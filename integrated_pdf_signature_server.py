@@ -2500,31 +2500,42 @@ class CRMBidirectionalSync:
             import requests
             
             if operation == 'create_contact':
+                # Log the data being processed to debug company field
+                logger.info(f"🔍 Creating CRM contact with data: {data}")
+                company_value = data.get('company', '')
+                logger.info(f"🏢 Company field value: '{company_value}'")
+                
                 params = {
                     'APIToken': self.api_key,
                     'UserCode': self.user_code,
                     'Function': 'CreateContact',
                     'Name': data.get('name', ''),
                     'Email': data.get('email', ''),
-                    'CompanyName': data.get('company', ''),
+                    'CompanyName': company_value,
                     'Phone': data.get('phone', ''),
                     'Address': data.get('address', ''),
                     'Notes': data.get('notes', '')
                 }
                 
+                # Log CRM API request details
+                logger.info(f"📤 CRM API Request - CompanyName: '{params.get('CompanyName', 'NOT_SET')}'")
+                logger.info(f"📤 CRM API Request - All params: {params}")
+                
                 response = requests.get(self.crm_url, params=params, timeout=30)
                 
                 if response.status_code == 200:
                     result_data = json.loads(response.text)
+                    logger.info(f"📥 CRM API Response: {result_data}")
                     
                     # Update local record with CRM ID if successful
                     if result_data.get('Success'):
                         crm_id = result_data.get('Result', {}).get('ContactId')
                         if crm_id and data.get('local_id'):
                             self._update_local_crm_id(data['local_id'], str(crm_id))
+                        logger.info(f"✅ CRM contact created with ID: {crm_id}")
                         return True
                     else:
-                        logger.error(f"CRM API error: {result_data.get('Error', 'Unknown error')}")
+                        logger.error(f"❌ CRM API error: {result_data.get('Error', 'Unknown error')}")
                         return False
                 else:
                     logger.error(f"CRM HTTP error: {response.status_code}")
