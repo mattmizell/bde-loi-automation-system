@@ -16,8 +16,16 @@ import threading
 import time
 import hashlib
 import secrets
+import os
 from signature_storage import TamperEvidentSignatureStorage
 from html_to_pdf_generator import HTMLLOIPDFGenerator
+
+# CRM Bridge Authentication
+CRM_BRIDGE_TOKENS = {
+    "loi_automation": "bde_loi_auth_" + hashlib.sha256("loi_automation_secret_key_2025".encode()).hexdigest()[:32],
+    "bolt_sales_tool": "bde_bolt_auth_" + hashlib.sha256("bolt_sales_secret_key_2025".encode()).hexdigest()[:32], 
+    "adam_sales_app": "bde_adam_auth_" + hashlib.sha256("adam_sales_secret_key_2025".encode()).hexdigest()[:32],
+}
 
 # Configure logging
 logging.basicConfig(
@@ -154,6 +162,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.serve_login_page()
         elif path == "/logout":
             self.handle_logout()
+        elif path.startswith("/api/v1/crm-bridge/"):
+            self.handle_crm_bridge_get(path, parsed_path)
         else:
             self.send_error(404)
     
@@ -185,6 +195,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             self.handle_login(post_data)
+        elif self.path.startswith("/api/v1/crm-bridge/"):
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length) if content_length > 0 else b''
+            self.handle_crm_bridge_post(self.path, post_data)
         else:
             self.send_error(404)
     
@@ -2512,6 +2526,8 @@ class CRMBidirectionalSync:
                     'Name': data.get('name', ''),
                     'Email': data.get('email', ''),
                     'CompanyName': company_value,
+                    'IsCompany': False,  # Creating person contacts, not company contacts
+                    'AssignedTo': 1073223,  # Adam's user ID from CRM
                     'Phone': data.get('phone', ''),
                     'Address': data.get('address', ''),
                     'Notes': data.get('notes', '')
@@ -2528,14 +2544,14 @@ class CRMBidirectionalSync:
                     logger.info(f"📥 CRM API Response: {result_data}")
                     
                     # Update local record with CRM ID if successful
-                    if result_data.get('Success'):
-                        crm_id = result_data.get('Result', {}).get('ContactId')
+                    if result_data.get('ContactId'):
+                        crm_id = result_data.get('ContactId')
                         if crm_id and data.get('local_id'):
                             self._update_local_crm_id(data['local_id'], str(crm_id))
                         logger.info(f"✅ CRM contact created with ID: {crm_id}")
                         return True
                     else:
-                        logger.error(f"❌ CRM API error: {result_data.get('Error', 'Unknown error')}")
+                        logger.error(f"❌ CRM API error: {result_data.get('ErrorDescription', result_data.get('Error', 'Unknown error'))}")
                         return False
                 else:
                     logger.error(f"CRM HTTP error: {response.status_code}")
@@ -2974,6 +2990,286 @@ class CRMBidirectionalSync:
 
 # Global delta sync instance
 crm_bidirectional_sync = CRMBidirectionalSync()
+
+# Add CRM Bridge methods to the IntegratedSignatureHandler class
+def verify_crm_bridge_token(self):
+    """Verify CRM bridge authentication token"""
+    auth_header = self.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    
+    token = auth_header[7:]  # Remove 'Bearer ' prefix
+    
+    for app_name, valid_token in CRM_BRIDGE_TOKENS.items():
+        if token == valid_token:
+            logger.info(f"🔐 CRM Bridge access granted to: {app_name}")
+            return {"app_name": app_name, "token": token}
+    
+    logger.warning(f"🚫 Invalid CRM bridge token attempted: {token[:20]}...")
+    return None
+
+def handle_crm_bridge_get(self, path, parsed_path):
+    """Handle CRM bridge GET requests"""
+    auth_info = self.verify_crm_bridge_token()
+    if not auth_info:
+        self.send_response(401)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            "error": "Invalid CRM bridge API token. Contact Better Day Energy IT for access."
+        }).encode())
+        return
+
+    query_params = parse_qs(parsed_path.query)
+    
+    if path == "/api/v1/crm-bridge/contacts":
+        limit = int(query_params.get('limit', [50])[0])
+        self.handle_crm_bridge_contacts(auth_info, limit)
+    elif path == "/api/v1/crm-bridge/stats":
+        self.handle_crm_bridge_stats(auth_info)
+    else:
+        self.send_error(404)
+
+def handle_crm_bridge_post(self, path, post_data):
+    """Handle CRM bridge POST requests"""
+    auth_info = self.verify_crm_bridge_token()
+    if not auth_info:
+        self.send_response(401)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            "error": "Invalid CRM bridge API token. Contact Better Day Energy IT for access."
+        }).encode())
+        return
+
+    if path == "/api/v1/crm-bridge/auth/verify":
+        self.handle_crm_bridge_auth_verify(auth_info)
+    elif path == "/api/v1/crm-bridge/contacts/search":
+        self.handle_crm_bridge_search(auth_info, post_data)
+    elif path == "/api/v1/crm-bridge/contacts/create":
+        self.handle_crm_bridge_create(auth_info, post_data)
+    else:
+        self.send_error(404)
+
+def handle_crm_bridge_auth_verify(self, auth_info):
+    """Verify authentication"""
+    response = {
+        "authenticated": True,
+        "app_name": auth_info["app_name"],
+        "permissions": ["read_contacts", "create_contacts", "search_contacts"],
+        "service": "CRM Bridge on LOI Automation API",
+        "cache_access": "enabled",
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    self.send_response(200)
+    self.send_header('Content-Type', 'application/json')
+    self.end_headers()
+    self.wfile.write(json.dumps(response).encode())
+
+def handle_crm_bridge_contacts(self, auth_info, limit):
+    """Get contacts from cache"""
+    try:
+        import psycopg2
+        db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
+        
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT contact_id, name, company_name, email, phone, created_at 
+                    FROM crm_contacts_cache 
+                    ORDER BY created_at DESC 
+                    LIMIT %s
+                """, (limit,))
+                
+                contacts = []
+                for row in cursor.fetchall():
+                    contacts.append({
+                        "contact_id": row[0],
+                        "name": row[1],
+                        "company_name": row[2] or "",
+                        "email": row[3] or "",
+                        "phone": row[4] or "",
+                        "created_at": row[5].isoformat() if row[5] else ""
+                    })
+        
+        logger.info(f"⚡ CRM Bridge: Served {len(contacts)} contacts to {auth_info['app_name']}")
+        
+        response = {
+            "success": True,
+            "count": len(contacts),
+            "contacts": contacts,
+            "source": "cache",
+            "app": auth_info["app_name"]
+        }
+        
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge contacts error: {str(e)}")
+        self.send_response(500)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+def handle_crm_bridge_stats(self, auth_info):
+    """Get cache statistics"""
+    try:
+        import psycopg2
+        db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
+        
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) FROM crm_contacts_cache")
+                total_contacts = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM crm_contacts_cache WHERE company_name IS NOT NULL AND company_name != ''")
+                contacts_with_companies = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT MAX(created_at) FROM crm_contacts_cache")
+                last_sync = cursor.fetchone()[0]
+        
+        company_coverage = (contacts_with_companies / total_contacts * 100) if total_contacts > 0 else 0
+        
+        response = {
+            "total_contacts": total_contacts,
+            "contacts_with_companies": contacts_with_companies,
+            "company_coverage": round(company_coverage, 1),
+            "cache_freshness": {
+                "fresh_last_24h": total_contacts,
+                "last_sync": last_sync.isoformat() if last_sync else None
+            }
+        }
+        
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge stats error: {str(e)}")
+        self.send_response(500)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+def handle_crm_bridge_search(self, auth_info, post_data):
+    """Search contacts"""
+    try:
+        data = json.loads(post_data.decode())
+        query = data.get('query', '')
+        limit = data.get('limit', 50)
+        
+        import psycopg2
+        db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
+        
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cursor:
+                search_pattern = f"%{query}%"
+                cursor.execute("""
+                    SELECT contact_id, name, company_name, email, phone, created_at 
+                    FROM crm_contacts_cache 
+                    WHERE LOWER(name) LIKE LOWER(%s) 
+                       OR LOWER(company_name) LIKE LOWER(%s)
+                       OR LOWER(email) LIKE LOWER(%s)
+                    ORDER BY created_at DESC 
+                    LIMIT %s
+                """, (search_pattern, search_pattern, search_pattern, limit))
+                
+                contacts = []
+                for row in cursor.fetchall():
+                    contacts.append({
+                        "contact_id": row[0],
+                        "name": row[1],
+                        "company_name": row[2] or "",
+                        "email": row[3] or "",
+                        "phone": row[4] or "",
+                        "created_at": row[5].isoformat() if row[5] else ""
+                    })
+        
+        logger.info(f"🔍 CRM Bridge: Search '{query}' returned {len(contacts)} results for {auth_info['app_name']}")
+        
+        response = {
+            "success": True,
+            "query": query,
+            "count": len(contacts),
+            "contacts": contacts,
+            "source": "cache",
+            "app": auth_info["app_name"]
+        }
+        
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge search error: {str(e)}")
+        self.send_response(500)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+def handle_crm_bridge_create(self, auth_info, post_data):
+    """Create new contact"""
+    try:
+        data = json.loads(post_data.decode())
+        
+        # Add to CRM write queue for background processing
+        import psycopg2
+        db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
+        
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cursor:
+                # Add to write queue
+                cursor.execute("""
+                    INSERT INTO crm_write_queue (operation, contact_data, created_at)
+                    VALUES (%s, %s, %s)
+                """, ('create', json.dumps(data), datetime.now()))
+                
+                # Add to local cache immediately
+                contact_id = f"pending_{secrets.token_urlsafe(16)}"
+                cursor.execute("""
+                    INSERT INTO crm_contacts_cache (contact_id, name, company_name, email, phone, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (contact_id, data.get('name'), data.get('company_name'), 
+                      data.get('email'), data.get('phone'), datetime.now()))
+                
+                conn.commit()
+        
+        logger.info(f"✅ CRM Bridge: Contact created and queued for sync by {auth_info['app_name']}")
+        
+        response = {
+            "success": True,
+            "contact_id": contact_id,
+            "message": "Contact created and queued for CRM sync",
+            "app": auth_info["app_name"]
+        }
+        
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(response).encode())
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge create error: {str(e)}")
+        self.send_response(500)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": str(e)}).encode())
+
+# Add methods to the IntegratedSignatureHandler class
+IntegratedSignatureHandler.verify_crm_bridge_token = verify_crm_bridge_token
+IntegratedSignatureHandler.handle_crm_bridge_get = handle_crm_bridge_get
+IntegratedSignatureHandler.handle_crm_bridge_post = handle_crm_bridge_post
+IntegratedSignatureHandler.handle_crm_bridge_auth_verify = handle_crm_bridge_auth_verify
+IntegratedSignatureHandler.handle_crm_bridge_contacts = handle_crm_bridge_contacts
+IntegratedSignatureHandler.handle_crm_bridge_stats = handle_crm_bridge_stats
+IntegratedSignatureHandler.handle_crm_bridge_search = handle_crm_bridge_search
+IntegratedSignatureHandler.handle_crm_bridge_create = handle_crm_bridge_create
 
 def main():
     """Start the complete integrated signature server"""
