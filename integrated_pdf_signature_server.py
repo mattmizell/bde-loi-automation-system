@@ -64,10 +64,6 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.serve_audit_report(verification_code)
         elif path == "/admin":
             self.serve_admin_dashboard()
-        elif path == "/api/search-crm":
-            self.handle_crm_search()
-        elif path == "/api/create-crm-contact":
-            self.handle_create_crm_contact()
         else:
             self.send_error(404)
     
@@ -1328,20 +1324,20 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
             # CRM search endpoint
             search_url = "https://api.lessannoyingcrm.com/v2"
-            headers = {
-                "Authorization": "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W",
-                "Content-Type": "application/json"
-            }
             
-            # Search for contacts
+            # Use the API key from pdf_generator or environment
+            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+            
+            # Search for contacts using Less Annoying CRM format
             search_payload = {
+                "UserCode": api_key,
                 "Function": "SearchContacts",
                 "Parameters": {
                     "SearchTerm": query
                 }
             }
             
-            response = requests.post(search_url, json=search_payload, headers=headers, timeout=10)
+            response = requests.post(search_url, json=search_payload, timeout=15)
             
             if response.status_code == 200:
                 try:
@@ -1398,13 +1394,11 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             import requests
             
             crm_url = "https://api.lessannoyingcrm.com/v2"
-            headers = {
-                "Authorization": "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W",
-                "Content-Type": "application/json"
-            }
+            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
             
-            # Create contact payload
+            # Create contact payload using correct LACRM format
             create_payload = {
+                "UserCode": api_key,
                 "Function": "CreateContact",
                 "Parameters": {
                     "Name": data.get('name', ''),
@@ -1416,7 +1410,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 }
             }
             
-            response = requests.post(crm_url, json=create_payload, headers=headers, timeout=10)
+            response = requests.post(crm_url, json=create_payload, timeout=15)
             
             if response.status_code == 200:
                 try:
