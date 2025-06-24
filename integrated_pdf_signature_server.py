@@ -1009,23 +1009,23 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             
             if session_token:
                 user = AUTHORIZED_USERS[email]
-                response_data = {{
+                response_data = {
                     "success": True,
                     "session_token": session_token,
-                    "user": {{
+                    "user": {
                         "name": user["name"],
                         "email": email,
                         "role": user["role"],
                         "permissions": user["permissions"]
-                    }}
-                }}
-                logger.info(f"User logged in: {{email}} ({{user['role']}})")
+                    }
+                }
+                logger.info(f"User logged in: {email} ({user['role']})")
             else:
-                response_data = {{
+                response_data = {
                     "success": False,
                     "error": "Invalid email or password"
-                }}
-                logger.warning(f"Failed login attempt: {{email}}")
+                }
+                logger.warning(f"Failed login attempt: {email}")
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -1033,11 +1033,11 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
             
         except Exception as e:
-            logger.error(f"Login error: {{str(e)}}")
+            logger.error(f"Login error: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            error_response = {{"success": False, "error": str(e)}}
+            error_response = {"success": False, "error": str(e)}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def handle_logout(self):
