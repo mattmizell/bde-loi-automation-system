@@ -1337,7 +1337,21 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 }
             }
             
-            response = requests.post(search_url, json=search_payload, timeout=15)
+            # Add headers to mimic browser request in case LACRM blocks server calls
+            headers = {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Origin': 'https://loi-automation-api.onrender.com',
+                'Referer': 'https://loi-automation-api.onrender.com/admin'
+            }
+            
+            response = requests.post(search_url, json=search_payload, headers=headers, timeout=15)
+            
+            logger.info(f"CRM search request: {search_payload}")
+            logger.info(f"CRM response status: {response.status_code}")
+            logger.info(f"CRM response text: {response.text[:500]}...")
             
             if response.status_code == 200:
                 try:
@@ -1411,7 +1425,21 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 }
             }
             
-            response = requests.post(crm_url, json=create_payload, timeout=15)
+            # Add headers to mimic browser request
+            headers = {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Origin': 'https://loi-automation-api.onrender.com',
+                'Referer': 'https://loi-automation-api.onrender.com/admin'
+            }
+            
+            response = requests.post(crm_url, json=create_payload, headers=headers, timeout=15)
+            
+            logger.info(f"CRM create request: {create_payload}")
+            logger.info(f"CRM create response status: {response.status_code}")
+            logger.info(f"CRM create response text: {response.text[:500]}...")
             
             if response.status_code == 200:
                 try:
