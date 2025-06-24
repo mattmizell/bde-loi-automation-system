@@ -1,0 +1,16 @@
+# Production Requirements for LOI Automation System
+# Minimal dependencies for signature server
+
+# Core dependencies
+requests==2.31.0
+psycopg2-binary==2.9.9
+python-dateutil==2.8.2
+Pillow==10.1.0
+
+# Standard library is sufficient for:
+# - HTTP server (http.server)
+# - JSON handling (json)
+# - Base64 encoding (base64)
+# - UUID generation (uuid)
+# - Logging (logging)
+# - HMAC/SHA256 (hashlib, hmac)

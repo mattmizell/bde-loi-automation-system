@@ -64,8 +64,8 @@ mypy==1.7.1
 pre-commit==3.5.0
 
 # Security
-cryptography==41.0.8
-bcrypt==4.1.1
+cryptography==41.0.7
+bcrypt==4.1.2
 
 # Background Task Processing
 celery==5.3.4
