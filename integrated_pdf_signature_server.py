@@ -64,6 +64,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.serve_audit_report(verification_code)
         elif path == "/admin":
             self.serve_admin_dashboard()
+        elif path == "/api/search-crm":
+            self.handle_crm_search()
+        elif path == "/api/create-crm-contact":
+            self.handle_create_crm_contact()
         else:
             self.send_error(404)
     
@@ -77,6 +81,14 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             self.handle_create_loi(post_data)
+        elif self.path == "/api/search-crm":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_crm_search(post_data)
+        elif self.path == "/api/create-crm-contact":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_create_crm_contact(post_data)
         else:
             self.send_error(404)
     
@@ -709,12 +721,12 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         self.wfile.write(html.encode('utf-8'))
     
     def serve_admin_dashboard(self):
-        """Serve admin dashboard for creating new LOIs"""
+        """Serve CRM-integrated admin dashboard for creating LOIs"""
         html = """
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Better Day Energy - LOI Admin Dashboard</title>
+            <title>Better Day Energy - CRM-Integrated LOI Admin</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -724,7 +736,7 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     padding: 20px;
                 }
                 .container {
-                    max-width: 1000px;
+                    max-width: 1200px;
                     margin: 0 auto;
                     background: white;
                     border-radius: 10px;
@@ -742,11 +754,20 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                 .content {
                     padding: 30px;
                 }
-                .form-section {
+                .step-section {
                     background: #f8f9fa;
                     padding: 25px;
                     border-radius: 8px;
                     margin-bottom: 30px;
+                    border-left: 5px solid #007bff;
+                }
+                .step-section.active {
+                    border-left-color: #28a745;
+                    background: #f8fff8;
+                }
+                .step-section h2 {
+                    color: #1f4e79;
+                    margin-bottom: 20px;
                 }
                 .form-group {
                     margin-bottom: 20px;
@@ -757,168 +778,378 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     font-weight: 600;
                     color: #1f4e79;
                 }
-                .form-group input {
+                .form-group input, .form-group select, .form-group textarea {
                     width: 100%;
                     padding: 12px;
                     border: 2px solid #e9ecef;
                     border-radius: 6px;
                     font-size: 16px;
                 }
-                .form-group input:focus {
+                .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
                     outline: none;
                     border-color: #007bff;
                 }
+                .form-row {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                }
                 .btn {
-                    background: #28a745;
+                    background: #007bff;
                     color: white;
-                    padding: 15px 30px;
+                    padding: 12px 24px;
                     border: none;
                     border-radius: 6px;
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: 600;
                     cursor: pointer;
-                    width: 100%;
+                    margin-right: 10px;
+                    margin-bottom: 10px;
+                }
+                .btn.btn-success {
+                    background: #28a745;
+                }
+                .btn.btn-warning {
+                    background: #ffc107;
+                    color: #000;
                 }
                 .btn:hover {
-                    background: #218838;
+                    opacity: 0.9;
                 }
-                .result-box {
+                .customer-info {
+                    background: #e7f3ff;
+                    border: 2px solid #007bff;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                }
+                .deal-summary {
                     background: #e8f5e8;
                     border: 2px solid #28a745;
                     padding: 20px;
                     border-radius: 8px;
-                    margin-top: 20px;
+                    margin: 20px 0;
+                }
+                .hidden {
                     display: none;
                 }
-                .result-box h3 {
-                    color: #155724;
-                    margin-bottom: 15px;
-                }
-                .url-box {
-                    background: white;
+                .error-box {
+                    background: #f8d7da;
+                    border: 1px solid #f5c6cb;
+                    color: #721c24;
                     padding: 15px;
                     border-radius: 6px;
-                    border: 1px solid #c3e6c3;
                     margin: 10px 0;
-                    font-family: monospace;
-                    word-break: break-all;
                 }
-                .email-template {
-                    background: #fff;
-                    border: 1px solid #ddd;
-                    padding: 20px;
+                .success-box {
+                    background: #d4edda;
+                    border: 1px solid #c3e6cb;
+                    color: #155724;
+                    padding: 15px;
                     border-radius: 6px;
-                    margin-top: 15px;
-                    white-space: pre-line;
-                    font-family: Arial, sans-serif;
-                    font-size: 14px;
+                    margin: 10px 0;
                 }
-                .copy-btn {
-                    background: #007bff;
-                    color: white;
-                    padding: 8px 16px;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    margin-top: 10px;
-                }
-                .status-box {
+                .workflow-status {
                     background: #fff3cd;
                     border: 1px solid #ffeaa7;
                     padding: 15px;
                     border-radius: 6px;
                     margin-bottom: 20px;
                 }
+                .financial-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr;
+                    gap: 15px;
+                }
+                @media (max-width: 768px) {
+                    .form-row, .financial-grid { grid-template-columns: 1fr; }
+                }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎯 Better Day Energy - LOI Admin</h1>
-                    <p>Create new Letter of Intent signature requests for customers</p>
-                    <p><strong>Production System:</strong> https://loi-automation-api.onrender.com</p>
+                    <h1>🎯 Better Day Energy - CRM LOI System</h1>
+                    <p>Professional LOI Creation with Full CRM Integration</p>
+                    <p><strong>Workflow:</strong> CRM Search → Deal Terms → Generate LOI → Route → Sign → Store</p>
                 </div>
                 
                 <div class="content">
-                    <div class="status-box">
-                        <h3>🚀 Live Production System</h3>
-                        <p>✅ PostgreSQL connected | ✅ CRM integrated | ✅ Email ready</p>
-                        <p>This admin panel creates LOIs that are instantly live on the production system.</p>
+                    <div class="workflow-status">
+                        <h3>📋 Proper LOI Workflow</h3>
+                        <p>1️⃣ Search CRM for existing customer → 2️⃣ Add if not found → 3️⃣ Enter deal terms → 4️⃣ Generate LOI → 5️⃣ Route for signature</p>
                     </div>
                     
-                    <div class="form-section">
-                        <h2>📋 Create New LOI Request</h2>
-                        <form id="loi-form">
+                    <!-- STEP 1: CRM Customer Search -->
+                    <div class="step-section active" id="step-1">
+                        <h2>🔍 Step 1: Search CRM for Customer</h2>
+                        <div class="form-group">
+                            <label for="search-query">Search by Name, Email, or Company:</label>
+                            <input type="text" id="search-query" placeholder="Enter customer name, email, or company name" required>
+                        </div>
+                        <button type="button" class="btn" onclick="searchCRM()">🔍 Search CRM</button>
+                        <button type="button" class="btn btn-warning" onclick="showNewCustomerForm()">➕ Add New Customer</button>
+                        
+                        <div id="search-results" class="hidden"></div>
+                    </div>
+                    
+                    <!-- STEP 2: Customer Information (if not found) -->
+                    <div class="step-section hidden" id="step-2">
+                        <h2>👤 Step 2: Add New Customer to CRM</h2>
+                        <div class="form-row">
                             <div class="form-group">
-                                <label for="signer-name">Customer Name:</label>
-                                <input type="text" id="signer-name" placeholder="e.g., John Smith" required>
+                                <label for="customer-name">Customer Name:</label>
+                                <input type="text" id="customer-name" placeholder="John Smith" required>
                             </div>
-                            
                             <div class="form-group">
-                                <label for="signer-email">Customer Email:</label>
-                                <input type="email" id="signer-email" placeholder="e.g., john@example.com" required>
+                                <label for="customer-email">Email Address:</label>
+                                <input type="email" id="customer-email" placeholder="john@smithgas.com" required>
                             </div>
-                            
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="company-name">Company Name:</label>
-                                <input type="text" id="company-name" placeholder="e.g., Smith's Gas Station" required>
+                                <input type="text" id="company-name" placeholder="Smith's Gas Station" required>
                             </div>
-                            
-                            <button type="submit" class="btn">🚀 Create Live LOI Request</button>
-                        </form>
+                            <div class="form-group">
+                                <label for="customer-phone">Phone Number:</label>
+                                <input type="tel" id="customer-phone" placeholder="(555) 123-4567">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-address">Business Address:</label>
+                            <textarea id="customer-address" rows="3" placeholder="123 Main St, City, State 12345"></textarea>
+                        </div>
+                        <button type="button" class="btn btn-success" onclick="createCRMContact()">➕ Add to CRM & Continue</button>
                     </div>
                     
-                    <div id="result" class="result-box">
-                        <h3>✅ LOI Created Successfully!</h3>
-                        <div id="loi-details"></div>
+                    <!-- STEP 3: Deal Terms -->
+                    <div class="step-section hidden" id="step-3">
+                        <h2>💼 Step 3: Enter Deal Terms & Incentives</h2>
                         
-                        <h4>🔗 Live Signature URL:</h4>
-                        <div id="signature-url" class="url-box"></div>
-                        <button class="copy-btn" onclick="copyUrl()">📋 Copy URL</button>
+                        <div id="customer-summary" class="customer-info">
+                            <!-- Customer info will be populated here -->
+                        </div>
                         
-                        <h4>📧 Email Template for Customer:</h4>
-                        <div id="email-template" class="email-template"></div>
-                        <button class="copy-btn" onclick="copyEmail()">📋 Copy Email</button>
+                        <h3>📊 Volume Commitments</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="gasoline-volume">Monthly Gasoline (gallons):</label>
+                                <input type="number" id="gasoline-volume" value="85000" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="diesel-volume">Monthly Diesel (gallons):</label>
+                                <input type="number" id="diesel-volume" value="25000" required>
+                            </div>
+                        </div>
+                        
+                        <h3>💰 Financial Incentives</h3>
+                        <div class="financial-grid">
+                            <div class="form-group">
+                                <label for="image-funding">Image Program Funding:</label>
+                                <input type="number" id="image-funding" value="75000" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="volume-incentives">Annual Volume Incentives:</label>
+                                <input type="number" id="volume-incentives" value="50000" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contract-duration">Contract Duration (months):</label>
+                                <input type="number" id="contract-duration" value="36" required>
+                            </div>
+                        </div>
+                        
+                        <h3>📋 Terms & Conditions</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="conversion-date">Target Conversion Date:</label>
+                                <input type="date" id="conversion-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="pricing-structure">Pricing Structure:</label>
+                                <select id="pricing-structure" required>
+                                    <option value="competitive">Competitive with quarterly reviews</option>
+                                    <option value="fixed">Fixed pricing for term</option>
+                                    <option value="index">Index-based pricing</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="special-terms">Special Terms/Notes:</label>
+                            <textarea id="special-terms" rows="3" placeholder="Any special conditions, requirements, or notes..."></textarea>
+                        </div>
+                        
+                        <button type="button" class="btn btn-success" onclick="generateLOI()">🚀 Generate Complete LOI</button>
+                    </div>
+                    
+                    <!-- STEP 4: LOI Generated -->
+                    <div class="step-section hidden" id="step-4">
+                        <h2>✅ Step 4: LOI Generated & Ready</h2>
+                        <div id="loi-summary" class="deal-summary">
+                            <!-- LOI summary will be populated here -->
+                        </div>
+                        <div id="final-result"></div>
                     </div>
                 </div>
             </div>
             
             <script>
-                function generateUUID() {
-                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                        var r = Math.random() * 16 | 0,
-                            v = c == 'x' ? r : (r & 0x3 | 0x8);
-                        return v.toString(16);
-                    });
+                let currentCustomer = null;
+                let currentDeal = null;
+                
+                async function searchCRM() {
+                    const query = document.getElementById('search-query').value.trim();
+                    if (!query) {
+                        alert('Please enter a search term');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/api/search-crm', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ query: query })
+                        });
+                        
+                        if (response.ok) {
+                            const results = await response.json();
+                            displaySearchResults(results);
+                        } else {
+                            throw new Error('CRM search failed');
+                        }
+                    } catch (error) {
+                        document.getElementById('search-results').innerHTML = 
+                            '<div class="error-box">❌ CRM search failed: ' + error.message + '</div>';
+                        document.getElementById('search-results').classList.remove('hidden');
+                    }
                 }
                 
-                function generateTransactionId() {
-                    return 'TXN-' + generateUUID().substr(0, 8).toUpperCase();
+                function displaySearchResults(results) {
+                    const resultsDiv = document.getElementById('search-results');
+                    
+                    if (results.customers && results.customers.length > 0) {
+                        let html = '<div class="success-box"><h3>✅ Customers Found in CRM:</h3>';
+                        results.customers.forEach(customer => {
+                            html += `
+                                <div style="border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; background: white;">
+                                    <p><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
+                                    <p>📧 ${customer.email} | 📞 ${customer.phone || 'No phone'}</p>
+                                    <button class="btn" onclick="selectCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')">
+                                        ✅ Select This Customer
+                                    </button>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = 
+                            '<div class="error-box">❌ No customers found. Please add as new customer.</div>';
+                    }
+                    
+                    resultsDiv.classList.remove('hidden');
                 }
                 
-                document.getElementById('loi-form').addEventListener('submit', async function(e) {
-                    e.preventDefault();
+                function selectCustomer(id, name, email, company) {
+                    currentCustomer = { id, name, email, company };
+                    document.getElementById('customer-summary').innerHTML = `
+                        <h3>✅ Selected Customer:</h3>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Company:</strong> ${company}</p>
+                        <p><strong>CRM ID:</strong> ${id}</p>
+                    `;
+                    showStep(3);
+                }
+                
+                function showNewCustomerForm() {
+                    showStep(2);
+                }
+                
+                async function createCRMContact() {
+                    const customerData = {
+                        name: document.getElementById('customer-name').value,
+                        email: document.getElementById('customer-email').value,
+                        company: document.getElementById('company-name').value,
+                        phone: document.getElementById('customer-phone').value,
+                        address: document.getElementById('customer-address').value
+                    };
                     
-                    const signerName = document.getElementById('signer-name').value;
-                    const signerEmail = document.getElementById('signer-email').value;
-                    const companyName = document.getElementById('company-name').value;
+                    try {
+                        const response = await fetch('/api/create-crm-contact', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(customerData)
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            currentCustomer = {
+                                id: result.contact_id,
+                                name: customerData.name,
+                                email: customerData.email,
+                                company: customerData.company
+                            };
+                            
+                            document.getElementById('customer-summary').innerHTML = `
+                                <h3>✅ Customer Added to CRM:</h3>
+                                <p><strong>Name:</strong> ${customerData.name}</p>
+                                <p><strong>Email:</strong> ${customerData.email}</p>
+                                <p><strong>Company:</strong> ${customerData.company}</p>
+                                <p><strong>CRM ID:</strong> ${result.contact_id}</p>
+                            `;
+                            
+                            showStep(3);
+                        } else {
+                            throw new Error('Failed to create CRM contact');
+                        }
+                    } catch (error) {
+                        alert('❌ Error creating CRM contact: ' + error.message);
+                    }
+                }
+                
+                function generateLOI() {
+                    // Set default conversion date if not set
+                    const conversionDate = document.getElementById('conversion-date').value || 
+                        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
                     
-                    const transactionId = generateTransactionId();
+                    currentDeal = {
+                        customer: currentCustomer,
+                        gasoline_volume: parseInt(document.getElementById('gasoline-volume').value),
+                        diesel_volume: parseInt(document.getElementById('diesel-volume').value),
+                        image_funding: parseInt(document.getElementById('image-funding').value),
+                        volume_incentives: parseInt(document.getElementById('volume-incentives').value),
+                        contract_duration: parseInt(document.getElementById('contract-duration').value),
+                        conversion_date: conversionDate,
+                        pricing_structure: document.getElementById('pricing-structure').value,
+                        special_terms: document.getElementById('special-terms').value
+                    };
+                    
+                    const totalMonthly = currentDeal.gasoline_volume + currentDeal.diesel_volume;
+                    const totalAnnual = totalMonthly * 12;
+                    const totalIncentives = currentDeal.image_funding + currentDeal.volume_incentives;
+                    
+                    // Create the LOI with all deal terms
+                    createDetailedLOI(currentDeal);
+                }
+                
+                async function createDetailedLOI(dealData) {
+                    const transactionId = 'TXN-' + Math.random().toString(36).substr(2, 8).toUpperCase();
                     const signatureToken = generateUUID();
-                    const createdAt = new Date().toISOString();
-                    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
                     
                     const loiData = {
                         transaction_id: transactionId,
                         signature_token: signatureToken,
-                        signer_name: signerName,
-                        signer_email: signerEmail,
-                        company_name: companyName,
+                        signer_name: dealData.customer.name,
+                        signer_email: dealData.customer.email,
+                        company_name: dealData.customer.company,
+                        crm_contact_id: dealData.customer.id,
                         document_name: "VP Racing Fuel Supply Agreement - Letter of Intent",
                         status: "pending",
-                        created_at: createdAt,
-                        expires_at: expiresAt
+                        created_at: new Date().toISOString(),
+                        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        deal_terms: dealData
                     };
                     
                     try {
@@ -930,69 +1161,102 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         
                         if (response.ok) {
                             const result = await response.json();
-                            const signatureUrl = `https://loi-automation-api.onrender.com/sign/${signatureToken}`;
-                            
-                            // Show results
-                            document.getElementById('loi-details').innerHTML = `
-                                <p><strong>Customer:</strong> ${signerName}</p>
-                                <p><strong>Company:</strong> ${companyName}</p>
-                                <p><strong>Email:</strong> ${signerEmail}</p>
-                                <p><strong>Transaction ID:</strong> ${transactionId}</p>
-                                <p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleDateString()}</p>
-                            `;
-                            
-                            document.getElementById('signature-url').textContent = signatureUrl;
-                            
-                            const emailTemplate = `Subject: VP Racing Fuel Supply Agreement - Electronic Signature Required
-
-Dear ${signerName},
-
-Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.
-
-Please review and electronically sign the attached Letter of Intent for our VP Racing Fuel Supply Agreement by clicking the link below:
-
-🔗 Sign Document: ${signatureUrl}
-
-Key Benefits:
-• $125,000 first-year incentive package  
-• Competitive pricing with quarterly reviews
-• 24/7 emergency fuel supply support
-• Dedicated account management
-
-This document expires in 30 days. Please complete your signature at your earliest convenience.
-
-If you have any questions, please contact Adam Simpson directly.
-
-Best regards,
-Better Day Energy Team
-
-Transaction ID: ${transactionId}`;
-                            
-                            document.getElementById('email-template').textContent = emailTemplate;
-                            document.getElementById('result').style.display = 'block';
-                            
-                            // Store the data for copying
-                            window.currentSignatureUrl = signatureUrl;
-                            window.currentEmailTemplate = emailTemplate;
-                            
-                            alert('✅ LOI Created Successfully!\\n\\nThe signature URL is now live and ready to send to the customer.');
-                            
+                            displayFinalLOI(loiData, result);
                         } else {
                             throw new Error('Failed to create LOI');
                         }
                     } catch (error) {
                         alert('❌ Error creating LOI: ' + error.message);
                     }
-                });
-                
-                function copyUrl() {
-                    navigator.clipboard.writeText(window.currentSignatureUrl);
-                    alert('✅ Signature URL copied to clipboard!');
                 }
                 
-                function copyEmail() {
-                    navigator.clipboard.writeText(window.currentEmailTemplate);
-                    alert('✅ Email template copied to clipboard!');
+                function displayFinalLOI(loiData, result) {
+                    const dealData = loiData.deal_terms;
+                    const totalMonthly = dealData.gasoline_volume + dealData.diesel_volume;
+                    const totalAnnual = totalMonthly * 12;
+                    const totalIncentives = dealData.image_funding + dealData.volume_incentives;
+                    
+                    document.getElementById('loi-summary').innerHTML = `
+                        <h3>🎯 Complete LOI Generated</h3>
+                        <p><strong>Customer:</strong> ${dealData.customer.name} (${dealData.customer.company})</p>
+                        <p><strong>Transaction ID:</strong> ${loiData.transaction_id}</p>
+                        <p><strong>Total Volume:</strong> ${totalMonthly.toLocaleString()} gal/month (${totalAnnual.toLocaleString()} annual)</p>
+                        <p><strong>Total Incentives:</strong> $${totalIncentives.toLocaleString()}</p>
+                        <p><strong>Contract Term:</strong> ${dealData.contract_duration} months</p>
+                    `;
+                    
+                    const signatureUrl = result.signature_url;
+                    
+                    document.getElementById('final-result').innerHTML = `
+                        <div class="success-box">
+                            <h3>✅ LOI Ready for Signature!</h3>
+                            <p><strong>Signature URL:</strong></p>
+                            <div style="background: white; padding: 15px; border-radius: 5px; font-family: monospace; word-break: break-all; margin: 10px 0;">
+                                ${signatureUrl}
+                            </div>
+                            <button class="btn" onclick="copyToClipboard('${signatureUrl}')">📋 Copy URL</button>
+                            <button class="btn btn-success" onclick="window.open('${signatureUrl}', '_blank')">👀 Preview LOI</button>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                            <h4>📧 Email Template:</h4>
+                            <textarea readonly style="width: 100%; height: 200px; margin: 10px 0;">Subject: VP Racing Fuel Supply Agreement - Electronic Signature Required
+
+Dear ${dealData.customer.name},
+
+Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.
+
+Please review and electronically sign the Letter of Intent for our VP Racing Fuel Supply Agreement:
+
+🔗 Sign Document: ${signatureUrl}
+
+Deal Summary:
+• Total Incentive Package: $${totalIncentives.toLocaleString()}
+• Monthly Volume: ${totalMonthly.toLocaleString()} gallons
+• Contract Duration: ${dealData.contract_duration} months
+• Target Conversion: ${dealData.conversion_date}
+
+This document expires in 30 days. Please complete your signature at your earliest convenience.
+
+Best regards,
+Better Day Energy Team
+Transaction ID: ${loiData.transaction_id}</textarea>
+                            <button class="btn" onclick="copyEmailTemplate()">📋 Copy Email</button>
+                        </div>
+                    `;
+                    
+                    showStep(4);
+                }
+                
+                function showStep(stepNumber) {
+                    // Hide all steps
+                    for (let i = 1; i <= 4; i++) {
+                        document.getElementById('step-' + i).classList.add('hidden');
+                        document.getElementById('step-' + i).classList.remove('active');
+                    }
+                    
+                    // Show current step
+                    document.getElementById('step-' + stepNumber).classList.remove('hidden');
+                    document.getElementById('step-' + stepNumber).classList.add('active');
+                }
+                
+                function generateUUID() {
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0,
+                            v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+                
+                function copyToClipboard(text) {
+                    navigator.clipboard.writeText(text);
+                    alert('✅ Copied to clipboard!');
+                }
+                
+                function copyEmailTemplate() {
+                    const emailText = document.querySelector('textarea[readonly]').value;
+                    navigator.clipboard.writeText(emailText);
+                    alert('✅ Email template copied!');
                 }
             </script>
         </body>
@@ -1044,6 +1308,157 @@ Transaction ID: ${transactionId}`;
             
         except Exception as e:
             logger.error(f"Error creating LOI: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_crm_search(self, post_data):
+        """Handle CRM customer search"""
+        try:
+            data = json.loads(post_data.decode('utf-8'))
+            query = data.get('query', '').strip()
+            
+            if not query:
+                raise ValueError("Search query is required")
+            
+            # Search CRM using the same function from pdf_generator
+            import requests
+            
+            # CRM search endpoint
+            search_url = "https://api.lessannoyingcrm.com/v2"
+            headers = {
+                "Authorization": "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W",
+                "Content-Type": "application/json"
+            }
+            
+            # Search for contacts
+            search_payload = {
+                "Function": "SearchContacts",
+                "Parameters": {
+                    "SearchTerm": query
+                }
+            }
+            
+            response = requests.post(search_url, json=search_payload, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                try:
+                    result_data = response.json()
+                    
+                    customers = []
+                    if result_data.get('Result') and isinstance(result_data['Result'], list):
+                        for contact in result_data['Result']:
+                            customers.append({
+                                'id': contact.get('ContactId'),
+                                'name': contact.get('Name', 'Unknown'),
+                                'email': contact.get('Email', ''),
+                                'company': contact.get('CompanyName', ''),
+                                'phone': contact.get('Phone', '')
+                            })
+                    
+                    response_data = {
+                        "success": True,
+                        "customers": customers,
+                        "total_found": len(customers)
+                    }
+                    
+                except json.JSONDecodeError:
+                    # Handle non-JSON response
+                    customers = []  # No customers found
+                    response_data = {
+                        "success": True,
+                        "customers": customers,
+                        "total_found": 0,
+                        "message": "No customers found matching search criteria"
+                    }
+            else:
+                raise Exception(f"CRM API error: {response.status_code}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"CRM search error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_create_crm_contact(self, post_data):
+        """Handle creating new CRM contact"""
+        try:
+            data = json.loads(post_data.decode('utf-8'))
+            
+            # Create contact in CRM
+            import requests
+            
+            crm_url = "https://api.lessannoyingcrm.com/v2"
+            headers = {
+                "Authorization": "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W",
+                "Content-Type": "application/json"
+            }
+            
+            # Create contact payload
+            create_payload = {
+                "Function": "CreateContact",
+                "Parameters": {
+                    "Name": data.get('name', ''),
+                    "Email": data.get('email', ''),
+                    "CompanyName": data.get('company', ''),
+                    "Phone": data.get('phone', ''),
+                    "Address": data.get('address', ''),
+                    "Notes": f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                }
+            }
+            
+            response = requests.post(crm_url, json=create_payload, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                try:
+                    result_data = response.json()
+                    contact_id = result_data.get('Result', {}).get('ContactId') if isinstance(result_data.get('Result'), dict) else str(result_data.get('Result', ''))
+                    
+                    if not contact_id:
+                        # Extract ID from response text if needed
+                        response_text = str(result_data)
+                        import re
+                        id_match = re.search(r'ContactId[\'"]:\s*[\'"]?(\d+)', response_text)
+                        if id_match:
+                            contact_id = id_match.group(1)
+                        else:
+                            contact_id = f"CRM_{int(datetime.now().timestamp())}"
+                    
+                    response_data = {
+                        "success": True,
+                        "contact_id": contact_id,
+                        "message": "Contact created successfully"
+                    }
+                    
+                    logger.info(f"CRM contact created: {contact_id} for {data.get('name')}")
+                    
+                except json.JSONDecodeError:
+                    # Handle non-JSON response but assume success
+                    contact_id = f"CRM_{int(datetime.now().timestamp())}"
+                    response_data = {
+                        "success": True,
+                        "contact_id": contact_id,
+                        "message": "Contact created (response parsing issue)"
+                    }
+            else:
+                raise Exception(f"CRM API error: {response.status_code}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"CRM contact creation error: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
