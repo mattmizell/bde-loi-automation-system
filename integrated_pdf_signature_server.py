@@ -1322,8 +1322,8 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             # Search CRM using the same function from pdf_generator
             import requests
             
-            # CRM search endpoint
-            search_url = "https://api.lessannoyingcrm.com/v2"
+            # CRM search endpoint (without /v2 as shown in working example)
+            search_url = "https://api.lessannoyingcrm.com"
             
             # Use the API key from pdf_generator or environment
             api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
@@ -1341,7 +1341,8 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
             if response.status_code == 200:
                 try:
-                    result_data = response.json()
+                    # LACRM returns JSON with text/html content-type, so parse manually
+                    result_data = json.loads(response.text)
                     
                     customers = []
                     if result_data.get('Result') and isinstance(result_data['Result'], list):
@@ -1393,7 +1394,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             # Create contact in CRM
             import requests
             
-            crm_url = "https://api.lessannoyingcrm.com/v2"
+            crm_url = "https://api.lessannoyingcrm.com"
             api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
             
             # Create contact payload using correct LACRM format
@@ -1414,7 +1415,8 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
             if response.status_code == 200:
                 try:
-                    result_data = response.json()
+                    # LACRM returns JSON with text/html content-type, so parse manually
+                    result_data = json.loads(response.text)
                     contact_id = result_data.get('Result', {}).get('ContactId') if isinstance(result_data.get('Result'), dict) else str(result_data.get('Result', ''))
                     
                     if not contact_id:
