@@ -3273,8 +3273,7 @@ IntegratedSignatureHandler.handle_crm_bridge_create = handle_crm_bridge_create
 
 def main():
     """Start the complete integrated signature server"""
-    import os
-    port = int(os.environ.get('PORT', 8003))  # Use PORT env var for Render
+    port = int(os.environ.get('PORT', 8002))  # Use PORT env var for Render (match render.yaml)
     server_address = ('', port)
     httpd = HTTPServer(server_address, IntegratedSignatureHandler)
     
