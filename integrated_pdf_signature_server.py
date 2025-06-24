@@ -1459,14 +1459,26 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     if (results.customers && results.customers.length > 0) {
                         let html = '<h4 style="color: #155724; margin-bottom: 10px;">✅ Found in CRM:</h4>';
                         results.customers.forEach((customer, index) => {
+                            // Escape strings for safe JavaScript usage
+                            const escapeForJS = (str) => {
+                                if (!str) return '';
+                                return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+                            };
+                            
+                            const safeId = escapeForJS(customer.id);
+                            const safeName = escapeForJS(customer.name);
+                            const safeEmail = escapeForJS(customer.email);
+                            const safeCompany = escapeForJS(customer.company || '');
+                            const safePhone = escapeForJS(customer.phone || '');
+                            
                             html += `
                                 <div style="border: 1px solid #28a745; padding: 12px; margin: 8px 0; border-radius: 4px; background: white;">
                                     <p style="margin: 0 0 5px 0;"><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
                                     <p style="margin: 0 0 8px 0; color: #666;">📧 ${customer.email} ${customer.phone ? '| 📞 ' + customer.phone : ''}</p>
-                                    <button class="btn" onclick="selectExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')" style="background: #28a745; margin-right: 8px;">
+                                    <button class="btn" onclick="selectExistingCustomer('${safeId}', '${safeName}', '${safeEmail}', '${safeCompany}')" style="background: #28a745; margin-right: 8px;">
                                         ✅ Select This Customer
                                     </button>
-                                    <button class="btn" onclick="editExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}', '${customer.phone || ''}')" style="background: #ffc107; color: #000;">
+                                    <button class="btn" onclick="editExistingCustomer('${safeId}', '${safeName}', '${safeEmail}', '${safeCompany}', '${safePhone}')" style="background: #ffc107; color: #000;">
                                         ✏️ Edit & Use
                                     </button>
                                 </div>
