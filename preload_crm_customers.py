@@ -40,43 +40,108 @@ def preload_crm_customers():
         print("📞 Fetching all customers from Less Annoying CRM...")
         print("🔧 Using LACRM-specific API format...")
         
-        # LACRM API uses GET with URL parameters - correct function is GetContacts
-        params = {
-            'APIToken': api_key,
-            'UserCode': user_code,
-            'Function': 'GetContacts',
-            'MaxNumberOfResults': 10000  # Get all contacts (max allowed)
-        }
+        # Use proper LACRM API pagination to get ALL contacts
+        all_customers = []
+        customers_by_id = {}  # Use dict to deduplicate by ContactId
         
-        print(f"🌐 API URL: {crm_url}")
-        print(f"📋 Parameters: {params}")
+        print("🔍 Using SearchContacts with proper pagination...")
+        print("📚 LACRM API investigative approach to understand data limits")
         
-        response = requests.get(crm_url, params=params, timeout=30)
+        page = 1
+        max_results_per_page = 10000  # LACRM API maximum
+        total_retrieved = 0
         
-        print(f"📊 Response Status: {response.status_code}")
-        print(f"📄 Response Headers: {dict(response.headers)}")
-        print(f"📝 Response Text (first 500 chars): {response.text[:500]}...")
+        while True:
+            print(f"\n📄 Fetching page {page} (requesting up to {max_results_per_page} records)...")
+            
+            params = {
+                'APIToken': api_key,
+                'UserCode': user_code,
+                'Function': 'SearchContacts',
+                'SearchTerm': '',  # Empty to get all contacts
+                'MaxNumberOfResults': max_results_per_page,
+                'Page': page
+            }
+            
+            print(f"📋 Parameters: Function=SearchContacts, SearchTerm='', MaxNumberOfResults={max_results_per_page}, Page={page}")
+            
+            try:
+                response = requests.get(crm_url, params=params, timeout=30)
+                
+                print(f"📊 Response Status: {response.status_code}")
+                
+                if response.status_code != 200:
+                    print(f"❌ API error: {response.status_code} - {response.text[:200]}...")
+                    break
+                
+                # LACRM returns JSON with text/html content-type, so parse manually
+                try:
+                    result_data = json.loads(response.text)
+                    print(f"🔧 API Response keys: {list(result_data.keys())}")
+                    if 'HasMoreResults' in result_data:
+                        print(f"📄 HasMoreResults: {result_data.get('HasMoreResults')}")
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON parsing failed: {e}")
+                    print(f"📄 Raw response text: {response.text[:1000]}")
+                    break
+                
+                if not result_data.get('Success'):
+                    print(f"❌ CRM API failed: {result_data.get('Error', 'Unknown error')}")
+                    break
+                
+                customers_data = result_data.get('Result', [])
+                
+                if not isinstance(customers_data, list):
+                    customers_data = [customers_data] if customers_data else []
+                
+                print(f"✅ Retrieved {len(customers_data)} customers from page {page}")
+                
+                # If we got no results, we've reached the end
+                if len(customers_data) == 0:
+                    print("📋 No more customers found - reached end of data")
+                    break
+                
+                # Add to our deduplicated collection
+                new_customers = 0
+                for customer in customers_data:
+                    contact_id = str(customer.get('ContactId', ''))
+                    if contact_id and contact_id not in customers_by_id:
+                        customers_by_id[contact_id] = customer
+                        new_customers += 1
+                
+                total_retrieved += new_customers
+                print(f"📊 Added {new_customers} new unique customers")
+                print(f"📊 Total unique customers so far: {len(customers_by_id)}")
+                
+                # Show a sample customer from this page
+                if len(customers_data) > 0:
+                    sample_customer = customers_data[0]
+                    name = sample_customer.get('Name', 'No name')
+                    company = sample_customer.get('CompanyName', 'No company')
+                    contact_id = sample_customer.get('ContactId', 'No ID')
+                    print(f"📋 Sample from page {page}: {name} / {company} - ID: {contact_id}")
+                
+                # LACRM appears to limit to 25 results per page regardless of MaxNumberOfResults
+                # Continue until we get 0 results (indicating end of data)
+                # Don't stop just because we got fewer than max_results_per_page
+                
+                # Move to next page
+                page += 1
+                
+                # Safety check to prevent infinite loops
+                if page > 50:  # 50 pages * 25 contacts = 1250 contacts max (should be plenty)
+                    print("⚠️ Safety limit reached - stopping pagination")
+                    break
+                
+            except Exception as e:
+                print(f"❌ Page {page} fetch failed: {e}")
+                break
         
-        if response.status_code != 200:
-            raise Exception(f"CRM API error: {response.status_code} - {response.text}")
-        
-        # LACRM returns JSON with text/html content-type, so parse manually
-        try:
-            result_data = json.loads(response.text)
-        except json.JSONDecodeError as e:
-            print(f"❌ JSON parsing failed: {e}")
-            print(f"📄 Raw response: {response.text}")
-            raise Exception(f"Failed to parse CRM response as JSON: {e}")
-        
-        if not result_data.get('Success'):
-            raise Exception(f"CRM API failed: {result_data.get('Error', 'Unknown error')}")
-        
-        customers_data = result_data.get('Result', [])
-        
-        if not isinstance(customers_data, list):
-            customers_data = [customers_data] if customers_data else []
-        
-        print(f"✅ Retrieved {len(customers_data)} customers from CRM")
+        # Convert back to list
+        customers_data = list(customers_by_id.values())
+        print(f"\n🎉 Pagination complete!")
+        print(f"📊 Total pages fetched: {page}")
+        print(f"📊 Final result: {len(customers_data)} unique customers found")
         
         # Insert customers into database cache
         print("💾 Inserting customers into database cache...")
@@ -86,29 +151,88 @@ def preload_crm_customers():
         
         for customer in customers_data:
             try:
-                # Extract customer data
+                # Extract customer data using actual LACRM format, handling different data types
                 contact_id = str(customer.get('ContactId', ''))
-                name = customer.get('Name', '').strip()
-                email = customer.get('Email', '').strip()
-                company_name = customer.get('CompanyName', '').strip()
-                phone = customer.get('Phone', '').strip()
-                address = customer.get('Address', '').strip()
+                name = str(customer.get('CompanyName', '') or 'Unknown Contact')
+                
+                # Extract email (LACRM format: list of dicts with 'Text' field)
+                email_raw = customer.get('Email', '')
+                if isinstance(email_raw, list) and len(email_raw) > 0:
+                    # Extract Text field from first email entry, handle both formats
+                    first_email = email_raw[0]
+                    if isinstance(first_email, dict):
+                        email_text = first_email.get('Text', '')
+                        # Remove "(Work)" suffix if present
+                        email = email_text.split(' (')[0] if email_text else ''
+                    else:
+                        email = str(first_email)
+                elif isinstance(email_raw, dict):
+                    email = str(email_raw.get('Text', '') or email_raw.get('Value', '') or '')
+                else:
+                    email = str(email_raw or '')
+                
+                # Company name
+                company_name = str(customer.get('CompanyName', '') or '')
+                
+                # Extract phone (LACRM format: list of dicts with 'Text' field)
+                phone_raw = customer.get('Phone', '')
+                if isinstance(phone_raw, list) and len(phone_raw) > 0:
+                    # Extract Text field from first phone entry, handle both formats
+                    first_phone = phone_raw[0]
+                    if isinstance(first_phone, dict):
+                        phone_text = first_phone.get('Text', '')
+                        # Remove "(Work)" suffix if present
+                        phone = phone_text.split(' (')[0] if phone_text else ''
+                    else:
+                        phone = str(first_phone)
+                elif isinstance(phone_raw, dict):
+                    phone = str(phone_raw.get('Text', '') or phone_raw.get('Value', '') or '')
+                else:
+                    phone = str(phone_raw or '')
+                
+                # Extract address (LACRM format: list of dicts with structured address)
+                address_raw = customer.get('Address', '')
+                if isinstance(address_raw, list) and len(address_raw) > 0:
+                    # Extract address from first address entry
+                    first_address = address_raw[0]
+                    if isinstance(first_address, dict):
+                        # LACRM address structure: Street, City, State, Zip
+                        street = first_address.get('Street', '')
+                        city = first_address.get('City', '')
+                        state = first_address.get('State', '')
+                        zip_code = first_address.get('Zip', '')
+                        address_parts = [p for p in [street, city, state, zip_code] if p]
+                        address = ', '.join(address_parts)
+                    else:
+                        address = str(first_address)
+                elif isinstance(address_raw, dict):
+                    address = str(address_raw.get('Street', '') or address_raw.get('Text', '') or address_raw.get('Value', '') or '')
+                else:
+                    address = str(address_raw or '')
                 
                 # Skip if no essential data
                 if not contact_id or not name:
                     skipped_count += 1
                     continue
                 
-                # Combine additional fields into notes
+                # Combine additional fields into notes using actual LACRM field names
                 notes_parts = []
-                if customer.get('Notes'):
-                    notes_parts.append(f"Notes: {customer['Notes']}")
+                if customer.get('BackgroundInfo'):
+                    notes_parts.append(f"Background: {customer['BackgroundInfo']}")
                 if customer.get('Birthday'):
                     notes_parts.append(f"Birthday: {customer['Birthday']}")
-                if customer.get('DateCreated'):
-                    notes_parts.append(f"Created: {customer['DateCreated']}")
-                if customer.get('DateModified'):
-                    notes_parts.append(f"Modified: {customer['DateModified']}")
+                if customer.get('Industry'):
+                    notes_parts.append(f"Industry: {customer['Industry']}")
+                if customer.get('NumEmployees'):
+                    notes_parts.append(f"Employees: {customer['NumEmployees']}")
+                if customer.get('Website'):
+                    notes_parts.append(f"Website: {customer['Website']}")
+                if customer.get('CreationDate'):
+                    notes_parts.append(f"Created: {customer['CreationDate']}")
+                if customer.get('EditedDate'):
+                    notes_parts.append(f"Modified: {customer['EditedDate']}")
+                if customer.get('AssignedTo'):
+                    notes_parts.append(f"Assigned: {customer['AssignedTo']}")
                 
                 notes = " | ".join(notes_parts)
                 
@@ -147,6 +271,9 @@ def preload_crm_customers():
                 
             except Exception as e:
                 print(f"⚠️ Error processing customer {customer.get('ContactId', 'unknown')}: {e}")
+                print(f"   Customer data types: Email={type(customer.get('Email'))}, Phone={type(customer.get('Phone'))}, Address={type(customer.get('Address'))}")
+                if customer.get('Email'):
+                    print(f"   Email value: {customer['Email']}")
                 skipped_count += 1
                 continue
         

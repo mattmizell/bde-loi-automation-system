@@ -35,13 +35,13 @@ AUTHORIZED_USERS = {
     "matt.mizell@gmail.com": {
         "name": "Matt Mizell",
         "role": "admin",
-        "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # 'password123'
+        "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",  # 'password123'
         "permissions": ["create_loi", "view_all", "admin_access", "crm_access"]
     },
     "adam@betterdayenergy.com": {
         "name": "Adam Castelli", 
         "role": "manager",
-        "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # 'password123'
+        "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",  # 'password123'
         "permissions": ["create_loi", "view_all", "crm_access"]
     }
 }
@@ -2562,52 +2562,101 @@ class CRMBidirectionalSync:
             logger.error(f"Error updating local CRM ID: {e}")
     
     def _check_and_sync_deltas(self):
-        """Check for CRM changes and sync deltas"""
+        """Check for CRM changes and sync deltas using proper LACRM API with pagination"""
         try:
             # Get last sync timestamp from database
             last_sync = self._get_last_sync_time()
             
-            # Get contacts modified since last sync
-            params = {
-                'APIToken': self.api_key,
-                'UserCode': self.user_code,
-                'Function': 'GetContactList'
-            }
+            logger.info(f"🔄 Starting CRM delta sync (last sync: {last_sync})")
             
-            # If we have a last sync time, add date filter
-            if last_sync:
-                # LACRM API might support date filtering - check documentation
-                params['ModifiedSince'] = last_sync.strftime('%Y-%m-%d %H:%M:%S')
+            # Use SearchContacts with pagination to get all contacts
+            # LACRM API doesn't support ModifiedSince, so we get all and filter locally
+            all_contacts = []
+            page = 1
+            max_results_per_page = 10000  # LACRM maximum
             
-            import requests
-            response = requests.get(self.crm_url, params=params, timeout=30)
-            
-            if response.status_code == 200:
-                result_data = json.loads(response.text)
+            while True:
+                params = {
+                    'APIToken': self.api_key,
+                    'UserCode': self.user_code,
+                    'Function': 'SearchContacts',
+                    'SearchTerm': '',  # Empty to get all contacts
+                    'MaxNumberOfResults': max_results_per_page,
+                    'Page': page
+                }
                 
-                if result_data.get('Result'):
-                    contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
-                    
-                    # Filter only modified contacts if we have a last sync time
-                    new_or_modified = []
-                    for contact in contacts_list:
-                        if contact and isinstance(contact, dict):
-                            # Check if contact is new or modified
-                            contact_modified = self._parse_contact_date(contact.get('DateModified'))
-                            if not last_sync or (contact_modified and contact_modified > last_sync):
-                                new_or_modified.append(contact)
-                    
-                    if new_or_modified:
-                        self._update_cache_with_deltas(new_or_modified)
-                        logger.info(f"🔄 CRM delta sync: Updated {len(new_or_modified)} contacts")
-                    else:
-                        logger.info("✅ CRM delta sync: No changes detected")
-                    
-                    # Update last sync timestamp
-                    self._update_last_sync_time()
+                import requests
+                response = requests.get(self.crm_url, params=params, timeout=30)
+                
+                if response.status_code != 200:
+                    logger.error(f"CRM API error: {response.status_code} - {response.text[:200]}")
+                    break
+                
+                # LACRM returns JSON with text/html content-type, parse manually
+                try:
+                    result_data = json.loads(response.text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"JSON parsing failed: {e}")
+                    break
+                
+                if not result_data.get('Success'):
+                    logger.error(f"CRM API failed: {result_data.get('Error', 'Unknown error')}")
+                    break
+                
+                contacts_data = result_data.get('Result', [])
+                
+                if not isinstance(contacts_data, list):
+                    contacts_data = [contacts_data] if contacts_data else []
+                
+                # If no results, we've reached the end
+                if len(contacts_data) == 0:
+                    break
+                
+                all_contacts.extend(contacts_data)
+                
+                # LACRM appears to limit to 25 results per page regardless of MaxNumberOfResults
+                # Continue until we get 0 results (indicating end of data)
+                # Don't stop just because we got fewer than max_results_per_page
+                
+                page += 1
+                
+                # Safety check
+                if page > 100:
+                    logger.warning("CRM sync safety limit reached - stopping pagination")
+                    break
+            
+            logger.info(f"🔄 Retrieved {len(all_contacts)} total contacts from CRM")
+            
+            # Log warning if we're getting unexpectedly few contacts
+            if len(all_contacts) < 500:
+                logger.warning(f"⚠️ Retrieved {len(all_contacts)} contacts - may indicate incomplete sync:")
+                logger.warning("   - Check if pagination completed successfully")
+                logger.warning("   - Verify API rate limits weren't hit")
+                logger.warning("   - Consider running manual full sync")
+            
+            # Filter only modified contacts if we have a last sync time
+            new_or_modified = []
+            for contact in all_contacts:
+                if contact and isinstance(contact, dict):
+                    # Check if contact is new or modified (using actual LACRM field name)
+                    contact_modified = self._parse_contact_date(contact.get('EditedDate'))
+                    if not last_sync or (contact_modified and contact_modified > last_sync):
+                        new_or_modified.append(contact)
+            
+            if new_or_modified:
+                self._update_cache_with_deltas(new_or_modified)
+                logger.info(f"✅ CRM delta sync: Updated {len(new_or_modified)} contacts")
+            else:
+                logger.info("✅ CRM delta sync: No changes detected")
+            
+            # Update last sync timestamp
+            self._update_last_sync_time(len(new_or_modified))
+            
+            # Log summary for monitoring
+            logger.info(f"📊 CRM Sync Summary: {len(all_contacts)} total, {len(new_or_modified)} updated")
                 
         except Exception as e:
-            logger.error(f"Delta sync check failed: {e}")
+            logger.error(f"❌ Delta sync check failed: {e}")
     
     def _get_last_sync_time(self):
         """Get the last sync timestamp from database"""
@@ -2641,7 +2690,7 @@ class CRMBidirectionalSync:
             logger.error(f"Error getting last sync time: {e}")
             return None
     
-    def _update_last_sync_time(self):
+    def _update_last_sync_time(self, records_updated=0):
         """Update the last sync timestamp"""
         try:
             import psycopg2
@@ -2651,7 +2700,7 @@ class CRMBidirectionalSync:
                 cursor.execute("""
                     INSERT INTO crm_sync_log (last_sync_time, sync_type, records_updated)
                     VALUES (%s, %s, %s)
-                """, (datetime.now(), 'delta', 0))
+                """, (datetime.now(), 'delta', records_updated))
                 
                 conn.commit()
             conn.close()
@@ -2675,44 +2724,219 @@ class CRMBidirectionalSync:
             return None
     
     def _update_cache_with_deltas(self, contacts):
-        """Update the cache with delta contacts"""
+        """Update the cache with delta contacts using proper LACRM data format"""
         try:
             import psycopg2
             conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
+                updated_count = 0
                 for contact in contacts:
-                    name = contact.get('Name', '').strip()
-                    if not name:
-                        first = contact.get('FirstName', '').strip()
-                        last = contact.get('LastName', '').strip()
-                        name = f"{first} {last}".strip() or 'Unknown'
-                    
-                    # Use UPSERT to handle both new and modified contacts
-                    cursor.execute("""
-                        INSERT INTO crm_contacts_cache 
-                        (contact_id, name, email, company, phone, last_updated)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (contact_id) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            email = EXCLUDED.email,
-                            company = EXCLUDED.company,
-                            phone = EXCLUDED.phone,
-                            last_updated = EXCLUDED.last_updated
-                    """, (
-                        str(contact.get('ContactId', '')),
-                        name,
-                        str(contact.get('Email', '')),
-                        str(contact.get('CompanyName', '') or contact.get('Company', '')),
-                        str(contact.get('Phone', '') or contact.get('PhoneNumber', '')),
-                        datetime.now().isoformat()
-                    ))
+                    try:
+                        # Extract contact ID
+                        contact_id = str(contact.get('ContactId', ''))
+                        if not contact_id:
+                            continue
+                        
+                        # Extract name from actual LACRM format
+                        name = str(contact.get('CompanyName', '') or 'Unknown Contact')
+                        
+                        # Extract email (LACRM format: list of dicts with 'Text' field)
+                        email_raw = contact.get('Email', '')
+                        if isinstance(email_raw, list) and len(email_raw) > 0:
+                            # Extract Text field from first email entry, handle both formats
+                            first_email = email_raw[0]
+                            if isinstance(first_email, dict):
+                                email_text = first_email.get('Text', '')
+                                # Remove "(Work)" suffix if present
+                                email = email_text.split(' (')[0] if email_text else ''
+                            else:
+                                email = str(first_email)
+                        elif isinstance(email_raw, dict):
+                            email = str(email_raw.get('Text', '') or email_raw.get('Value', '') or '')
+                        else:
+                            email = str(email_raw or '')
+                        
+                        # Company name
+                        company_name = str(contact.get('CompanyName', '') or '')
+                        
+                        # Extract phone (LACRM format: list of dicts with 'Text' field)
+                        phone_raw = contact.get('Phone', '')
+                        if isinstance(phone_raw, list) and len(phone_raw) > 0:
+                            # Extract Text field from first phone entry, handle both formats
+                            first_phone = phone_raw[0]
+                            if isinstance(first_phone, dict):
+                                phone_text = first_phone.get('Text', '')
+                                # Remove "(Work)" suffix if present
+                                phone = phone_text.split(' (')[0] if phone_text else ''
+                            else:
+                                phone = str(first_phone)
+                        elif isinstance(phone_raw, dict):
+                            phone = str(phone_raw.get('Text', '') or phone_raw.get('Value', '') or '')
+                        else:
+                            phone = str(phone_raw or '')
+                        
+                        # Extract address (LACRM format: list of dicts with structured address)
+                        address_raw = contact.get('Address', '')
+                        if isinstance(address_raw, list) and len(address_raw) > 0:
+                            # Extract address from first address entry
+                            first_address = address_raw[0]
+                            if isinstance(first_address, dict):
+                                # LACRM address structure: Street, City, State, Zip
+                                street = first_address.get('Street', '')
+                                city = first_address.get('City', '')
+                                state = first_address.get('State', '')
+                                zip_code = first_address.get('Zip', '')
+                                address_parts = [p for p in [street, city, state, zip_code] if p]
+                                address = ', '.join(address_parts)
+                            else:
+                                address = str(first_address)
+                        elif isinstance(address_raw, dict):
+                            address = str(address_raw.get('Street', '') or address_raw.get('Text', '') or address_raw.get('Value', '') or '')
+                        else:
+                            address = str(address_raw or '')
+                        
+                        # Combine additional fields into notes using actual LACRM field names
+                        notes_parts = []
+                        if contact.get('BackgroundInfo'):
+                            notes_parts.append(f"Background: {str(contact['BackgroundInfo'])}")
+                        if contact.get('Birthday'):
+                            notes_parts.append(f"Birthday: {str(contact['Birthday'])}")
+                        if contact.get('Industry'):
+                            notes_parts.append(f"Industry: {str(contact['Industry'])}")
+                        if contact.get('NumEmployees'):
+                            notes_parts.append(f"Employees: {str(contact['NumEmployees'])}")
+                        if contact.get('Website'):
+                            notes_parts.append(f"Website: {str(contact['Website'])}")
+                        if contact.get('CreationDate'):
+                            notes_parts.append(f"Created: {str(contact['CreationDate'])}")
+                        if contact.get('EditedDate'):
+                            notes_parts.append(f"Modified: {str(contact['EditedDate'])}")
+                        if contact.get('AssignedTo'):
+                            notes_parts.append(f"Assigned: {str(contact['AssignedTo'])}")
+                        
+                        notes = " | ".join(notes_parts)
+                        
+                        # Use UPSERT to handle both new and modified contacts
+                        cursor.execute("""
+                            INSERT INTO crm_contacts_cache 
+                            (contact_id, name, email, company_name, phone, address, notes, sync_status, last_sync)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (contact_id) DO UPDATE SET
+                                name = EXCLUDED.name,
+                                email = EXCLUDED.email,
+                                company_name = EXCLUDED.company_name,
+                                phone = EXCLUDED.phone,
+                                address = EXCLUDED.address,
+                                notes = EXCLUDED.notes,
+                                sync_status = EXCLUDED.sync_status,
+                                last_sync = EXCLUDED.last_sync,
+                                updated_at = CURRENT_TIMESTAMP
+                        """, (
+                            contact_id,
+                            name,
+                            email,
+                            company_name,
+                            phone,
+                            address,
+                            notes,
+                            'synced',
+                            datetime.now()
+                        ))
+                        
+                        updated_count += 1
+                        
+                    except Exception as contact_error:
+                        logger.error(f"Error processing contact {contact.get('ContactId', 'unknown')}: {contact_error}")
+                        continue
                 
                 conn.commit()
+                logger.info(f"✅ Cache updated: {updated_count} contacts processed")
+                
             conn.close()
             
         except Exception as e:
-            logger.error(f"Error updating cache with deltas: {e}")
+            logger.error(f"❌ Error updating cache with deltas: {e}")
+    
+    def diagnose_crm_access(self):
+        """Diagnose CRM API access to understand why we're only getting ~25 contacts"""
+        try:
+            logger.info("🔬 Starting CRM API diagnostics...")
+            
+            # Test 1: Try different search approaches
+            test_approaches = [
+                {"name": "Empty search", "params": {"SearchTerm": ""}},
+                {"name": "Wildcard search", "params": {"SearchTerm": "*"}},
+                {"name": "Common letter search", "params": {"SearchTerm": "a"}},
+                {"name": "Company search", "params": {"SearchTerm": "inc"}},
+                {"name": "Max results 500", "params": {"SearchTerm": "", "MaxNumberOfResults": 500}},
+                {"name": "Max results 1000", "params": {"SearchTerm": "", "MaxNumberOfResults": 1000}},
+            ]
+            
+            import requests
+            
+            for approach in test_approaches:
+                try:
+                    params = {
+                        'APIToken': self.api_key,
+                        'UserCode': self.user_code,
+                        'Function': 'SearchContacts',
+                        **approach['params']
+                    }
+                    
+                    response = requests.get(self.crm_url, params=params, timeout=30)
+                    
+                    if response.status_code == 200:
+                        result_data = json.loads(response.text)
+                        if result_data.get('Success'):
+                            contacts = result_data.get('Result', [])
+                            if not isinstance(contacts, list):
+                                contacts = [contacts] if contacts else []
+                            
+                            logger.info(f"🔬 {approach['name']}: {len(contacts)} contacts")
+                            
+                            # Show sample contact data structure
+                            if contacts and len(contacts) > 0:
+                                sample = contacts[0]
+                                logger.info(f"   Sample fields: {list(sample.keys())}")
+                        else:
+                            logger.error(f"🔬 {approach['name']}: API Error - {result_data.get('Error')}")
+                    else:
+                        logger.error(f"🔬 {approach['name']}: HTTP {response.status_code}")
+                        
+                except Exception as test_error:
+                    logger.error(f"🔬 {approach['name']}: Exception - {test_error}")
+            
+            # Test 2: Check if there are other API functions available
+            logger.info("🔬 Testing alternative API functions...")
+            
+            alt_functions = ['GetContacts', 'GetContactList', 'GetAllContacts']
+            for func in alt_functions:
+                try:
+                    params = {
+                        'APIToken': self.api_key,
+                        'UserCode': self.user_code,
+                        'Function': func
+                    }
+                    
+                    response = requests.get(self.crm_url, params=params, timeout=30)
+                    
+                    if response.status_code == 200:
+                        result_data = json.loads(response.text)
+                        if result_data.get('Success'):
+                            logger.info(f"🔬 {func}: Available and working")
+                        else:
+                            logger.warning(f"🔬 {func}: {result_data.get('Error')}")
+                    else:
+                        logger.warning(f"🔬 {func}: HTTP {response.status_code}")
+                        
+                except Exception as func_error:
+                    logger.error(f"🔬 {func}: Exception - {func_error}")
+            
+            logger.info("🔬 CRM API diagnostics complete")
+            
+        except Exception as e:
+            logger.error(f"❌ CRM diagnostics failed: {e}")
 
 # Global delta sync instance
 crm_bidirectional_sync = CRMBidirectionalSync()
