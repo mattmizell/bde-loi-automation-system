@@ -85,6 +85,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             self.handle_create_crm_contact(post_data)
+        elif self.path == "/api/refresh-crm-cache":
+            self.handle_refresh_crm_cache()
+        elif self.path == "/api/get-crm-contacts":
+            self.handle_get_crm_contacts()
         else:
             self.send_error(404)
     
@@ -876,17 +880,26 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         <p>1️⃣ Search CRM for existing customer → 2️⃣ Add if not found → 3️⃣ Enter deal terms → 4️⃣ Generate LOI → 5️⃣ Route for signature</p>
                     </div>
                     
-                    <!-- STEP 1: CRM Customer Search -->
+                    <!-- STEP 1: CRM Customer Selection -->
                     <div class="step-section active" id="step-1">
-                        <h2>🔍 Step 1: Search CRM for Customer</h2>
+                        <h2>🔍 Step 1: Select CRM Customer</h2>
                         <div class="form-group">
-                            <label for="search-query">Search by Name, Email, or Company:</label>
-                            <input type="text" id="search-query" placeholder="Enter customer name, email, or company name" required>
+                            <label for="customer-dropdown">Select Existing Customer:</label>
+                            <select id="customer-dropdown" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 16px;">
+                                <option value="">Loading customers...</option>
+                            </select>
                         </div>
-                        <button type="button" class="btn" onclick="searchCRM()">🔍 Search CRM</button>
+                        <div class="form-group">
+                            <label for="customer-search">Or Search:</label>
+                            <input type="text" id="customer-search" placeholder="Type to filter customers..." onkeyup="filterCustomers()">
+                        </div>
+                        <button type="button" class="btn" onclick="selectFromDropdown()">✅ Select Customer</button>
                         <button type="button" class="btn btn-warning" onclick="showNewCustomerForm()">➕ Add New Customer</button>
+                        <button type="button" class="btn" onclick="refreshCRMCache()" style="background: #17a2b8;">🔄 Refresh CRM Cache</button>
                         
-                        <div id="search-results" class="hidden"></div>
+                        <div id="selected-customer-info" class="hidden" style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                            <!-- Selected customer info will appear here -->
+                        </div>
                     </div>
                     
                     <!-- STEP 2: Customer Information (if not found) -->
@@ -993,6 +1006,86 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             <script>
                 let currentCustomer = null;
                 let currentDeal = null;
+                let allCustomers = [];
+                
+                // Load CRM contacts on page load
+                window.addEventListener('load', function() {
+                    loadCRMContacts();
+                });
+                
+                async function loadCRMContacts() {
+                    try {
+                        const response = await fetch('/api/get-crm-contacts');
+                        if (response.ok) {
+                            const result = await response.json();
+                            allCustomers = result.contacts || [];
+                            populateCustomerDropdown(allCustomers);
+                        } else {
+                            // If no cache exists, refresh from CRM
+                            await refreshCRMCache();
+                        }
+                    } catch (error) {
+                        console.error('Error loading CRM contacts:', error);
+                        document.getElementById('customer-dropdown').innerHTML = '<option value="">Error loading customers</option>';
+                    }
+                }
+                
+                function populateCustomerDropdown(customers) {
+                    const dropdown = document.getElementById('customer-dropdown');
+                    dropdown.innerHTML = '<option value="">Select a customer...</option>';
+                    
+                    customers.forEach(customer => {
+                        const option = document.createElement('option');
+                        option.value = customer.id;
+                        option.textContent = `${customer.name} - ${customer.company || 'No company'} (${customer.email})`;
+                        option.dataset.customer = JSON.stringify(customer);
+                        dropdown.appendChild(option);
+                    });
+                }
+                
+                function filterCustomers() {
+                    const searchTerm = document.getElementById('customer-search').value.toLowerCase();
+                    const filteredCustomers = allCustomers.filter(customer => 
+                        customer.name.toLowerCase().includes(searchTerm) ||
+                        customer.email.toLowerCase().includes(searchTerm) ||
+                        (customer.company && customer.company.toLowerCase().includes(searchTerm))
+                    );
+                    populateCustomerDropdown(filteredCustomers);
+                }
+                
+                function selectFromDropdown() {
+                    const dropdown = document.getElementById('customer-dropdown');
+                    const selectedOption = dropdown.options[dropdown.selectedIndex];
+                    
+                    if (selectedOption.value) {
+                        const customer = JSON.parse(selectedOption.dataset.customer);
+                        selectCustomer(customer.id, customer.name, customer.email, customer.company);
+                    } else {
+                        alert('Please select a customer from the dropdown');
+                    }
+                }
+                
+                async function refreshCRMCache() {
+                    const refreshBtn = event.target;
+                    refreshBtn.disabled = true;
+                    refreshBtn.innerHTML = '⏳ Refreshing...';
+                    
+                    try {
+                        const response = await fetch('/api/refresh-crm-cache');
+                        if (response.ok) {
+                            const result = await response.json();
+                            alert(`✅ CRM cache refreshed! Loaded ${result.total_contacts} contacts.`);
+                            await loadCRMContacts();
+                        } else {
+                            throw new Error('Failed to refresh CRM cache');
+                        }
+                    } catch (error) {
+                        alert('❌ Error refreshing CRM cache: ' + error.message);
+                    } finally {
+                        refreshBtn.disabled = false;
+                        refreshBtn.innerHTML = '🔄 Refresh CRM Cache';
+                    }
+                }
                 
                 async function searchCRM() {
                     const query = document.getElementById('search-query').value.trim();
@@ -1346,7 +1439,17 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
             logger.info(f"CRM search request: {params}")
             logger.info(f"CRM response status: {response.status_code}")
-            logger.info(f"CRM response text: {response.text[:500]}...")
+            logger.info(f"CRM response text: {response.text[:1000]}...")
+            
+            # Debug: Log the actual response structure
+            if response.status_code == 200:
+                try:
+                    debug_data = json.loads(response.text)
+                    logger.info(f"CRM response structure: {type(debug_data.get('Result'))}")
+                    if debug_data.get('Result') and isinstance(debug_data['Result'], list) and len(debug_data['Result']) > 0:
+                        logger.info(f"First contact example: {debug_data['Result'][0]}")
+                except:
+                    pass
             
             if response.status_code == 200:
                 try:
@@ -1354,15 +1457,23 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                     result_data = json.loads(response.text)
                     
                     customers = []
-                    if result_data.get('Result') and isinstance(result_data['Result'], list):
-                        for contact in result_data['Result']:
-                            customers.append({
-                                'id': contact.get('ContactId'),
-                                'name': contact.get('Name', 'Unknown'),
-                                'email': contact.get('Email', ''),
-                                'company': contact.get('CompanyName', ''),
-                                'phone': contact.get('Phone', '')
-                            })
+                    if result_data.get('Result'):
+                        # Handle both single contact and list of contacts
+                        contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
+                        
+                        for contact in contacts_list:
+                            if contact and isinstance(contact, dict):
+                                # Extract proper values, handling different field names
+                                name = contact.get('Name') or contact.get('FirstName', '') + ' ' + contact.get('LastName', '')
+                                name = name.strip() or 'Unknown'
+                                
+                                customers.append({
+                                    'id': str(contact.get('ContactId', '')),
+                                    'name': name,
+                                    'email': str(contact.get('Email', '')),
+                                    'company': str(contact.get('CompanyName', '') or contact.get('Company', '')),
+                                    'phone': str(contact.get('Phone', '') or contact.get('PhoneNumber', ''))
+                                })
                     
                     response_data = {
                         "success": True,
@@ -1472,6 +1583,180 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
         except Exception as e:
             logger.error(f"CRM contact creation error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_refresh_crm_cache(self):
+        """Refresh the local CRM contact cache from LACRM"""
+        try:
+            logger.info("Starting CRM cache refresh...")
+            
+            # Get all contacts from LACRM
+            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+            api_parts = api_key.split('-', 1)
+            user_code = api_parts[0]
+            
+            # Use GetContactList to get all contacts
+            params = {
+                'APIToken': api_key,
+                'UserCode': user_code,
+                'Function': 'GetContactList'
+            }
+            
+            crm_url = "https://api.lessannoyingcrm.com"
+            response = requests.get(crm_url, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                result_data = json.loads(response.text)
+                contacts = []
+                
+                if result_data.get('Result'):
+                    contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
+                    
+                    for contact in contacts_list:
+                        if contact and isinstance(contact, dict):
+                            name = contact.get('Name', '').strip()
+                            if not name:
+                                first = contact.get('FirstName', '').strip()
+                                last = contact.get('LastName', '').strip()
+                                name = f"{first} {last}".strip() or 'Unknown'
+                            
+                            contact_data = {
+                                'id': str(contact.get('ContactId', '')),
+                                'name': name,
+                                'email': str(contact.get('Email', '')),
+                                'company': str(contact.get('CompanyName', '') or contact.get('Company', '')),
+                                'phone': str(contact.get('Phone', '') or contact.get('PhoneNumber', '')),
+                                'last_updated': datetime.now().isoformat()
+                            }
+                            contacts.append(contact_data)
+                
+                # Store in PostgreSQL cache
+                try:
+                    # Simple table creation and storage (using existing signature_storage connection)
+                    import psycopg2
+                    conn = psycopg2.connect(
+                        host=signature_storage.host,
+                        database=signature_storage.database,
+                        user=signature_storage.user,
+                        password=signature_storage.password,
+                        port=signature_storage.port
+                    )
+                    
+                    with conn.cursor() as cursor:
+                        # Create contacts cache table if not exists
+                        cursor.execute("""
+                            CREATE TABLE IF NOT EXISTS crm_contacts_cache (
+                                contact_id VARCHAR(50) PRIMARY KEY,
+                                name VARCHAR(255),
+                                email VARCHAR(255),
+                                company VARCHAR(255),
+                                phone VARCHAR(50),
+                                last_updated TIMESTAMP,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        """)
+                        
+                        # Clear existing cache
+                        cursor.execute("DELETE FROM crm_contacts_cache")
+                        
+                        # Insert all contacts
+                        for contact in contacts:
+                            cursor.execute("""
+                                INSERT INTO crm_contacts_cache 
+                                (contact_id, name, email, company, phone, last_updated)
+                                VALUES (%s, %s, %s, %s, %s, %s)
+                            """, (
+                                contact['id'],
+                                contact['name'],
+                                contact['email'],
+                                contact['company'],
+                                contact['phone'],
+                                contact['last_updated']
+                            ))
+                        
+                        conn.commit()
+                    
+                    conn.close()
+                    
+                    response_data = {
+                        "success": True,
+                        "message": f"CRM cache refreshed with {len(contacts)} contacts",
+                        "total_contacts": len(contacts)
+                    }
+                    
+                    logger.info(f"CRM cache refreshed: {len(contacts)} contacts")
+                    
+                except Exception as db_error:
+                    logger.error(f"Database error during cache refresh: {db_error}")
+                    response_data = {
+                        "success": False,
+                        "error": f"Database error: {str(db_error)}"
+                    }
+            else:
+                raise Exception(f"CRM API error: {response.status_code} - {response.text}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"CRM cache refresh error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_get_crm_contacts(self):
+        """Get all cached CRM contacts for the dropdown"""
+        try:
+            import psycopg2
+            conn = psycopg2.connect(
+                host=signature_storage.host,
+                database=signature_storage.database,
+                user=signature_storage.user,
+                password=signature_storage.password,
+                port=signature_storage.port
+            )
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT contact_id, name, email, company, phone, last_updated
+                    FROM crm_contacts_cache 
+                    ORDER BY name
+                """)
+                
+                contacts = []
+                for row in cursor.fetchall():
+                    contacts.append({
+                        'id': row[0],
+                        'name': row[1],
+                        'email': row[2] or '',
+                        'company': row[3] or '',
+                        'phone': row[4] or '',
+                        'last_updated': row[5].isoformat() if row[5] else None
+                    })
+            
+            conn.close()
+            
+            response_data = {
+                "success": True,
+                "contacts": contacts,
+                "total": len(contacts)
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"Get CRM contacts error: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
