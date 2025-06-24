@@ -5,8 +5,8 @@ services:
   - type: web
     name: loi-automation-api
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements_production.txt
+    startCommand: python integrated_pdf_signature_server.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -27,7 +27,7 @@ services:
   - type: web
     name: loi-signature-service
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements_production.txt
     startCommand: python signature_server_production.py
     envVars:
       - key: DATABASE_URL
