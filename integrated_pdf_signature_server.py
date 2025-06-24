@@ -12,6 +12,8 @@ from urllib.parse import urlparse, parse_qs
 import base64
 import logging
 from pathlib import Path
+import threading
+import time
 from signature_storage import TamperEvidentSignatureStorage
 from html_to_pdf_generator import HTMLLOIPDFGenerator
 
@@ -89,6 +91,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.handle_refresh_crm_cache()
         elif self.path == "/api/get-crm-contacts":
             self.handle_get_crm_contacts()
+        elif self.path == "/api/sync-status":
+            self.handle_sync_status()
         else:
             self.send_error(404)
     
@@ -1762,6 +1766,277 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             self.end_headers()
             error_response = {"success": False, "error": str(e)}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_sync_status(self):
+        """Get the sync status and recent sync history"""
+        try:
+            import psycopg2
+            conn = psycopg2.connect(
+                host=signature_storage.host,
+                database=signature_storage.database,
+                user=signature_storage.user,
+                password=signature_storage.password,
+                port=signature_storage.port
+            )
+            
+            with conn.cursor() as cursor:
+                # Get recent sync history
+                cursor.execute("""
+                    SELECT last_sync_time, sync_type, records_updated, created_at
+                    FROM crm_sync_log 
+                    ORDER BY created_at DESC LIMIT 10
+                """)
+                
+                sync_history = []
+                for row in cursor.fetchall():
+                    sync_history.append({
+                        'last_sync_time': row[0].isoformat() if row[0] else None,
+                        'sync_type': row[1],
+                        'records_updated': row[2],
+                        'created_at': row[3].isoformat() if row[3] else None
+                    })
+                
+                # Get total contacts in cache
+                cursor.execute("SELECT COUNT(*) FROM crm_contacts_cache")
+                total_contacts = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            response_data = {
+                "success": True,
+                "background_sync_running": crm_delta_sync.running,
+                "sync_interval_minutes": crm_delta_sync.sync_interval // 60,
+                "total_cached_contacts": total_contacts,
+                "recent_syncs": sync_history
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"Sync status error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+
+class CRMDeltaSync:
+    """Background service to sync CRM deltas automatically"""
+    
+    def __init__(self):
+        self.api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+        self.api_parts = self.api_key.split('-', 1)
+        self.user_code = self.api_parts[0]
+        self.crm_url = "https://api.lessannoyingcrm.com"
+        self.sync_interval = 300  # 5 minutes
+        self.running = False
+        self.thread = None
+        
+    def start_background_sync(self):
+        """Start the background delta sync process"""
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self._sync_loop, daemon=True)
+            self.thread.start()
+            logger.info("🔄 CRM delta sync started - checking every 5 minutes")
+    
+    def stop_background_sync(self):
+        """Stop the background sync"""
+        self.running = False
+        if self.thread:
+            self.thread.join()
+        logger.info("⏹️ CRM delta sync stopped")
+    
+    def _sync_loop(self):
+        """Main sync loop that runs in background"""
+        while self.running:
+            try:
+                self._check_and_sync_deltas()
+            except Exception as e:
+                logger.error(f"CRM delta sync error: {e}")
+            
+            # Wait for next sync interval
+            for _ in range(self.sync_interval):
+                if not self.running:
+                    break
+                time.sleep(1)
+    
+    def _check_and_sync_deltas(self):
+        """Check for CRM changes and sync deltas"""
+        try:
+            # Get last sync timestamp from database
+            last_sync = self._get_last_sync_time()
+            
+            # Get contacts modified since last sync
+            params = {
+                'APIToken': self.api_key,
+                'UserCode': self.user_code,
+                'Function': 'GetContactList'
+            }
+            
+            # If we have a last sync time, add date filter
+            if last_sync:
+                # LACRM API might support date filtering - check documentation
+                params['ModifiedSince'] = last_sync.strftime('%Y-%m-%d %H:%M:%S')
+            
+            import requests
+            response = requests.get(self.crm_url, params=params, timeout=30)
+            
+            if response.status_code == 200:
+                result_data = json.loads(response.text)
+                
+                if result_data.get('Result'):
+                    contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
+                    
+                    # Filter only modified contacts if we have a last sync time
+                    new_or_modified = []
+                    for contact in contacts_list:
+                        if contact and isinstance(contact, dict):
+                            # Check if contact is new or modified
+                            contact_modified = self._parse_contact_date(contact.get('DateModified'))
+                            if not last_sync or (contact_modified and contact_modified > last_sync):
+                                new_or_modified.append(contact)
+                    
+                    if new_or_modified:
+                        self._update_cache_with_deltas(new_or_modified)
+                        logger.info(f"🔄 CRM delta sync: Updated {len(new_or_modified)} contacts")
+                    else:
+                        logger.info("✅ CRM delta sync: No changes detected")
+                    
+                    # Update last sync timestamp
+                    self._update_last_sync_time()
+                
+        except Exception as e:
+            logger.error(f"Delta sync check failed: {e}")
+    
+    def _get_last_sync_time(self):
+        """Get the last sync timestamp from database"""
+        try:
+            import psycopg2
+            conn = psycopg2.connect(
+                host=signature_storage.host,
+                database=signature_storage.database,
+                user=signature_storage.user,
+                password=signature_storage.password,
+                port=signature_storage.port
+            )
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS crm_sync_log (
+                        id SERIAL PRIMARY KEY,
+                        last_sync_time TIMESTAMP,
+                        sync_type VARCHAR(50),
+                        records_updated INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                cursor.execute("""
+                    SELECT last_sync_time FROM crm_sync_log 
+                    WHERE sync_type = 'delta' 
+                    ORDER BY created_at DESC LIMIT 1
+                """)
+                
+                result = cursor.fetchone()
+                conn.close()
+                
+                return result[0] if result else None
+                
+        except Exception as e:
+            logger.error(f"Error getting last sync time: {e}")
+            return None
+    
+    def _update_last_sync_time(self):
+        """Update the last sync timestamp"""
+        try:
+            import psycopg2
+            conn = psycopg2.connect(
+                host=signature_storage.host,
+                database=signature_storage.database,
+                user=signature_storage.user,
+                password=signature_storage.password,
+                port=signature_storage.port
+            )
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO crm_sync_log (last_sync_time, sync_type, records_updated)
+                    VALUES (%s, %s, %s)
+                """, (datetime.now(), 'delta', 0))
+                
+                conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            logger.error(f"Error updating last sync time: {e}")
+    
+    def _parse_contact_date(self, date_str):
+        """Parse contact date string to datetime"""
+        if not date_str:
+            return None
+        try:
+            # Handle different date formats that LACRM might use
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%m/%d/%Y', '%m/%d/%Y %H:%M:%S']:
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+            return None
+        except:
+            return None
+    
+    def _update_cache_with_deltas(self, contacts):
+        """Update the cache with delta contacts"""
+        try:
+            import psycopg2
+            conn = psycopg2.connect(
+                host=signature_storage.host,
+                database=signature_storage.database,
+                user=signature_storage.user,
+                password=signature_storage.password,
+                port=signature_storage.port
+            )
+            
+            with conn.cursor() as cursor:
+                for contact in contacts:
+                    name = contact.get('Name', '').strip()
+                    if not name:
+                        first = contact.get('FirstName', '').strip()
+                        last = contact.get('LastName', '').strip()
+                        name = f"{first} {last}".strip() or 'Unknown'
+                    
+                    # Use UPSERT to handle both new and modified contacts
+                    cursor.execute("""
+                        INSERT INTO crm_contacts_cache 
+                        (contact_id, name, email, company, phone, last_updated)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (contact_id) DO UPDATE SET
+                            name = EXCLUDED.name,
+                            email = EXCLUDED.email,
+                            company = EXCLUDED.company,
+                            phone = EXCLUDED.phone,
+                            last_updated = EXCLUDED.last_updated
+                    """, (
+                        str(contact.get('ContactId', '')),
+                        name,
+                        str(contact.get('Email', '')),
+                        str(contact.get('CompanyName', '') or contact.get('Company', '')),
+                        str(contact.get('Phone', '') or contact.get('PhoneNumber', '')),
+                        datetime.now().isoformat()
+                    ))
+                
+                conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            logger.error(f"Error updating cache with deltas: {e}")
+
+# Global delta sync instance
+crm_delta_sync = CRMDeltaSync()
 
 def main():
     """Start the complete integrated signature server"""
@@ -1786,9 +2061,22 @@ def main():
     print("- /signed-loi/CODE - PDF-ready document")
     print("- /signature-image/CODE - Signature image")
     print("- /audit-report/CODE - Complete audit trail")
-    print("- Full CRM integration with Farley's contact")
+    print("- /admin - CRM-integrated LOI admin dashboard")
+    print("- 🔄 Background CRM delta sync every 5 minutes")
     
-    httpd.serve_forever()
+    # Start background CRM delta sync
+    try:
+        crm_delta_sync.start_background_sync()
+        print("✅ CRM delta sync service started")
+    except Exception as e:
+        print(f"⚠️ CRM delta sync failed to start: {e}")
+    
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n🛑 Shutting down server...")
+        crm_delta_sync.stop_background_sync()
+        print("✅ Server stopped")
 
 if __name__ == "__main__":
     main()
