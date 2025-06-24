@@ -1873,7 +1873,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def handle_crm_search(self, post_data):
-        """Handle CRM customer search"""
+        """Handle CRM customer search using local database cache"""
         try:
             data = json.loads(post_data.decode('utf-8'))
             query = data.get('query', '').strip()
@@ -1881,86 +1881,56 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             if not query:
                 raise ValueError("Search query is required")
             
-            # Search CRM using the same function from pdf_generator
-            import requests
+            logger.info(f"Searching CRM cache for: {query}")
             
-            # CRM search endpoint (without /v2 as shown in working example)
-            search_url = "https://api.lessannoyingcrm.com"
+            # Search local PostgreSQL cache instead of API
+            import psycopg2
+            conn = signature_storage.get_connection()
             
-            # Use the API key from pdf_generator or environment
-            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+            customers = []
+            with conn.cursor() as cursor:
+                # Case-insensitive search across name, email, and company fields
+                search_pattern = f"%{query.lower()}%"
+                cursor.execute("""
+                    SELECT contact_id, name, email, company_name, phone, address
+                    FROM crm_contacts_cache 
+                    WHERE LOWER(name) LIKE %s 
+                       OR LOWER(email) LIKE %s 
+                       OR LOWER(company_name) LIKE %s
+                    ORDER BY 
+                        CASE 
+                            WHEN LOWER(name) LIKE %s THEN 1
+                            WHEN LOWER(company_name) LIKE %s THEN 2
+                            ELSE 3
+                        END,
+                        name
+                    LIMIT 10
+                """, (search_pattern, search_pattern, search_pattern, 
+                      f"%{query.lower()}%", f"%{query.lower()}%"))
+                
+                results = cursor.fetchall()
+                
+                for row in results:
+                    contact_id, name, email, company_name, phone, address = row
+                    customers.append({
+                        'id': str(contact_id),
+                        'name': str(name or ''),
+                        'email': str(email or ''),
+                        'company': str(company_name or ''),
+                        'phone': str(phone or ''),
+                        'address': str(address or '')
+                    })
             
-            # LACRM API uses GET with URL parameters, not POST with JSON
-            # Extract UserCode (first part) and APIToken (rest) from the API key
-            api_parts = api_key.split('-', 1)
-            user_code = api_parts[0]  # "1073223"
-            api_token = api_key  # Full key
+            conn.close()
+            logger.info(f"Found {len(customers)} customers in cache for query: {query}")
             
-            # Build URL with parameters as per LACRM documentation
-            params = {
-                'APIToken': api_token,
-                'UserCode': user_code,
-                'Function': 'SearchContacts',
-                'SearchTerm': query
+            # Return successful response with cached results
+            response_data = {
+                "success": True,
+                "customers": customers,
+                "total": len(customers),
+                "source": "database_cache"
             }
-            
-            response = requests.get(search_url, params=params, timeout=15)
-            
-            logger.info(f"CRM search request: {params}")
-            logger.info(f"CRM response status: {response.status_code}")
-            logger.info(f"CRM response text: {response.text[:1000]}...")
-            
-            # Debug: Log the actual response structure
-            if response.status_code == 200:
-                try:
-                    debug_data = json.loads(response.text)
-                    logger.info(f"CRM response structure: {type(debug_data.get('Result'))}")
-                    if debug_data.get('Result') and isinstance(debug_data['Result'], list) and len(debug_data['Result']) > 0:
-                        logger.info(f"First contact example: {debug_data['Result'][0]}")
-                except:
-                    pass
-            
-            if response.status_code == 200:
-                try:
-                    # LACRM returns JSON with text/html content-type, so parse manually
-                    result_data = json.loads(response.text)
-                    
-                    customers = []
-                    if result_data.get('Result'):
-                        # Handle both single contact and list of contacts
-                        contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
-                        
-                        for contact in contacts_list:
-                            if contact and isinstance(contact, dict):
-                                # Extract proper values, handling different field names
-                                name = contact.get('Name') or contact.get('FirstName', '') + ' ' + contact.get('LastName', '')
-                                name = name.strip() or 'Unknown'
-                                
-                                customers.append({
-                                    'id': str(contact.get('ContactId', '')),
-                                    'name': name,
-                                    'email': str(contact.get('Email', '')),
-                                    'company': str(contact.get('CompanyName', '') or contact.get('Company', '')),
-                                    'phone': str(contact.get('Phone', '') or contact.get('PhoneNumber', ''))
-                                })
-                    
-                    response_data = {
-                        "success": True,
-                        "customers": customers,
-                        "total_found": len(customers)
-                    }
-                    
-                except json.JSONDecodeError:
-                    # Handle non-JSON response
-                    customers = []  # No customers found
-                    response_data = {
-                        "success": True,
-                        "customers": customers,
-                        "total_found": 0,
-                        "message": "No customers found matching search criteria"
-                    }
-            else:
-                raise Exception(f"CRM API error: {response.status_code}")
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
