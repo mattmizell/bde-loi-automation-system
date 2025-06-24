@@ -1,0 +1,19 @@
+# LOI Automation System - Production Requirements
+
+# Core Python Dependencies (Available on Render)
+requests==2.31.0
+psycopg2-binary==2.9.9
+python-dateutil==2.8.2
+Pillow==10.1.0
+
+# Email Support
+email-validator==2.1.0
+
+# Security
+cryptography==41.0.8
+
+# Standard Library Extensions (if needed)
+pathlib2==2.3.7
+
+# Optional: For enhanced logging
+structlog==23.2.0

@@ -1,0 +1,49 @@
+
+# BDE LOI Automation - GitHub Upload Instructions
+
+## Quick Upload Steps:
+
+### 1. Create GitHub Repository
+- Go to: https://github.com/new
+- Repository name: `bde-loi-automation-system`
+- Keep it PUBLIC
+- DON'T initialize with README, .gitignore, or license
+- Click "Create repository"
+
+### 2. Upload Using GitHub Web Interface
+Since the OAuth flow had issues, use the web interface:
+
+1. On the new repository page, click "uploading an existing file"
+2. Open this folder in your file manager: `/media/sf_PycharmProjects/bde_customer_onboarding/loi_automation_system/`
+3. Select ALL files (Ctrl+A) except hidden folders
+4. Drag and drop into GitHub web interface
+5. Commit message: "Complete LOI Automation System"
+6. Click "Commit changes"
+
+### 3. Or Use Command Line (if git works)
+```bash
+cd /media/sf_PycharmProjects/bde_customer_onboarding/loi_automation_system
+git init
+git add .
+git commit -m "Complete LOI Automation System"
+git remote add origin https://github.com/mattmizell/bde-loi-automation-system.git
+git push -u origin main
+```
+
+### 4. Deploy to Render
+Once uploaded:
+1. Go to render.com
+2. New Web Service
+3. Connect GitHub repository
+4. It will auto-detect render.yaml
+5. Add environment variables
+
+## Files Being Uploaded:
+- integrated_pdf_signature_server.py - Main application
+- signature_storage.py - PostgreSQL storage
+- html_to_pdf_generator.py - PDF generation
+- render.yaml - Deployment config
+- requirements.txt - Dependencies
+- All supporting files
+
+Ready for production deployment!

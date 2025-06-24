@@ -1,0 +1,11 @@
+127.0.0.1 - - [23/Jun/2025 20:11:19] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [23/Jun/2025 20:12:21] "GET /sign/c2ea84c2-19b0-42f5-8c6e-4b9382b9df68 HTTP/1.1" 200 -
+2025-06-23 20:13:30,150 - __main__ - INFO - ✅ Signature completed for Farely Barnhart
+127.0.0.1 - - [23/Jun/2025 20:13:30] "POST /api/submit-signature HTTP/1.1" 200 -
+127.0.0.1 - - [23/Jun/2025 20:13:30] "GET /signature-complete/LOI-49060B16 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Jun/2025 20:15:34] "GET /sign/c2ea84c2-19b0-42f5-8c6e-4b9382b9df68 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Jun/2025 20:27:43] "GET /sign/c2ea84c2-19b0-42f5-8c6e-4b9382b9df68 HTTP/1.1" 200 -
+127.0.0.1 - - [23/Jun/2025 20:31:33] code 501, message Unsupported method ('HEAD')
+127.0.0.1 - - [23/Jun/2025 20:31:33] "HEAD /sign/e1f88927-534c-4abe-8239-a71d97b9b64c HTTP/1.1" 501 -
+127.0.0.1 - - [23/Jun/2025 20:31:39] code 404, message Signature request not found
+127.0.0.1 - - [23/Jun/2025 20:31:39] "GET /sign/e1f88927-534c-4abe-8239-a71d97b9b64c HTTP/1.1" 404 -

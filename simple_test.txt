@@ -1,0 +1,9 @@
+Test LOI Document for Adam Simpson
+
+This is a simple test document to verify CRM document storage functionality.
+
+Date: June 23, 2025
+Customer: Adam Simpson
+Email: Adam_Simpson@unifirst.com
+
+This document demonstrates the LOI automation system's ability to store documents in the CRM.

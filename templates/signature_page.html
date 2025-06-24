@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electronic Signature - Better Day Energy</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1f4e79, #2563eb);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .document-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e1e5e9;
+        }
+        
+        .signature-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e1e5e9;
+        }
+        
+        .document-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1f4e79;
+        }
+        
+        .signature-pad-container {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin: 20px 0;
+            background: #fafbfc;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .signature-pad {
+            display: block;
+            width: 100%;
+            height: 200px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        
+        .signature-controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #1f4e79;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+            font-size: 16px;
+            padding: 15px 30px;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .signature-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #adb5bd;
+            font-style: italic;
+            pointer-events: none;
+            font-size: 18px;
+        }
+        
+        .signature-placeholder.hidden {
+            display: none;
+        }
+        
+        .legal-notice {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #bbdefb;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 75%;
+            transition: width 0.3s ease;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f4e79;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .document-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .summary-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .summary-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .summary-value {
+            color: #212529;
+            font-size: 1em;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .document-preview, .signature-section {
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .signature-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏢 Better Day Energy</h1>
+        <h2>Electronic Signature Portal</h2>
+        <p>VP Racing Fuel Supply Agreement</p>
+    </div>
+    
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <!-- Document Preview Section -->
+        <div class="document-preview">
+            <h3>📄 Document Review</h3>
+            
+            <div class="document-info">
+                <h4>Letter of Intent - VP Racing Fuel Supply Agreement</h4>
+                <p>Please review the document details below before signing:</p>
+            </div>
+            
+            <div class="document-summary">
+                <div class="summary-item">
+                    <div class="summary-label">Customer</div>
+                    <div class="summary-value" id="customer-name">Loading...</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Company</div>
+                    <div class="summary-value" id="company-name">Loading...</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Document Date</div>
+                    <div class="summary-value" id="document-date">Loading...</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Expires</div>
+                    <div class="summary-value" id="expires-date">Loading...</div>
+                </div>
+            </div>
+            
+            <div class="legal-notice">
+                <h5>📋 Document Contents</h5>
+                <p>This Letter of Intent outlines the terms for VP Racing fuel supply services including:</p>
+                <ul>
+                    <li>Monthly fuel volume commitments</li>
+                    <li>Pricing structure and incentive programs</li>
+                    <li>Image funding and canopy installation details</li>
+                    <li>Service terms and conditions</li>
+                </ul>
+                <p><strong>By signing below, you acknowledge that you have read, understood, and agree to the terms outlined in this Letter of Intent.</strong></p>
+            </div>
+        </div>
+        
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <h3>✍️ Electronic Signature</h3>
+            
+            <div id="signature-form">
+                <p>Please provide your electronic signature in the box below:</p>
+                
+                <div class="signature-pad-container">
+                    <canvas id="signature-pad" class="signature-pad" width="738" height="200"></canvas>
+                    <div id="signature-placeholder" class="signature-placeholder">
+                        Sign here with your mouse or touch device
+                    </div>
+                    
+                    <div class="signature-controls">
+                        <div>
+                            <button type="button" id="clear-signature" class="btn btn-secondary">
+                                🗑️ Clear Signature
+                            </button>
+                        </div>
+                        <div>
+                            <span id="signature-status" style="color: #6c757d; font-style: italic;">
+                                Please provide your signature above
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="legal-notice">
+                    <h5>🔒 Legal Agreement</h5>
+                    <p>By clicking "Complete Signature" below, you agree that:</p>
+                    <ul>
+                        <li>Your electronic signature has the same legal effect as a handwritten signature</li>
+                        <li>You are authorized to sign this document on behalf of your organization</li>
+                        <li>You have reviewed and agree to all terms in the Letter of Intent</li>
+                        <li>This signature will be legally binding and enforceable</li>
+                    </ul>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <button type="button" id="submit-signature" class="btn btn-success" disabled>
+                        ✍️ Complete Signature
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing your signature...</p>
+            </div>
+            
+            <!-- Success/Error Messages -->
+            <div id="alert-container"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Signature pad functionality
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('signature-placeholder');
+        const clearButton = document.getElementById('clear-signature');
+        const submitButton = document.getElementById('submit-signature');
+        const signatureStatus = document.getElementById('signature-status');
+        const loading = document.getElementById('loading');
+        const signatureForm = document.getElementById('signature-form');
+        const alertContainer = document.getElementById('alert-container');
+        
+        let isDrawing = false;
+        let hasSignature = false;
+        
+        // Get signature request ID from URL
+        const pathParts = window.location.pathname.split('/');
+        const signatureRequestId = pathParts[pathParts.length - 1];
+        
+        // Load signature request data
+        async function loadSignatureData() {
+            try {
+                const response = await fetch(`/api/v1/signature/${signatureRequestId}/data`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('customer-name').textContent = data.customer_name || 'Not specified';
+                    document.getElementById('company-name').textContent = data.company_name || 'Not specified';
+                    document.getElementById('document-date').textContent = new Date(data.created_at).toLocaleDateString();
+                    document.getElementById('expires-date').textContent = new Date(data.expires_at).toLocaleDateString();
+                } else {
+                    showAlert('Error loading signature data: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to load signature data', 'error');
+            }
+        }
+        
+        // Canvas setup
+        function setupCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            return { scaleX, scaleY };
+        }
+        
+        const { scaleX, scaleY } = setupCanvas();
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            if (!hasSignature) {
+                placeholder.classList.add('hidden');
+                hasSignature = true;
+                updateSignatureStatus();
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+        
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            placeholder.classList.remove('hidden');
+            updateSignatureStatus();
+        }
+        
+        function updateSignatureStatus() {
+            if (hasSignature) {
+                signatureStatus.textContent = 'Signature provided ✓';
+                signatureStatus.style.color = '#28a745';
+                submitButton.disabled = false;
+            } else {
+                signatureStatus.textContent = 'Please provide your signature above';
+                signatureStatus.style.color = '#6c757d';
+                submitButton.disabled = true;
+            }
+        }
+        
+        function showAlert(message, type) {
+            const alertClass = type === 'error' ? 'alert-error' : 'alert-success';
+            alertContainer.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${message}
+                </div>
+            `;
+        }
+        
+        async function submitSignature() {
+            if (!hasSignature) {
+                showAlert('Please provide your signature before submitting', 'error');
+                return;
+            }
+            
+            // Show loading
+            signatureForm.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                // Get signature data as base64
+                const signatureData = canvas.toDataURL('image/png');
+                
+                // Submit signature
+                const response = await fetch(`/api/v1/signature/${signatureRequestId}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        signature_data: signatureData,
+                        ip_address: await getClientIP(),
+                        user_agent: navigator.userAgent
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update progress bar
+                    document.querySelector('.progress-fill').style.width = '100%';
+                    
+                    // Show success message
+                    loading.style.display = 'none';
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-success">
+                            <h4>✅ Signature Complete!</h4>
+                            <p>Your Letter of Intent has been successfully signed and processed.</p>
+                            <p>You will receive a copy of the signed document via email shortly.</p>
+                            <p><strong>Transaction ID:</strong> ${result.transaction_id}</p>
+                        </div>
+                    `;
+                    
+                    // Redirect after delay
+                    setTimeout(() => {
+                        window.location.href = '/signature/complete';
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(result.error || 'Signature submission failed');
+                }
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                signatureForm.style.display = 'block';
+                showAlert('Error submitting signature: ' + error.message, 'error');
+            }
+        }
+        
+        async function getClientIP() {
+            try {
+                const response = await fetch('/api/v1/client-ip');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                return 'unknown';
+            }
+        }
+        
+        // Event listeners
+        clearButton.addEventListener('click', clearSignature);
+        submitButton.addEventListener('click', submitSignature);
+        
+        // Initialize
+        loadSignatureData();
+        updateSignatureStatus();
+        
+        // Handle window resize
+        window.addEventListener('resize', setupCanvas);
+    </script>
+</body>
+</html>

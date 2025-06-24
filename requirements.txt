@@ -1,0 +1,101 @@
+# LOI Automation System Requirements
+
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Async HTTP and Task Management
+aiohttp==3.9.1
+aiofiles==23.2.1
+asyncio-mqtt==0.16.1
+
+# PDF Generation
+reportlab==4.0.7
+PyPDF2==3.0.1
+
+# Template Engine
+jinja2==3.1.2
+
+# Google Drive Integration
+google-api-python-client==2.109.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.1.0
+google-auth==2.23.4
+
+# E-Signature Services
+requests==2.31.0
+requests-oauthlib==1.3.1
+
+# Database (if needed for transaction storage)
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9  # PostgreSQL
+# sqlite3 is built into Python
+
+# Configuration Management
+python-dotenv==1.0.0
+pyyaml==6.0.1
+configparser==6.0.0
+
+# Logging and Monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Data Validation and Processing
+marshmallow==3.20.1
+phonenumbers==8.13.26
+email-validator==2.1.0
+
+# Date/Time Handling
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+httpx==0.25.2  # For testing async endpoints
+
+# Development Tools
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1
+pre-commit==3.5.0
+
+# Security
+cryptography==41.0.8
+bcrypt==4.1.1
+
+# Background Task Processing
+celery==5.3.4
+redis==5.0.1
+
+# File Handling
+pillow==10.1.0  # For image processing if needed
+pathlib2==2.3.7
+
+# HTTP and API Tools
+httptools==0.6.1
+websockets==12.0
+
+# JSON and Data Serialization
+orjson==3.9.10
+msgpack==1.0.7
+
+# Monitoring and Health Checks
+psutil==5.9.6
+
+# Less Annoying CRM (if specific SDK exists)
+# Note: Most likely will use REST API with requests/aiohttp
+
+# DocuSign SDK (optional)
+docusign-esign==3.23.0
+
+# Adobe Sign SDK (optional, if available)
+# Note: Usually REST API integration
+
+# Additional utilities
+click==8.1.7  # Command line interface
+rich==13.7.0  # Better console output
+tabulate==0.9.0  # Table formatting

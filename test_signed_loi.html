@@ -1,0 +1,349 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Signed LOI - LOI-SAMPLE123</title>
+            <style>
+                @page {
+                    size: A4;
+                    margin: 0.75in;
+                }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-size: 11pt;
+                    line-height: 1.4;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #1f4e79;
+                    padding-bottom: 15px;
+                }
+                .company-name {
+                    font-size: 28pt;
+                    font-weight: bold;
+                    color: #1f4e79;
+                    margin-bottom: 5px;
+                }
+                .document-title {
+                    font-size: 18pt;
+                    color: #1f4e79;
+                    margin-bottom: 10px;
+                }
+                .metadata {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                }
+                .metadata table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .metadata td {
+                    padding: 5px 10px;
+                    border: 1px solid #dee2e6;
+                }
+                .metadata td:first-child {
+                    background: #e9ecef;
+                    font-weight: bold;
+                    width: 30%;
+                }
+                .section {
+                    margin-bottom: 25px;
+                    page-break-inside: avoid;
+                }
+                .section-title {
+                    font-size: 16pt;
+                    font-weight: bold;
+                    color: #1f4e79;
+                    margin-bottom: 10px;
+                    border-bottom: 1px solid #1f4e79;
+                    padding-bottom: 5px;
+                }
+                .info-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 15px;
+                }
+                .info-table th {
+                    background: #1f4e79;
+                    color: white;
+                    padding: 10px;
+                    text-align: center;
+                    font-weight: bold;
+                }
+                .info-table td {
+                    padding: 8px 10px;
+                    border: 1px solid #1f4e79;
+                    text-align: center;
+                }
+                .info-table tr:nth-child(even) td {
+                    background: #f8f9fa;
+                }
+                .financial-highlight {
+                    background: #e8f5e8;
+                    border: 2px solid #28a745;
+                    padding: 15px;
+                    border-radius: 5px;
+                }
+                .financial-highlight .total-row {
+                    background: #28a745;
+                    color: white;
+                    font-weight: bold;
+                }
+                .terms-list {
+                    margin-left: 20px;
+                    margin-bottom: 15px;
+                }
+                .terms-list li {
+                    margin-bottom: 8px;
+                    list-style-type: disc;
+                }
+                .signature-section {
+                    border: 2px solid #007bff;
+                    padding: 20px;
+                    border-radius: 8px;
+                    background: #f0f8ff;
+                    page-break-inside: avoid;
+                }
+                .signature-image {
+                    max-width: 300px;
+                    max-height: 150px;
+                    border: 1px solid #ccc;
+                    padding: 10px;
+                    background: white;
+                    margin: 15px 0;
+                }
+                .signature-details {
+                    background: #fff3cd;
+                    padding: 15px;
+                    border-radius: 5px;
+                    border: 1px solid #ffeaa7;
+                    margin-top: 15px;
+                }
+                .security-section {
+                    background: #e7f3ff;
+                    border: 1px solid #007bff;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin-top: 20px;
+                }
+                .compliance-notice {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin-top: 15px;
+                    font-style: italic;
+                }
+                .page-break {
+                    page-break-before: always;
+                }
+                @media print {
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <!-- Header -->
+            <div class="header">
+                <div class="company-name">Better Day Energy</div>
+                <div class="document-title">Letter of Intent - VP Racing Fuel Supply Agreement</div>
+                <div style="font-size: 12pt; color: #666;">Electronically Executed Document</div>
+            </div>
+            
+            <!-- Document Metadata -->
+            <div class="metadata">
+                <table>
+                    <tr>
+                        <td>Document Type:</td>
+                        <td>Letter of Intent</td>
+                    </tr>
+                    <tr>
+                        <td>Transaction ID:</td>
+                        <td>TXN-SAMPLE456</td>
+                    </tr>
+                    <tr>
+                        <td>Verification Code:</td>
+                        <td>LOI-SAMPLE123</td>
+                    </tr>
+                    <tr>
+                        <td>Generated:</td>
+                        <td>June 23, 2025 at 08:49 PM</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Customer Information -->
+            <div class="section">
+                <div class="section-title">Customer Information</div>
+                <table class="info-table">
+                    <tr>
+                        <td><strong>Business Name:</strong></td>
+                        <td>Farley's Gas and Go</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Owner/Contact:</strong></td>
+                        <td>Farely Barnhart</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Email Address:</strong></td>
+                        <td>matt.mizell@gmail.com</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Business Type:</strong></td>
+                        <td>Independent Gas Station</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Fuel Volume Commitments -->
+            <div class="section">
+                <div class="section-title">Fuel Volume Commitments</div>
+                <table class="info-table">
+                    <tr>
+                        <th>Product</th>
+                        <th>Monthly Volume</th>
+                        <th>Annual Volume</th>
+                    </tr>
+                    <tr>
+                        <td>Gasoline</td>
+                        <td>85,000 gallons</td>
+                        <td>1,020,000 gallons</td>
+                    </tr>
+                    <tr>
+                        <td>Diesel</td>
+                        <td>25,000 gallons</td>
+                        <td>300,000 gallons</td>
+                    </tr>
+                    <tr style="background: #e8f5e8; font-weight: bold;">
+                        <td>Total</td>
+                        <td>110,000 gallons</td>
+                        <td>1,320,000 gallons</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Financial Incentive Package -->
+            <div class="section">
+                <div class="section-title">Financial Incentive Package</div>
+                <div class="financial-highlight">
+                    <table class="info-table">
+                        <tr>
+                            <th>Incentive Type</th>
+                            <th>Amount</th>
+                        </tr>
+                        <tr>
+                            <td>Image Program Funding</td>
+                            <td>$75,000</td>
+                        </tr>
+                        <tr>
+                            <td>Volume Incentives (Annual)</td>
+                            <td>$50,000</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>Total First Year Value</strong></td>
+                            <td><strong>$125,000</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Key Terms & Conditions -->
+            <div class="section">
+                <div class="section-title">Key Terms & Conditions</div>
+                <ul class="terms-list">
+                    <li>Contract Duration: 36 months</li>
+                    <li>Exclusive fuel purchasing agreement</li>
+                    <li>Minimum monthly volume: 110,000 gallons</li>
+                    <li>Target conversion date: August 1, 2025</li>
+                    <li>Dedicated account management</li>
+                    <li>24/7 emergency fuel supply</li>
+                    <li>Competitive pricing with quarterly reviews</li>
+                </ul>
+            </div>
+            
+            <!-- Electronic Signature Section -->
+            <div class="section signature-section">
+                <div class="section-title">Electronic Signature</div>
+                
+                <p><strong>Electronically Signed By:</strong> Farely Barnhart</p>
+                
+                <p><em>Signature image not available</em></p>
+                
+                <div class="signature-details">
+                    <table style="width: 100%; border: none;">
+                        <tr>
+                            <td style="border: none; padding: 5px 0;"><strong>Date & Time:</strong></td>
+                            <td style="border: none; padding: 5px 0;">June 23, 2025 at 08:49 PM</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 5px 0;"><strong>IP Address:</strong></td>
+                            <td style="border: none; padding: 5px 0;">192.168.1.100</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 5px 0;"><strong>Verification Code:</strong></td>
+                            <td style="border: none; padding: 5px 0;">LOI-SAMPLE123</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 5px 0;"><strong>Browser Fingerprint:</strong></td>
+                            <td style="border: none; padding: 5px 0;">abc123def456ghi789...</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="compliance-notice">
+                    <strong>Legal Notice:</strong> This document has been electronically signed in accordance with the 
+                    Electronic Signatures in Global and National Commerce Act (ESIGN Act). The electronic signature 
+                    is legally binding and has the same legal effect as a handwritten signature.
+                </div>
+            </div>
+            
+            <!-- Security & Integrity Information -->
+            <div class="section security-section">
+                <div class="section-title">Document Security & Integrity</div>
+                <table class="info-table">
+                    <tr>
+                        <td><strong>Storage Method:</strong></td>
+                        <td>PostgreSQL with tamper-evident hashing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Integrity Status:</strong></td>
+                        <td>Signature integrity verified ✅</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Compliance:</strong></td>
+                        <td>ESIGN Act Compliant ✓</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Audit Trail:</strong></td>
+                        <td>Complete IP and timestamp logging</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Document Hash:</strong></td>
+                        <td>sha256:abcdef123456789...</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Print Instructions (hidden when printed) -->
+            <div class="no-print" style="margin-top: 30px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+                <h3>To Save as PDF:</h3>
+                <ol>
+                    <li>Press <strong>Ctrl+P</strong> (or Cmd+P on Mac)</li>
+                    <li>Select "Save as PDF" as destination</li>
+                    <li>Choose "More settings" if needed</li>
+                    <li>Click "Save"</li>
+                </ol>
+            </div>
+        </body>
+        </html>
+        
