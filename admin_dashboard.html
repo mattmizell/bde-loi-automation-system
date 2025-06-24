@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Better Day Energy - LOI Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1f4e79, #2c5aa0);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        .content {
+            padding: 30px;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1f4e79;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #218838;
+        }
+        .result-box {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .result-box h3 {
+            color: #155724;
+            margin-bottom: 15px;
+        }
+        .url-box {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #c3e6c3;
+            margin: 10px 0;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .email-template {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-line;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+        .copy-btn {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 LOI Admin Dashboard</h1>
+            <p>Create new Letter of Intent signature requests for Better Day Energy customers</p>
+        </div>
+        
+        <div class="content">
+            <div class="form-section">
+                <h2>📋 Create New LOI Request</h2>
+                <form id="loi-form">
+                    <div class="form-group">
+                        <label for="signer-name">Customer Name:</label>
+                        <input type="text" id="signer-name" placeholder="e.g., John Smith" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signer-email">Customer Email:</label>
+                        <input type="email" id="signer-email" placeholder="e.g., john@example.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="company-name">Company Name:</label>
+                        <input type="text" id="company-name" placeholder="e.g., Smith's Gas Station" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">🚀 Generate LOI Signature Request</button>
+                </form>
+            </div>
+            
+            <div id="result" class="result-box">
+                <h3>✅ LOI Created Successfully!</h3>
+                <div id="loi-details"></div>
+                
+                <h4>🔗 Signature URL:</h4>
+                <div id="signature-url" class="url-box"></div>
+                <button class="copy-btn" onclick="copyUrl()">📋 Copy URL</button>
+                
+                <h4>📧 Email Template for Customer:</h4>
+                <div id="email-template" class="email-template"></div>
+                <button class="copy-btn" onclick="copyEmail()">📋 Copy Email</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0,
+                    v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        
+        function generateTransactionId() {
+            return 'TXN-' + generateUUID().substr(0, 8).toUpperCase();
+        }
+        
+        document.getElementById('loi-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const signerName = document.getElementById('signer-name').value;
+            const signerEmail = document.getElementById('signer-email').value;
+            const companyName = document.getElementById('company-name').value;
+            
+            const transactionId = generateTransactionId();
+            const signatureToken = generateUUID();
+            const createdAt = new Date().toISOString();
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            
+            const signatureUrl = `https://loi-automation-api.onrender.com/sign/${signatureToken}`;
+            
+            // Show results
+            document.getElementById('loi-details').innerHTML = `
+                <p><strong>Customer:</strong> ${signerName}</p>
+                <p><strong>Company:</strong> ${companyName}</p>
+                <p><strong>Email:</strong> ${signerEmail}</p>
+                <p><strong>Transaction ID:</strong> ${transactionId}</p>
+                <p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleDateString()}</p>
+            `;
+            
+            document.getElementById('signature-url').textContent = signatureUrl;
+            
+            const emailTemplate = `Subject: VP Racing Fuel Supply Agreement - Electronic Signature Required
+
+Dear ${signerName},
+
+Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.
+
+Please review and electronically sign the attached Letter of Intent for our VP Racing Fuel Supply Agreement by clicking the link below:
+
+🔗 Sign Document: ${signatureUrl}
+
+Key Benefits:
+• $125,000 first-year incentive package  
+• Competitive pricing with quarterly reviews
+• 24/7 emergency fuel supply support
+• Dedicated account management
+
+This document expires in 30 days. Please complete your signature at your earliest convenience.
+
+If you have any questions, please contact Adam Simpson directly.
+
+Best regards,
+Better Day Energy Team
+
+Transaction ID: ${transactionId}`;
+            
+            document.getElementById('email-template').textContent = emailTemplate;
+            document.getElementById('result').style.display = 'block';
+            
+            // Store the data for copying
+            window.currentSignatureUrl = signatureUrl;
+            window.currentEmailTemplate = emailTemplate;
+            
+            // Create JSON data for manual addition to server
+            const jsonData = {
+                [`request_${Date.now()}`]: {
+                    transaction_id: transactionId,
+                    signature_token: signatureToken,
+                    signer_name: signerName,
+                    signer_email: signerEmail,
+                    company_name: companyName,
+                    document_name: "VP Racing Fuel Supply Agreement - Letter of Intent",
+                    status: "pending",
+                    created_at: createdAt,
+                    expires_at: expiresAt
+                }
+            };
+            
+            console.log('JSON Data for server:', JSON.stringify(jsonData, null, 2));
+            
+            // Show alert with instructions
+            alert(`✅ LOI Created!
+
+IMPORTANT: To activate this LOI, you need to:
+
+1. Copy the JSON data from the browser console
+2. Add it to the signature_request_data.json file on the server
+3. Or use the admin_loi_creator.py script
+
+The signature URL will be active once the data is added to the server.`);
+        });
+        
+        function copyUrl() {
+            navigator.clipboard.writeText(window.currentSignatureUrl);
+            alert('✅ Signature URL copied to clipboard!');
+        }
+        
+        function copyEmail() {
+            navigator.clipboard.writeText(window.currentEmailTemplate);
+            alert('✅ Email template copied to clipboard!');
+        }
+    </script>
+</body>
+</html>
