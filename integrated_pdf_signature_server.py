@@ -873,33 +873,45 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🎯 Better Day Energy - CRM LOI System</h1>
-                    <p>Professional LOI Creation with Full CRM Integration</p>
-                    <p><strong>Workflow:</strong> CRM Search → Deal Terms → Generate LOI → Route → Sign → Store</p>
+                    <h1>🎯 Better Day Energy - LOI Creation System</h1>
+                    <p>Professional LOI Creation with Background CRM Sync</p>
+                    <p><strong>Workflow:</strong> Customer Info → Deal Terms → Generate LOI → Route → Sign → Background CRM Sync</p>
                 </div>
                 
                 <div class="content">
                     <div class="workflow-status">
-                        <h3>📋 Proper LOI Workflow</h3>
-                        <p>1️⃣ Search CRM for existing customer → 2️⃣ Add if not found → 3️⃣ Enter deal terms → 4️⃣ Generate LOI → 5️⃣ Route for signature</p>
+                        <h3>📋 Streamlined LOI Workflow</h3>
+                        <p>1️⃣ Enter customer information → 2️⃣ Enter deal terms → 3️⃣ Generate LOI → 4️⃣ Route for signature → 5️⃣ Background CRM sync</p>
                     </div>
                     
-                    <!-- STEP 1: CRM Customer Selection -->
+                    <!-- STEP 1: Customer Information -->
                     <div class="step-section active" id="step-1">
-                        <h2>🔍 Step 1: Select CRM Customer</h2>
-                        <div class="form-group">
-                            <label for="customer-dropdown">Select Existing Customer:</label>
-                            <select id="customer-dropdown" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px; font-size: 16px;">
-                                <option value="">Loading customers...</option>
-                            </select>
+                        <h2>👤 Step 1: Customer Information</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="customer-name">Contact Name: <span style="color: red;">*</span></label>
+                                <input type="text" id="customer-name" placeholder="e.g., John Smith" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customer-email">Email Address: <span style="color: red;">*</span></label>
+                                <input type="email" id="customer-email" placeholder="e.g., john@example.com" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="company-name">Company Name: <span style="color: red;">*</span></label>
+                                <input type="text" id="company-name" placeholder="e.g., Smith's Gas Station" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customer-phone">Phone Number:</label>
+                                <input type="tel" id="customer-phone" placeholder="e.g., 314-555-1234">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="customer-search">Or Search:</label>
-                            <input type="text" id="customer-search" placeholder="Type to filter customers..." onkeyup="filterCustomers()">
+                            <label for="customer-address">Business Address:</label>
+                            <input type="text" id="customer-address" placeholder="e.g., 123 Main St, St. Louis, MO 63101">
                         </div>
-                        <button type="button" class="btn" onclick="selectFromDropdown()">✅ Select Customer</button>
-                        <button type="button" class="btn btn-warning" onclick="showNewCustomerForm()">➕ Add New Customer</button>
-                        <button type="button" class="btn" onclick="refreshCRMCache()" style="background: #17a2b8;">🔄 Refresh CRM Cache</button>
+                        <button type="button" class="btn btn-success" onclick="proceedToDealTerms()">Next: Deal Terms →</button>
                         
                         <div id="selected-customer-info" class="hidden" style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin-top: 15px;">
                             <!-- Selected customer info will appear here -->
@@ -1057,16 +1069,42 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     populateCustomerDropdown(filteredCustomers);
                 }
                 
-                function selectFromDropdown() {
-                    const dropdown = document.getElementById('customer-dropdown');
-                    const selectedOption = dropdown.options[dropdown.selectedIndex];
+                function proceedToDealTerms() {
+                    // Validate required fields
+                    const name = document.getElementById('customer-name').value.trim();
+                    const email = document.getElementById('customer-email').value.trim();
+                    const company = document.getElementById('company-name').value.trim();
+                    const phone = document.getElementById('customer-phone').value.trim();
+                    const address = document.getElementById('customer-address').value.trim();
                     
-                    if (selectedOption.value) {
-                        const customer = JSON.parse(selectedOption.dataset.customer);
-                        selectCustomer(customer.id, customer.name, customer.email, customer.company);
-                    } else {
-                        alert('Please select a customer from the dropdown');
+                    if (!name || !email || !company) {
+                        alert('Please fill in all required fields (marked with *)');
+                        return;
                     }
+                    
+                    // Create local customer object
+                    currentCustomer = {
+                        id: 'LOCAL_' + Date.now(),
+                        name: name,
+                        email: email,
+                        company: company,
+                        phone: phone,
+                        address: address
+                    };
+                    
+                    // Display customer summary
+                    document.getElementById('customer-summary').innerHTML = `
+                        <h3>✅ Customer Information:</h3>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Company:</strong> ${company}</p>
+                        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
+                        ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
+                        <p style="color: #666; font-style: italic;">Note: Customer will be synced to CRM in background</p>
+                    `;
+                    
+                    // Move to deal terms step
+                    showStep(3);
                 }
                 
                 async function refreshCRMCache() {
@@ -1376,6 +1414,28 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             # Add new request to memory
             signature_requests[request_key] = data
             
+            # Check if customer needs to be created in CRM (has a LOCAL_ ID)
+            customer_id = data.get('crm_contact_id', '')
+            if customer_id.startswith('LOCAL_'):
+                # This is a new customer - queue for CRM creation
+                deal_terms = data.get('deal_terms', {})
+                customer = deal_terms.get('customer', {})
+                
+                if customer:
+                    # Queue customer creation in background
+                    customer_data = {
+                        'local_id': customer_id,
+                        'name': customer.get('name', data.get('signer_name', '')),
+                        'email': customer.get('email', data.get('signer_email', '')),
+                        'company': customer.get('company', data.get('company_name', '')),
+                        'phone': customer.get('phone', ''),
+                        'address': customer.get('address', ''),
+                        'notes': f"Created via LOI System - Transaction {data['transaction_id']}"
+                    }
+                    
+                    queue_id = crm_bidirectional_sync.queue_crm_write('create_contact', customer_data, 'high')
+                    logger.info(f"Queued new customer {customer_data['name']} for CRM creation (queue ID: {queue_id})")
+            
             # Save to file (in production, this updates the server's data)
             try:
                 with open("signature_request_data.json", "w") as f:
@@ -1511,74 +1571,76 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def handle_create_crm_contact(self, post_data):
-        """Handle creating new CRM contact"""
+        """Handle creating new CRM contact using write queue"""
         try:
             data = json.loads(post_data.decode('utf-8'))
             
-            # Create contact in CRM
-            import requests
+            # Generate temporary local ID
+            local_id = f"LOCAL_{int(datetime.now().timestamp())}_{uuid.uuid4().hex[:8]}"
             
-            crm_url = "https://api.lessannoyingcrm.com"
-            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+            # Store contact in local cache first
+            import psycopg2
+            conn = signature_storage.get_connection()
             
-            # LACRM API uses GET with URL parameters for all functions
-            api_parts = api_key.split('-', 1)
-            user_code = api_parts[0]  # "1073223"
-            api_token = api_key  # Full key
+            with conn.cursor() as cursor:
+                # Create cache table if not exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS crm_contacts_cache (
+                        contact_id VARCHAR(100) PRIMARY KEY,
+                        name VARCHAR(255),
+                        email VARCHAR(255),
+                        company_name VARCHAR(255),
+                        phone VARCHAR(50),
+                        address TEXT,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_sync TIMESTAMP,
+                        sync_status VARCHAR(20) DEFAULT 'pending'
+                    )
+                """)
+                
+                # Insert into local cache
+                cursor.execute("""
+                    INSERT INTO crm_contacts_cache 
+                    (contact_id, name, email, company_name, phone, address, notes, sync_status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    local_id,
+                    data.get('name', ''),
+                    data.get('email', ''),
+                    data.get('company', ''),
+                    data.get('phone', ''),
+                    data.get('address', ''),
+                    f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                    'queued_for_crm'
+                ))
+                conn.commit()
             
-            # Build URL with parameters for CreateContact
-            params = {
-                'APIToken': api_token,
-                'UserCode': user_code,
-                'Function': 'CreateContact',
-                'Name': data.get('name', ''),
-                'Email': data.get('email', ''),
-                'CompanyName': data.get('company', ''),
-                'Phone': data.get('phone', ''),
-                'Address': data.get('address', ''),
-                'Notes': f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            conn.close()
+            
+            # Queue the write operation for background sync
+            queue_data = {
+                'local_id': local_id,
+                'name': data.get('name', ''),
+                'email': data.get('email', ''),
+                'company': data.get('company', ''),
+                'phone': data.get('phone', ''),
+                'address': data.get('address', ''),
+                'notes': f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
             
-            response = requests.get(crm_url, params=params, timeout=15)
+            queue_id = crm_bidirectional_sync.queue_crm_write('create_contact', queue_data, 'high')
             
-            logger.info(f"CRM create request: {params}")
-            logger.info(f"CRM create response status: {response.status_code}")
-            logger.info(f"CRM create response text: {response.text[:500]}...")
+            response_data = {
+                "success": True,
+                "contact_id": local_id,
+                "message": "Contact queued for CRM creation",
+                "queue_id": queue_id,
+                "status": "Will sync to CRM within 30 seconds"
+            }
             
-            if response.status_code == 200:
-                try:
-                    # LACRM returns JSON with text/html content-type, so parse manually
-                    result_data = json.loads(response.text)
-                    contact_id = result_data.get('Result', {}).get('ContactId') if isinstance(result_data.get('Result'), dict) else str(result_data.get('Result', ''))
-                    
-                    if not contact_id:
-                        # Extract ID from response text if needed
-                        response_text = str(result_data)
-                        import re
-                        id_match = re.search(r'ContactId[\'"]:\s*[\'"]?(\d+)', response_text)
-                        if id_match:
-                            contact_id = id_match.group(1)
-                        else:
-                            contact_id = f"CRM_{int(datetime.now().timestamp())}"
-                    
-                    response_data = {
-                        "success": True,
-                        "contact_id": contact_id,
-                        "message": "Contact created successfully"
-                    }
-                    
-                    logger.info(f"CRM contact created: {contact_id} for {data.get('name')}")
-                    
-                except json.JSONDecodeError:
-                    # Handle non-JSON response but assume success
-                    contact_id = f"CRM_{int(datetime.now().timestamp())}"
-                    response_data = {
-                        "success": True,
-                        "contact_id": contact_id,
-                        "message": "Contact created (response parsing issue)"
-                    }
-            else:
-                raise Exception(f"CRM API error: {response.status_code}")
+            logger.info(f"Contact queued for CRM creation: {local_id} for {data.get('name')}")
             
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -1642,13 +1704,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 try:
                     # Simple table creation and storage (using existing signature_storage connection)
                     import psycopg2
-                    conn = psycopg2.connect(
-                        host=signature_storage.host,
-                        database=signature_storage.database,
-                        user=signature_storage.user,
-                        password=signature_storage.password,
-                        port=signature_storage.port
-                    )
+                    conn = signature_storage.get_connection()
                     
                     with conn.cursor() as cursor:
                         # Create contacts cache table if not exists
@@ -1720,13 +1776,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
         """Get all cached CRM contacts for the dropdown"""
         try:
             import psycopg2
-            conn = psycopg2.connect(
-                host=signature_storage.host,
-                database=signature_storage.database,
-                user=signature_storage.user,
-                password=signature_storage.password,
-                port=signature_storage.port
-            )
+            conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -1771,13 +1821,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
         """Get the sync status and recent sync history"""
         try:
             import psycopg2
-            conn = psycopg2.connect(
-                host=signature_storage.host,
-                database=signature_storage.database,
-                user=signature_storage.user,
-                password=signature_storage.password,
-                port=signature_storage.port
-            )
+            conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
                 # Get recent sync history
@@ -1804,8 +1848,9 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
             response_data = {
                 "success": True,
-                "background_sync_running": crm_delta_sync.running,
-                "sync_interval_minutes": crm_delta_sync.sync_interval // 60,
+                "background_sync_running": crm_bidirectional_sync.running,
+                "sync_interval_read_minutes": crm_bidirectional_sync.read_sync_interval // 60,
+                "sync_interval_write_seconds": crm_bidirectional_sync.write_sync_interval,
                 "total_cached_contacts": total_contacts,
                 "recent_syncs": sync_history
             }
@@ -1823,46 +1868,273 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             error_response = {"success": False, "error": str(e)}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
-class CRMDeltaSync:
-    """Background service to sync CRM deltas automatically"""
+class CRMBidirectionalSync:
+    """Background service for full bidirectional CRM sync with write queue"""
     
     def __init__(self):
         self.api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
         self.api_parts = self.api_key.split('-', 1)
         self.user_code = self.api_parts[0]
         self.crm_url = "https://api.lessannoyingcrm.com"
-        self.sync_interval = 300  # 5 minutes
+        self.read_sync_interval = 300  # 5 minutes for reading changes
+        self.write_sync_interval = 30   # 30 seconds for processing write queue
         self.running = False
-        self.thread = None
+        self.read_thread = None
+        self.write_thread = None
         
     def start_background_sync(self):
-        """Start the background delta sync process"""
+        """Start both read and write sync processes"""
         if not self.running:
             self.running = True
-            self.thread = threading.Thread(target=self._sync_loop, daemon=True)
-            self.thread.start()
-            logger.info("🔄 CRM delta sync started - checking every 5 minutes")
+            
+            # Start read sync thread (pulls changes from CRM)
+            self.read_thread = threading.Thread(target=self._read_sync_loop, daemon=True)
+            self.read_thread.start()
+            
+            # Start write sync thread (pushes changes to CRM)
+            self.write_thread = threading.Thread(target=self._write_sync_loop, daemon=True)
+            self.write_thread.start()
+            
+            logger.info("🔄 CRM bidirectional sync started - read every 5min, write every 30sec")
     
     def stop_background_sync(self):
-        """Stop the background sync"""
+        """Stop both sync processes"""
         self.running = False
-        if self.thread:
-            self.thread.join()
-        logger.info("⏹️ CRM delta sync stopped")
+        if self.read_thread:
+            self.read_thread.join()
+        if self.write_thread:
+            self.write_thread.join()
+        logger.info("⏹️ CRM bidirectional sync stopped")
     
-    def _sync_loop(self):
-        """Main sync loop that runs in background"""
+    def _read_sync_loop(self):
+        """Read sync loop - pulls changes from CRM"""
         while self.running:
             try:
                 self._check_and_sync_deltas()
             except Exception as e:
-                logger.error(f"CRM delta sync error: {e}")
+                logger.error(f"CRM read sync error: {e}")
             
-            # Wait for next sync interval
-            for _ in range(self.sync_interval):
+            # Wait for next read sync interval
+            for _ in range(self.read_sync_interval):
                 if not self.running:
                     break
                 time.sleep(1)
+    
+    def _write_sync_loop(self):
+        """Write sync loop - processes write queue to CRM"""
+        while self.running:
+            try:
+                self._process_write_queue()
+            except Exception as e:
+                logger.error(f"CRM write sync error: {e}")
+            
+            # Wait for next write sync interval
+            for _ in range(self.write_sync_interval):
+                if not self.running:
+                    break
+                time.sleep(1)
+    
+    def queue_crm_write(self, operation, data, priority='normal'):
+        """Queue a write operation to CRM"""
+        try:
+            import psycopg2
+            conn = signature_storage.get_connection()
+            
+            with conn.cursor() as cursor:
+                # Create write queue table if not exists
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS crm_write_queue (
+                        id SERIAL PRIMARY KEY,
+                        operation VARCHAR(50) NOT NULL,
+                        data JSONB NOT NULL,
+                        priority VARCHAR(20) DEFAULT 'normal',
+                        status VARCHAR(20) DEFAULT 'pending',
+                        attempts INTEGER DEFAULT 0,
+                        max_attempts INTEGER DEFAULT 3,
+                        error_message TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        processed_at TIMESTAMP,
+                        local_id VARCHAR(100)
+                    )
+                """)
+                
+                # Add operation to queue
+                cursor.execute("""
+                    INSERT INTO crm_write_queue (operation, data, priority, local_id)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id
+                """, (operation, json.dumps(data), priority, data.get('local_id')))
+                
+                queue_id = cursor.fetchone()[0]
+                conn.commit()
+            
+            conn.close()
+            logger.info(f"📤 Queued CRM {operation}: {queue_id}")
+            return queue_id
+            
+        except Exception as e:
+            logger.error(f"Error queueing CRM write: {e}")
+            return None
+    
+    def _process_write_queue(self):
+        """Process pending write operations to CRM"""
+        try:
+            import psycopg2
+            conn = signature_storage.get_connection()
+            
+            with conn.cursor() as cursor:
+                # Get pending operations (high priority first)
+                cursor.execute("""
+                    SELECT id, operation, data, attempts, local_id
+                    FROM crm_write_queue 
+                    WHERE status = 'pending' AND attempts < max_attempts
+                    ORDER BY 
+                        CASE priority WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
+                        created_at
+                    LIMIT 5
+                """)
+                
+                operations = cursor.fetchall()
+                
+                for op_id, operation, data_json, attempts, local_id in operations:
+                    try:
+                        data = json.loads(data_json)
+                        
+                        # Mark as processing
+                        cursor.execute("""
+                            UPDATE crm_write_queue 
+                            SET status = 'processing', attempts = attempts + 1
+                            WHERE id = %s
+                        """, (op_id,))
+                        conn.commit()
+                        
+                        # Execute the operation
+                        success = self._execute_crm_operation(operation, data)
+                        
+                        if success:
+                            # Mark as completed
+                            cursor.execute("""
+                                UPDATE crm_write_queue 
+                                SET status = 'completed', processed_at = %s
+                                WHERE id = %s
+                            """, (datetime.now(), op_id))
+                            logger.info(f"✅ CRM {operation} completed: {local_id}")
+                        else:
+                            # Mark as failed if max attempts reached
+                            cursor.execute("""
+                                UPDATE crm_write_queue 
+                                SET status = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+                                    error_message = %s
+                                WHERE id = %s
+                            """, (f"Operation failed after {attempts + 1} attempts", op_id))
+                            
+                        conn.commit()
+                        
+                    except Exception as op_error:
+                        logger.error(f"Error processing CRM operation {op_id}: {op_error}")
+                        
+                        # Mark as failed
+                        cursor.execute("""
+                            UPDATE crm_write_queue 
+                            SET status = 'pending', error_message = %s
+                            WHERE id = %s
+                        """, (str(op_error), op_id))
+                        conn.commit()
+            
+            conn.close()
+            
+        except Exception as e:
+            logger.error(f"Error processing write queue: {e}")
+    
+    def _execute_crm_operation(self, operation, data):
+        """Execute a specific CRM operation"""
+        try:
+            import requests
+            
+            if operation == 'create_contact':
+                params = {
+                    'APIToken': self.api_key,
+                    'UserCode': self.user_code,
+                    'Function': 'CreateContact',
+                    'Name': data.get('name', ''),
+                    'Email': data.get('email', ''),
+                    'CompanyName': data.get('company', ''),
+                    'Phone': data.get('phone', ''),
+                    'Address': data.get('address', ''),
+                    'Notes': data.get('notes', '')
+                }
+                
+                response = requests.get(self.crm_url, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    result_data = json.loads(response.text)
+                    
+                    # Update local record with CRM ID if successful
+                    if result_data.get('Success'):
+                        crm_id = result_data.get('Result', {}).get('ContactId')
+                        if crm_id and data.get('local_id'):
+                            self._update_local_crm_id(data['local_id'], str(crm_id))
+                        return True
+                    else:
+                        logger.error(f"CRM API error: {result_data.get('Error', 'Unknown error')}")
+                        return False
+                else:
+                    logger.error(f"CRM HTTP error: {response.status_code}")
+                    return False
+            
+            elif operation == 'update_contact':
+                # Implement contact update logic
+                params = {
+                    'APIToken': self.api_key,
+                    'UserCode': self.user_code,
+                    'Function': 'UpdateContact',
+                    'ContactId': data.get('crm_id'),
+                    'Notes': data.get('notes', '')
+                }
+                
+                response = requests.get(self.crm_url, params=params, timeout=30)
+                return response.status_code == 200
+            
+            elif operation == 'add_note':
+                # Add note to existing contact
+                params = {
+                    'APIToken': self.api_key,
+                    'UserCode': self.user_code,
+                    'Function': 'CreateNote',
+                    'ContactId': data.get('crm_id'),
+                    'Note': data.get('note_content', '')
+                }
+                
+                response = requests.get(self.crm_url, params=params, timeout=30)
+                return response.status_code == 200
+            
+            else:
+                logger.error(f"Unknown CRM operation: {operation}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error executing CRM operation {operation}: {e}")
+            return False
+    
+    def _update_local_crm_id(self, local_id, crm_id):
+        """Update local contact record with CRM ID"""
+        try:
+            import psycopg2
+            conn = signature_storage.get_connection()
+            
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE crm_contacts_cache 
+                    SET contact_id = %s 
+                    WHERE contact_id = %s
+                """, (crm_id, local_id))
+                conn.commit()
+            
+            conn.close()
+            logger.info(f"Updated local contact {local_id} with CRM ID {crm_id}")
+            
+        except Exception as e:
+            logger.error(f"Error updating local CRM ID: {e}")
     
     def _check_and_sync_deltas(self):
         """Check for CRM changes and sync deltas"""
@@ -1916,13 +2188,7 @@ class CRMDeltaSync:
         """Get the last sync timestamp from database"""
         try:
             import psycopg2
-            conn = psycopg2.connect(
-                host=signature_storage.host,
-                database=signature_storage.database,
-                user=signature_storage.user,
-                password=signature_storage.password,
-                port=signature_storage.port
-            )
+            conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -1954,13 +2220,7 @@ class CRMDeltaSync:
         """Update the last sync timestamp"""
         try:
             import psycopg2
-            conn = psycopg2.connect(
-                host=signature_storage.host,
-                database=signature_storage.database,
-                user=signature_storage.user,
-                password=signature_storage.password,
-                port=signature_storage.port
-            )
+            conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
                 cursor.execute("""
@@ -1993,13 +2253,7 @@ class CRMDeltaSync:
         """Update the cache with delta contacts"""
         try:
             import psycopg2
-            conn = psycopg2.connect(
-                host=signature_storage.host,
-                database=signature_storage.database,
-                user=signature_storage.user,
-                password=signature_storage.password,
-                port=signature_storage.port
-            )
+            conn = signature_storage.get_connection()
             
             with conn.cursor() as cursor:
                 for contact in contacts:
@@ -2036,7 +2290,7 @@ class CRMDeltaSync:
             logger.error(f"Error updating cache with deltas: {e}")
 
 # Global delta sync instance
-crm_delta_sync = CRMDeltaSync()
+crm_bidirectional_sync = CRMBidirectionalSync()
 
 def main():
     """Start the complete integrated signature server"""
@@ -2066,7 +2320,7 @@ def main():
     
     # Start background CRM delta sync
     try:
-        crm_delta_sync.start_background_sync()
+        crm_bidirectional_sync.start_background_sync()
         print("✅ CRM delta sync service started")
     except Exception as e:
         print(f"⚠️ CRM delta sync failed to start: {e}")
@@ -2075,7 +2329,7 @@ def main():
         httpd.serve_forever()
     except KeyboardInterrupt:
         print("\n🛑 Shutting down server...")
-        crm_delta_sync.stop_background_sync()
+        crm_bidirectional_sync.stop_background_sync()
         print("✅ Server stopped")
 
 if __name__ == "__main__":
