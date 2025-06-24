@@ -27,7 +27,12 @@ class LessAnnoyingCRMIntegration:
     - Map CRM fields to LOI processing format
     """
     
-    def __init__(self, api_key: str, base_url: str = "https://api.lessannoyingcrm.com/v2/"):
+    def __init__(self, api_key: str = None, base_url: str = None):
+        # Use CRM Bridge instead of direct LACRM API
+        self.crm_bridge_url = "https://loi-automation-api.onrender.com/api/v1/crm-bridge"
+        self.crm_bridge_token = "bde_loi_auth_e6db5173a4393421ffadae85f9a3513e"
+        
+        # Legacy parameters (deprecated)
         self.api_key = api_key
         self.base_url = base_url
         
@@ -137,29 +142,36 @@ class LessAnnoyingCRMIntegration:
         
         async with aiohttp.ClientSession() as session:
             
-            # Prepare API request based on LACRM v2 documentation
+            # Use CRM Bridge instead of direct LACRM API
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": self.api_key
+                "Authorization": f"Bearer {self.crm_bridge_token}"
             }
             
-            body = {
-                "Function": "GetContact",
-                "Parameters": {
-                    "ContactId": submission_id
-                }
+            # Search for contact by ID using CRM bridge
+            search_body = {
+                "query": submission_id,
+                "limit": 1
             }
             
-            async with session.post(self.base_url, headers=headers, json=body) as response:
+            async with session.post(f"{self.crm_bridge_url}/contacts/search", headers=headers, json=search_body) as response:
                 if response.status == 200:
                     data = await response.json()
                     
-                    if 'ErrorCode' not in data:
-                        return data
+                    if data.get('success') and data.get('contacts'):
+                        # Return first contact in LACRM format for compatibility
+                        contact = data['contacts'][0]
+                        return {
+                            'ContactId': contact['contact_id'],
+                            'Name': contact['name'],
+                            'CompanyName': contact['company_name'],
+                            'Email': contact['email'],
+                            'Phone': contact['phone']
+                        }
                     else:
-                        raise Exception(f"CRM API error {data.get('ErrorCode')}: {data.get('ErrorDescription', 'Unknown error')}")
+                        return None
                 else:
-                    raise Exception(f"CRM API returned status {response.status}")
+                    raise Exception(f"CRM Bridge returned status {response.status}")
     
     async def _find_form_by_email(self, email: str) -> Optional[str]:
         """Find form submission by customer email"""
@@ -169,30 +181,26 @@ class LessAnnoyingCRMIntegration:
             
             async with aiohttp.ClientSession() as session:
                 
-                # Search for contact by email using v2 API
+                # Search for contact by email using CRM Bridge
                 headers = {
                     "Content-Type": "application/json", 
-                    "Authorization": self.api_key
+                    "Authorization": f"Bearer {self.crm_bridge_token}"
                 }
                 
                 body = {
-                    "Function": "SearchContacts",
-                    "Parameters": {
-                        "SearchTerm": email,
-                        "SearchField": "Email"
-                    }
+                    "query": email,
+                    "limit": 1
                 }
                 
-                async with session.post(self.base_url, headers=headers, json=body) as response:
+                async with session.post(f"{self.crm_bridge_url}/contacts/search", headers=headers, json=body) as response:
                     if response.status == 200:
                         data = await response.json()
                         
-                        if 'ErrorCode' not in data and data:
+                        if data.get('success') and data.get('contacts'):
                             # Return first matching contact ID
-                            if isinstance(data, list) and data:
-                                return data[0].get('ContactId')
-                            elif isinstance(data, dict) and data.get('ContactId'):
-                                return data.get('ContactId')
+                            contacts = data['contacts']
+                            if contacts:
+                                return contacts[0]['contact_id']
                     
                     return None
                     
