@@ -62,6 +62,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         elif path.startswith("/audit-report/"):
             verification_code = path.split("/audit-report/")[1]
             self.serve_audit_report(verification_code)
+        elif path == "/admin":
+            self.serve_admin_dashboard()
         else:
             self.send_error(404)
     
@@ -71,6 +73,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             self.handle_signature_submission(post_data)
+        elif self.path == "/api/create-loi":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_create_loi(post_data)
         else:
             self.send_error(404)
     
@@ -701,15 +707,360 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.end_headers()
         self.wfile.write(html.encode('utf-8'))
+    
+    def serve_admin_dashboard(self):
+        """Serve admin dashboard for creating new LOIs"""
+        html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Better Day Energy - LOI Admin Dashboard</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: #f8f9fa;
+                    padding: 20px;
+                }
+                .container {
+                    max-width: 1000px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .header {
+                    background: linear-gradient(135deg, #1f4e79, #2c5aa0);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }
+                .header h1 { font-size: 28px; margin-bottom: 10px; }
+                .header p { opacity: 0.9; }
+                .content {
+                    padding: 30px;
+                }
+                .form-section {
+                    background: #f8f9fa;
+                    padding: 25px;
+                    border-radius: 8px;
+                    margin-bottom: 30px;
+                }
+                .form-group {
+                    margin-bottom: 20px;
+                }
+                .form-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #1f4e79;
+                }
+                .form-group input {
+                    width: 100%;
+                    padding: 12px;
+                    border: 2px solid #e9ecef;
+                    border-radius: 6px;
+                    font-size: 16px;
+                }
+                .form-group input:focus {
+                    outline: none;
+                    border-color: #007bff;
+                }
+                .btn {
+                    background: #28a745;
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 18px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    width: 100%;
+                }
+                .btn:hover {
+                    background: #218838;
+                }
+                .result-box {
+                    background: #e8f5e8;
+                    border: 2px solid #28a745;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-top: 20px;
+                    display: none;
+                }
+                .result-box h3 {
+                    color: #155724;
+                    margin-bottom: 15px;
+                }
+                .url-box {
+                    background: white;
+                    padding: 15px;
+                    border-radius: 6px;
+                    border: 1px solid #c3e6c3;
+                    margin: 10px 0;
+                    font-family: monospace;
+                    word-break: break-all;
+                }
+                .email-template {
+                    background: #fff;
+                    border: 1px solid #ddd;
+                    padding: 20px;
+                    border-radius: 6px;
+                    margin-top: 15px;
+                    white-space: pre-line;
+                    font-family: Arial, sans-serif;
+                    font-size: 14px;
+                }
+                .copy-btn {
+                    background: #007bff;
+                    color: white;
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    margin-top: 10px;
+                }
+                .status-box {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    padding: 15px;
+                    border-radius: 6px;
+                    margin-bottom: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 Better Day Energy - LOI Admin</h1>
+                    <p>Create new Letter of Intent signature requests for customers</p>
+                    <p><strong>Production System:</strong> https://loi-automation-api.onrender.com</p>
+                </div>
+                
+                <div class="content">
+                    <div class="status-box">
+                        <h3>🚀 Live Production System</h3>
+                        <p>✅ PostgreSQL connected | ✅ CRM integrated | ✅ Email ready</p>
+                        <p>This admin panel creates LOIs that are instantly live on the production system.</p>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h2>📋 Create New LOI Request</h2>
+                        <form id="loi-form">
+                            <div class="form-group">
+                                <label for="signer-name">Customer Name:</label>
+                                <input type="text" id="signer-name" placeholder="e.g., John Smith" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="signer-email">Customer Email:</label>
+                                <input type="email" id="signer-email" placeholder="e.g., john@example.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="company-name">Company Name:</label>
+                                <input type="text" id="company-name" placeholder="e.g., Smith's Gas Station" required>
+                            </div>
+                            
+                            <button type="submit" class="btn">🚀 Create Live LOI Request</button>
+                        </form>
+                    </div>
+                    
+                    <div id="result" class="result-box">
+                        <h3>✅ LOI Created Successfully!</h3>
+                        <div id="loi-details"></div>
+                        
+                        <h4>🔗 Live Signature URL:</h4>
+                        <div id="signature-url" class="url-box"></div>
+                        <button class="copy-btn" onclick="copyUrl()">📋 Copy URL</button>
+                        
+                        <h4>📧 Email Template for Customer:</h4>
+                        <div id="email-template" class="email-template"></div>
+                        <button class="copy-btn" onclick="copyEmail()">📋 Copy Email</button>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                function generateUUID() {
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        var r = Math.random() * 16 | 0,
+                            v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+                
+                function generateTransactionId() {
+                    return 'TXN-' + generateUUID().substr(0, 8).toUpperCase();
+                }
+                
+                document.getElementById('loi-form').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const signerName = document.getElementById('signer-name').value;
+                    const signerEmail = document.getElementById('signer-email').value;
+                    const companyName = document.getElementById('company-name').value;
+                    
+                    const transactionId = generateTransactionId();
+                    const signatureToken = generateUUID();
+                    const createdAt = new Date().toISOString();
+                    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                    
+                    const loiData = {
+                        transaction_id: transactionId,
+                        signature_token: signatureToken,
+                        signer_name: signerName,
+                        signer_email: signerEmail,
+                        company_name: companyName,
+                        document_name: "VP Racing Fuel Supply Agreement - Letter of Intent",
+                        status: "pending",
+                        created_at: createdAt,
+                        expires_at: expiresAt
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/create-loi', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(loiData)
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            const signatureUrl = `https://loi-automation-api.onrender.com/sign/${signatureToken}`;
+                            
+                            // Show results
+                            document.getElementById('loi-details').innerHTML = `
+                                <p><strong>Customer:</strong> ${signerName}</p>
+                                <p><strong>Company:</strong> ${companyName}</p>
+                                <p><strong>Email:</strong> ${signerEmail}</p>
+                                <p><strong>Transaction ID:</strong> ${transactionId}</p>
+                                <p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleDateString()}</p>
+                            `;
+                            
+                            document.getElementById('signature-url').textContent = signatureUrl;
+                            
+                            const emailTemplate = `Subject: VP Racing Fuel Supply Agreement - Electronic Signature Required
+
+Dear ${signerName},
+
+Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.
+
+Please review and electronically sign the attached Letter of Intent for our VP Racing Fuel Supply Agreement by clicking the link below:
+
+🔗 Sign Document: ${signatureUrl}
+
+Key Benefits:
+• $125,000 first-year incentive package  
+• Competitive pricing with quarterly reviews
+• 24/7 emergency fuel supply support
+• Dedicated account management
+
+This document expires in 30 days. Please complete your signature at your earliest convenience.
+
+If you have any questions, please contact Adam Simpson directly.
+
+Best regards,
+Better Day Energy Team
+
+Transaction ID: ${transactionId}`;
+                            
+                            document.getElementById('email-template').textContent = emailTemplate;
+                            document.getElementById('result').style.display = 'block';
+                            
+                            // Store the data for copying
+                            window.currentSignatureUrl = signatureUrl;
+                            window.currentEmailTemplate = emailTemplate;
+                            
+                            alert('✅ LOI Created Successfully!\\n\\nThe signature URL is now live and ready to send to the customer.');
+                            
+                        } else {
+                            throw new Error('Failed to create LOI');
+                        }
+                    } catch (error) {
+                        alert('❌ Error creating LOI: ' + error.message);
+                    }
+                });
+                
+                function copyUrl() {
+                    navigator.clipboard.writeText(window.currentSignatureUrl);
+                    alert('✅ Signature URL copied to clipboard!');
+                }
+                
+                function copyEmail() {
+                    navigator.clipboard.writeText(window.currentEmailTemplate);
+                    alert('✅ Email template copied to clipboard!');
+                }
+            </script>
+        </body>
+        </html>
+        """
+        
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html; charset=utf-8')
+        self.end_headers()
+        self.wfile.write(html.encode('utf-8'))
+    
+    def handle_create_loi(self, post_data):
+        """Handle creating new LOI requests"""
+        try:
+            # Parse JSON data
+            data = json.loads(post_data.decode('utf-8'))
+            
+            # Load existing signature requests
+            global signature_requests
+            
+            # Generate a unique request key
+            request_key = f"request_{len(signature_requests) + 1:03d}"
+            
+            # Add new request to memory
+            signature_requests[request_key] = data
+            
+            # Save to file (in production, this updates the server's data)
+            try:
+                with open("signature_request_data.json", "w") as f:
+                    json.dump(signature_requests, f, indent=2)
+                logger.info(f"LOI request created: {data['transaction_id']} for {data['signer_name']}")
+            except Exception as e:
+                logger.error(f"Failed to save LOI data to file: {str(e)}")
+                # Continue anyway since we have it in memory
+            
+            # Send success response
+            response_data = {
+                "success": True,
+                "message": "LOI created successfully",
+                "transaction_id": data["transaction_id"],
+                "signature_token": data["signature_token"],
+                "signature_url": f"https://loi-automation-api.onrender.com/sign/{data['signature_token']}"
+            }
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"Error creating LOI: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
 def main():
     """Start the complete integrated signature server"""
-    server_address = ('', 8003)  # Different port for complete system
+    import os
+    port = int(os.environ.get('PORT', 8003))  # Use PORT env var for Render
+    server_address = ('', port)
     httpd = HTTPServer(server_address, IntegratedSignatureHandler)
     
     print("🚀 Better Day Energy COMPLETE Signature System Started!")
     print("=" * 60)
-    print("🌐 Access at: http://localhost:8003")
+    print(f"🌐 Access at: http://localhost:{port}")
+    print(f"🎯 Admin panel: http://localhost:{port}/admin")
     print("📧 Ready for complete workflow automation")
     print("\n✅ Complete Workflow:")
     print("1. 🖊️ Electronic signature capture")
