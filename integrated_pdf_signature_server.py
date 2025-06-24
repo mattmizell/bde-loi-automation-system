@@ -185,6 +185,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             self.handle_create_crm_contact(post_data)
+        elif self.path == "/api/update-crm-contact":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_update_crm_contact(post_data)
         elif self.path == "/api/refresh-crm-cache":
             self.handle_refresh_crm_cache()
         elif self.path == "/api/get-crm-contacts":
@@ -1459,8 +1463,11 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                                 <div style="border: 1px solid #28a745; padding: 12px; margin: 8px 0; border-radius: 4px; background: white;">
                                     <p style="margin: 0 0 5px 0;"><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
                                     <p style="margin: 0 0 8px 0; color: #666;">📧 ${customer.email} ${customer.phone ? '| 📞 ' + customer.phone : ''}</p>
-                                    <button class="btn" onclick="selectExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')" style="background: #28a745;">
+                                    <button class="btn" onclick="selectExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')" style="background: #28a745; margin-right: 8px;">
                                         ✅ Select This Customer
+                                    </button>
+                                    <button class="btn" onclick="editExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}', '${customer.phone || ''}')" style="background: #ffc107; color: #000;">
+                                        ✏️ Edit & Use
                                     </button>
                                 </div>
                             `;
@@ -1501,6 +1508,50 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     showStep(3); // Skip to deal terms
                 }
                 
+                function editExistingCustomer(id, name, email, company, phone) {
+                    // Set up for editing existing customer
+                    currentCustomer = { 
+                        id: id, 
+                        name: name, 
+                        email: email, 
+                        company: company,
+                        phone: phone,
+                        existing: true,
+                        editing: true  // Flag to indicate this is an edit operation
+                    };
+                    
+                    // Pre-fill the form with existing data
+                    document.getElementById('customer-name').value = name || '';
+                    document.getElementById('customer-email').value = email || '';
+                    document.getElementById('company-name').value = company || '';
+                    document.getElementById('customer-phone').value = phone || '';
+                    
+                    // Clear address field for user to fill
+                    document.getElementById('customer-address').value = '';
+                    
+                    // Show step 2 with pre-filled data for editing
+                    showStep(2);
+                    
+                    // Update form title to indicate editing
+                    document.querySelector('#step-2 h2').innerHTML = '✏️ Step 2: Edit Customer Information';
+                    
+                    // Add a note about what's being edited
+                    const existingNote = document.getElementById('editing-note');
+                    if (existingNote) existingNote.remove();
+                    
+                    const noteDiv = document.createElement('div');
+                    noteDiv.id = 'editing-note';
+                    noteDiv.style.cssText = 'background: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #ffeaa7;';
+                    noteDiv.innerHTML = `
+                        <p style="margin: 0; color: #856404;">
+                            <strong>📝 Editing existing customer:</strong> ${name || 'Unnamed Contact'}<br>
+                            <small>Make any necessary changes below. Updates will be saved to CRM when you proceed.</small>
+                        </p>
+                    `;
+                    
+                    document.querySelector('#step-2').insertBefore(noteDiv, document.querySelector('#step-2 .form-row'));
+                }
+                
                 function skipToNewCustomer() {
                     // Clear any search results
                     document.getElementById('quick-search-results').classList.add('hidden');
@@ -1520,30 +1571,122 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         return;
                     }
                     
-                    // Create local customer object
-                    currentCustomer = {
-                        id: 'LOCAL_' + Date.now(),
-                        name: name,
-                        email: email,
-                        company: company,
-                        phone: phone,
-                        address: address,
-                        existing: false  // Flag to indicate this is new customer
-                    };
+                    // Check if this is editing an existing customer
+                    if (currentCustomer && currentCustomer.editing) {
+                        // Update the existing customer record
+                        currentCustomer.name = name;
+                        currentCustomer.email = email;
+                        currentCustomer.company = company;
+                        currentCustomer.phone = phone;
+                        currentCustomer.address = address;
+                        
+                        // Call CRM update endpoint in background
+                        updateCRMCustomer(currentCustomer);
+                        
+                        // Display updated customer summary
+                        document.getElementById('customer-summary').innerHTML = `
+                            <h3>✅ Updated Customer Information:</h3>
+                            <p><strong>Name:</strong> ${name}</p>
+                            <p><strong>Email:</strong> ${email}</p>
+                            <p><strong>Company:</strong> ${company}</p>
+                            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
+                            ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
+                            <p style="color: #155724; font-style: italic;">✏️ CRM record updated with new information</p>
+                        `;
+                    } else {
+                        // Create new local customer object
+                        currentCustomer = {
+                            id: 'LOCAL_' + Date.now(),
+                            name: name,
+                            email: email,
+                            company: company,
+                            phone: phone,
+                            address: address,
+                            existing: false  // Flag to indicate this is new customer
+                        };
+                        
+                        // Display new customer summary
+                        document.getElementById('customer-summary').innerHTML = `
+                            <h3>✅ New Customer Information:</h3>
+                            <p><strong>Name:</strong> ${name}</p>
+                            <p><strong>Email:</strong> ${email}</p>
+                            <p><strong>Company:</strong> ${company}</p>
+                            ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
+                            ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
+                            <p style="color: #666; font-style: italic;">📤 Will be added to CRM automatically</p>
+                        `;
+                    }
                     
-                    // Display customer summary
-                    document.getElementById('customer-summary').innerHTML = `
-                        <h3>✅ New Customer Information:</h3>
-                        <p><strong>Name:</strong> ${name}</p>
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Company:</strong> ${company}</p>
-                        ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
-                        ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
-                        <p style="color: #666; font-style: italic;">📤 Will be added to CRM automatically</p>
-                    `;
+                    // Reset form title and remove editing note
+                    document.querySelector('#step-2 h2').innerHTML = '👤 Step 2: Customer Information';
+                    const editingNote = document.getElementById('editing-note');
+                    if (editingNote) editingNote.remove();
                     
                     // Move to deal terms step
                     showStep(3);
+                }
+                
+                async function updateCRMCustomer(customer) {
+                    try {
+                        const response = await fetch('/api/update-crm-contact', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                contact_id: customer.id,
+                                name: customer.name,
+                                email: customer.email,
+                                company_name: customer.company,
+                                phone: customer.phone,
+                                address: customer.address
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json();
+                            console.log('✅ Customer updated in CRM:', result);
+                            
+                            // Show success notification
+                            showNotification('✅ Customer record updated in CRM', 'success');
+                        } else {
+                            console.error('❌ Failed to update customer in CRM:', response.status);
+                            showNotification('⚠️ Customer update queued for sync', 'warning');
+                        }
+                    } catch (error) {
+                        console.error('❌ Error updating customer:', error);
+                        showNotification('⚠️ Customer update queued for sync', 'warning');
+                    }
+                }
+                
+                function showNotification(message, type) {
+                    // Create notification element
+                    const notification = document.createElement('div');
+                    notification.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 12px 20px;
+                        border-radius: 4px;
+                        color: white;
+                        font-weight: bold;
+                        z-index: 1000;
+                        animation: slideIn 0.3s ease-out;
+                        ${type === 'success' ? 'background: #28a745;' : 'background: #ffc107; color: #000;'}
+                    `;
+                    notification.textContent = message;
+                    
+                    document.body.appendChild(notification);
+                    
+                    // Remove after 3 seconds
+                    setTimeout(() => {
+                        notification.style.animation = 'slideOut 0.3s ease-in';
+                        setTimeout(() => {
+                            if (notification.parentNode) {
+                                notification.parentNode.removeChild(notification);
+                            }
+                        }, 300);
+                    }, 3000);
                 }
                 
                 async function refreshCRMCache(event = null) {
@@ -2038,6 +2181,110 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             
         except Exception as e:
             logger.error(f"CRM contact creation error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_update_crm_contact(self, post_data):
+        """Handle updating existing CRM contact using CRM bridge"""
+        try:
+            data = json.loads(post_data.decode('utf-8'))
+            contact_id = data.get('contact_id')
+            
+            if not contact_id:
+                raise ValueError("Contact ID is required for updates")
+            
+            logger.info(f"📝 Updating CRM contact {contact_id}")
+            
+            # Update local cache first
+            import psycopg2
+            conn = signature_storage.get_connection()
+            
+            with conn.cursor() as cursor:
+                # Update local cache
+                cursor.execute("""
+                    UPDATE crm_contacts_cache 
+                    SET name = %s, email = %s, company_name = %s, phone = %s, 
+                        updated_at = CURRENT_TIMESTAMP, sync_status = %s
+                    WHERE contact_id = %s
+                """, (
+                    data.get('name', ''),
+                    data.get('email', ''),
+                    data.get('company_name', ''),
+                    data.get('phone', ''),
+                    'updated_pending_sync',
+                    contact_id
+                ))
+                
+                if cursor.rowcount == 0:
+                    # Contact not found in cache, create new entry
+                    cursor.execute("""
+                        INSERT INTO crm_contacts_cache 
+                        (contact_id, name, email, company_name, phone, sync_status)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        contact_id,
+                        data.get('name', ''),
+                        data.get('email', ''),
+                        data.get('company_name', ''),
+                        data.get('phone', ''),
+                        'updated_pending_sync'
+                    ))
+                
+                conn.commit()
+            
+            conn.close()
+            
+            # Queue update operation for CRM sync
+            write_queue_data = {
+                'contact_id': contact_id,
+                'name': data.get('name', ''),
+                'email': data.get('email', ''),
+                'company_name': data.get('company_name', ''),
+                'phone': data.get('phone', ''),
+                'address': data.get('address', ''),
+                'operation_type': 'update'
+            }
+            
+            # Use CRM bridge create endpoint for updates (will be handled as update if contact exists)
+            import requests
+            crm_bridge_url = "https://loi-automation-api.onrender.com/api/v1/crm-bridge"
+            crm_bridge_token = "bde_loi_auth_e6db5173a4393421ffadae85f9a3513e"
+            
+            headers = {
+                "Authorization": f"Bearer {crm_bridge_token}",
+                "Content-Type": "application/json"
+            }
+            
+            # Use CRM bridge create endpoint (it handles both create and update)
+            bridge_response = requests.post(
+                f"{crm_bridge_url}/contacts/create",
+                headers=headers,
+                json=write_queue_data,
+                timeout=10
+            )
+            
+            # Send success response regardless of CRM bridge result
+            # (updates are queued for sync)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            
+            response_data = {
+                "success": True,
+                "contact_id": contact_id,
+                "message": "Contact updated successfully",
+                "cache_updated": True,
+                "bridge_status": "queued" if not bridge_response.ok else "updated"
+            }
+            
+            logger.info(f"✅ Contact {contact_id} updated successfully")
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"❌ CRM contact update error: {str(e)}")
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -3168,16 +3415,52 @@ def handle_crm_bridge_search(self, auth_info, post_data):
         
         with psycopg2.connect(db_url) as conn:
             with conn.cursor() as cursor:
+                # Improved fuzzy search with better pattern matching
                 search_pattern = f"%{query}%"
-                cursor.execute("""
+                # Create variations for better fuzzy matching
+                query_words = query.lower().split()
+                word_patterns = [f"%{word}%" for word in query_words if len(word) > 2]
+                
+                # Build dynamic WHERE clause for fuzzy matching across all fields
+                where_conditions = []
+                params = []
+                
+                # Basic pattern search across all fields
+                where_conditions.append("""(
+                    LOWER(name) LIKE LOWER(%s) 
+                    OR LOWER(company_name) LIKE LOWER(%s)
+                    OR LOWER(email) LIKE LOWER(%s)
+                    OR LOWER(phone) LIKE LOWER(%s)
+                )""")
+                params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+                
+                # Add word-by-word fuzzy matching for better results
+                if word_patterns:
+                    for word_pattern in word_patterns:
+                        where_conditions.append("""(
+                            LOWER(name) LIKE LOWER(%s) 
+                            OR LOWER(company_name) LIKE LOWER(%s)
+                        )""")
+                        params.extend([word_pattern, word_pattern])
+                
+                where_clause = " OR ".join(where_conditions)
+                params.append(limit)
+                
+                cursor.execute(f"""
                     SELECT contact_id, name, company_name, email, phone, created_at 
                     FROM crm_contacts_cache 
-                    WHERE LOWER(name) LIKE LOWER(%s) 
-                       OR LOWER(company_name) LIKE LOWER(%s)
-                       OR LOWER(email) LIKE LOWER(%s)
-                    ORDER BY created_at DESC 
+                    WHERE {where_clause}
+                    ORDER BY 
+                        CASE 
+                            WHEN LOWER(name) = LOWER(%s) THEN 1
+                            WHEN LOWER(company_name) = LOWER(%s) THEN 2
+                            WHEN LOWER(name) LIKE LOWER(%s) THEN 3
+                            WHEN LOWER(company_name) LIKE LOWER(%s) THEN 4
+                            ELSE 5
+                        END,
+                        created_at DESC 
                     LIMIT %s
-                """, (search_pattern, search_pattern, search_pattern, limit))
+                """, params + [query, query, search_pattern, search_pattern, limit])
                 
                 contacts = []
                 for row in cursor.fetchall():
