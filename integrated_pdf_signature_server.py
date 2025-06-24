@@ -2445,7 +2445,8 @@ class CRMBidirectionalSync:
                 
                 for op_id, operation, data_json, attempts, local_id in operations:
                     try:
-                        data = json.loads(data_json)
+                        # data_json is already parsed by PostgreSQL JSONB - no need to json.loads()
+                        data = data_json
                         
                         # Mark as processing
                         cursor.execute("""
