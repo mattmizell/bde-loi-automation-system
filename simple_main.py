@@ -14,10 +14,15 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+from typing import Optional, List
 import uvicorn
+import hashlib
+import secrets
 
 # Configure logging
 logging.basicConfig(
@@ -41,6 +46,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# CRM Bridge Models
+class ContactCreateRequest(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+
+class ContactSearchRequest(BaseModel):
+    query: Optional[str] = None
+    company_filter: Optional[str] = None
+    limit: Optional[int] = 50
+
+# CRM Bridge Authentication
+CRM_BRIDGE_TOKENS = {
+    "loi_automation": "bde_loi_auth_" + hashlib.sha256("loi_automation_secret_key_2025".encode()).hexdigest()[:32],
+    "bolt_sales_tool": "bde_bolt_auth_" + hashlib.sha256("bolt_sales_secret_key_2025".encode()).hexdigest()[:32], 
+    "adam_sales_app": "bde_adam_auth_" + hashlib.sha256("adam_sales_secret_key_2025".encode()).hexdigest()[:32],
+}
+
+security = HTTPBearer()
+
+async def verify_crm_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify CRM bridge API token"""
+    token = credentials.credentials
+    
+    for app_name, valid_token in CRM_BRIDGE_TOKENS.items():
+        if token == valid_token:
+            logger.info(f"🔐 CRM Bridge access granted to: {app_name}")
+            return {"app_name": app_name, "token": token}
+    
+    logger.warning(f"🚫 Invalid CRM bridge token attempted: {token[:20]}...")
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid CRM bridge API token. Contact Better Day Energy IT for access."
+    )
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -676,10 +719,19 @@ async def get_crm_customers():
                                 elif contact.get('Name'):
                                     name = str(contact['Name'])
                                 
+                                # Get company name from the correct field
+                                company_name = 'N/A'
+                                if contact.get('Company Name'):
+                                    company_name = contact['Company Name']
+                                elif contact.get('CompanyMetaData', {}).get('CompanyName'):
+                                    company_name = contact['CompanyMetaData']['CompanyName']
+                                elif contact.get('CompanyName'):  # fallback to original field name
+                                    company_name = contact['CompanyName']
+                                
                                 customers.append({
                                     'contact_id': contact.get('ContactId'),
                                     'name': name,
-                                    'company': contact.get('CompanyName', 'N/A'),
+                                    'company': company_name,
                                     'email': contact.get('Email', 'N/A'),
                                     'phone': contact.get('Phone', 'N/A'),
                                     'created': contact.get('DateCreated', 'N/A'),
@@ -820,6 +872,287 @@ async def test_crm_functions():
             'traceback': traceback.format_exc(),
             'timestamp': datetime.now().isoformat()
         }
+
+# ========================================================================
+# CRM BRIDGE API - Fast cached access for all BDE sales tools
+# ========================================================================
+
+@app.get("/api/v1/crm-bridge/contacts")
+async def crm_bridge_get_contacts(
+    limit: int = 50,
+    auth_info: dict = Depends(verify_crm_token)
+):
+    """⚡ CRM Bridge: Get contacts from cache (lightning fast)"""
+    
+    try:
+        import psycopg2
+        
+        # Connect to database (production database if available, local fallback)
+        try:
+            # Try production database first (where the 2500+ cache is)
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+            logger.info("🌐 Using production database cache")
+        except:
+            # Fallback to local database
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+            logger.info("🏠 Using local database cache")
+        
+        cur = conn.cursor()
+        
+        # Get contacts from cache with proper company name handling
+        cur.execute("""
+            SELECT contact_id, name, company_name, email, phone, created_at
+            FROM crm_contacts_cache 
+            ORDER BY 
+                CASE WHEN last_sync > NOW() - INTERVAL '24 hours' THEN 1 ELSE 2 END,
+                name
+            LIMIT %s
+        """, (limit,))
+        
+        contacts = cur.fetchall()
+        conn.close()
+        
+        contact_list = [
+            {
+                "contact_id": row[0],
+                "name": row[1] or "",
+                "company_name": row[2] or "",
+                "email": row[3] or "",
+                "phone": row[4] or "",
+                "created_at": row[5].isoformat() if row[5] else None
+            }
+            for row in contacts
+        ]
+        
+        logger.info(f"⚡ CRM Bridge: Served {len(contact_list)} contacts to {auth_info['app_name']}")
+        
+        return {
+            "success": True,
+            "count": len(contact_list),
+            "contacts": contact_list,
+            "source": "cache",
+            "app": auth_info["app_name"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge contacts error: {e}")
+        raise HTTPException(status_code=500, detail=f"Cache unavailable: {str(e)}")
+
+@app.post("/api/v1/crm-bridge/contacts/search")
+async def crm_bridge_search_contacts(
+    search_request: ContactSearchRequest,
+    auth_info: dict = Depends(verify_crm_token)
+):
+    """⚡ CRM Bridge: Search contacts in cache"""
+    
+    try:
+        import psycopg2
+        
+        # Connect to database
+        try:
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        
+        # Build search query
+        where_conditions = []
+        params = []
+        
+        if search_request.query:
+            where_conditions.append("(name ILIKE %s OR company_name ILIKE %s OR email ILIKE %s)")
+            params.extend([f"%{search_request.query}%", f"%{search_request.query}%", f"%{search_request.query}%"])
+        
+        if search_request.company_filter:
+            where_conditions.append("company_name ILIKE %s")
+            params.append(f"%{search_request.company_filter}%")
+        
+        where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        params.append(search_request.limit or 50)
+        
+        query = f"""
+            SELECT contact_id, name, company_name, email, phone, created_at
+            FROM crm_contacts_cache 
+            {where_clause}
+            ORDER BY name
+            LIMIT %s
+        """
+        
+        cur.execute(query, params)
+        contacts = cur.fetchall()
+        conn.close()
+        
+        contact_list = [
+            {
+                "contact_id": row[0],
+                "name": row[1] or "",
+                "company_name": row[2] or "",
+                "email": row[3] or "",
+                "phone": row[4] or "",
+                "created_at": row[5].isoformat() if row[5] else None
+            }
+            for row in contacts
+        ]
+        
+        logger.info(f"🔍 CRM Bridge: Search '{search_request.query}' returned {len(contact_list)} results for {auth_info['app_name']}")
+        
+        return {
+            "success": True,
+            "query": search_request.query,
+            "company_filter": search_request.company_filter,
+            "count": len(contact_list),
+            "contacts": contact_list,
+            "app": auth_info["app_name"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Search unavailable: {str(e)}")
+
+@app.post("/api/v1/crm-bridge/contacts/create")
+async def crm_bridge_create_contact(
+    contact_request: ContactCreateRequest,
+    auth_info: dict = Depends(verify_crm_token)
+):
+    """🚀 CRM Bridge: Create contact immediately in cache, sync to CRM in background"""
+    
+    try:
+        import psycopg2
+        
+        # Connect to database
+        try:
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        
+        # Generate temporary contact ID for immediate response
+        temp_contact_id = f"TEMP_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+        
+        # 1. INSERT INTO CACHE IMMEDIATELY (for instant reads)
+        cur.execute("""
+            INSERT INTO crm_contacts_cache 
+            (contact_id, name, company_name, email, phone, created_at, sync_status)
+            VALUES (%s, %s, %s, %s, %s, %s, 'pending_sync')
+        """, (
+            temp_contact_id,
+            contact_request.name,
+            contact_request.company_name or "",
+            contact_request.email or "",
+            contact_request.phone or "",
+            datetime.now()
+        ))
+        
+        # 2. ADD TO WRITE QUEUE (for background LACRM sync)
+        queue_data = {
+            "temp_contact_id": temp_contact_id,
+            "operation": "create_contact",
+            "data": contact_request.dict(),
+            "app_source": auth_info["app_name"]
+        }
+        
+        cur.execute("""
+            INSERT INTO crm_write_queue 
+            (operation, data, status, created_at, max_attempts)
+            VALUES (%s, %s, 'pending', %s, %s)
+        """, (
+            "create_contact",
+            json.dumps(queue_data),
+            datetime.now(),
+            5
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ CRM Bridge: Contact '{contact_request.name}' created immediately for {auth_info['app_name']}")
+        
+        return {
+            "success": True,
+            "contact_id": temp_contact_id,
+            "message": "Contact created immediately in cache, syncing to CRM in background",
+            "status": "cache_created_sync_pending",
+            "app": auth_info["app_name"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge create error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/v1/crm-bridge/stats")
+async def crm_bridge_stats(auth_info: dict = Depends(verify_crm_token)):
+    """📊 CRM Bridge: Get cache statistics"""
+    
+    try:
+        import psycopg2
+        
+        # Connect to database
+        try:
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        
+        # Total contacts
+        cur.execute("SELECT COUNT(*) FROM crm_contacts_cache")
+        total_contacts = cur.fetchone()[0]
+        
+        # Contacts with companies
+        cur.execute("""
+            SELECT COUNT(*) FROM crm_contacts_cache 
+            WHERE company_name IS NOT NULL AND company_name != '' AND company_name != 'N/A'
+        """)
+        contacts_with_companies = cur.fetchone()[0]
+        
+        # Cache freshness
+        cur.execute("""
+            SELECT 
+                COUNT(CASE WHEN last_sync > NOW() - INTERVAL '24 hours' THEN 1 END) as fresh_24h,
+                MAX(last_sync) as last_sync
+            FROM crm_contacts_cache
+        """)
+        freshness_data = cur.fetchone()
+        fresh_24h, last_sync = freshness_data
+        
+        conn.close()
+        
+        return {
+            "total_contacts": total_contacts,
+            "contacts_with_companies": contacts_with_companies,
+            "company_coverage": round(contacts_with_companies / total_contacts * 100, 1) if total_contacts > 0 else 0,
+            "cache_freshness": {
+                "fresh_last_24h": fresh_24h,
+                "last_sync": last_sync.isoformat() if last_sync else None
+            },
+            "app": auth_info["app_name"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ CRM Bridge stats error: {e}")
+        raise HTTPException(status_code=500, detail=f"Stats unavailable: {str(e)}")
+
+@app.post("/api/v1/crm-bridge/auth/verify")
+async def crm_bridge_verify_auth(auth_info: dict = Depends(verify_crm_token)):
+    """🔐 CRM Bridge: Verify authentication"""
+    return {
+        "authenticated": True,
+        "app_name": auth_info["app_name"],
+        "permissions": ["read_contacts", "create_contacts", "search_contacts"],
+        "service": "CRM Bridge on LOI Automation API",
+        "cache_access": "enabled",
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/customers", response_class=HTMLResponse)
 async def customers_grid():
