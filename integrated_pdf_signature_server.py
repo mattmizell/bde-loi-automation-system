@@ -2061,49 +2061,121 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def handle_refresh_crm_cache(self):
-        """Refresh the local CRM contact cache from LACRM"""
+        """Refresh the local CRM contact cache from LACRM using proper pagination"""
         try:
             logger.info("Starting CRM cache refresh...")
             
-            # Get all contacts from LACRM
+            # Get all contacts from LACRM using working pagination approach
             api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
             api_parts = api_key.split('-', 1)
             user_code = api_parts[0]
             
-            # Use GetContactList to get all contacts
-            params = {
-                'APIToken': api_key,
-                'UserCode': user_code,
-                'Function': 'GetContactList'
-            }
-            
             crm_url = "https://api.lessannoyingcrm.com"
-            response = requests.get(crm_url, params=params, timeout=30)
+            all_contacts = []
+            page = 1
+            max_results_per_page = 10000
             
-            if response.status_code == 200:
-                result_data = json.loads(response.text)
-                contacts = []
+            # Use SearchContacts with pagination (the approach that works)
+            while True:
+                params = {
+                    'APIToken': api_key,
+                    'UserCode': user_code,
+                    'Function': 'SearchContacts',
+                    'SearchTerm': '',  # Empty to get all contacts
+                    'MaxNumberOfResults': max_results_per_page,
+                    'Page': page
+                }
                 
-                if result_data.get('Result'):
-                    contacts_list = result_data['Result'] if isinstance(result_data['Result'], list) else [result_data['Result']]
-                    
-                    for contact in contacts_list:
-                        if contact and isinstance(contact, dict):
-                            name = contact.get('Name', '').strip()
-                            if not name:
-                                first = contact.get('FirstName', '').strip()
-                                last = contact.get('LastName', '').strip()
-                                name = f"{first} {last}".strip() or 'Unknown'
-                            
-                            contact_data = {
-                                'id': str(contact.get('ContactId', '')),
-                                'name': name,
-                                'email': str(contact.get('Email', '')),
-                                'company': str(contact.get('CompanyName', '') or contact.get('Company', '')),
-                                'phone': str(contact.get('Phone', '') or contact.get('PhoneNumber', '')),
-                                'last_updated': datetime.now().isoformat()
-                            }
-                            contacts.append(contact_data)
+                response = requests.get(crm_url, params=params, timeout=30)
+                
+                if response.status_code != 200:
+                    logger.error(f"CRM API error: {response.status_code} - {response.text[:200]}")
+                    break
+                
+                result_data = json.loads(response.text)
+                
+                if not result_data.get('Success'):
+                    logger.error(f"CRM API failed: {result_data.get('Error', 'Unknown error')}")
+                    break
+                
+                contacts_data = result_data.get('Result', [])
+                
+                if not isinstance(contacts_data, list):
+                    contacts_data = [contacts_data] if contacts_data else []
+                
+                # If no results, we've reached the end
+                if len(contacts_data) == 0:
+                    break
+                
+                all_contacts.extend(contacts_data)
+                logger.info(f"Retrieved page {page}: {len(contacts_data)} contacts")
+                
+                page += 1
+                
+                # Safety check
+                if page > 50:
+                    logger.warning("CRM cache refresh safety limit reached")
+                    break
+            
+            logger.info(f"Retrieved {len(all_contacts)} total contacts from CRM")
+            
+            # Process contacts using the working data format
+            contacts = []
+            for contact in all_contacts:
+                if contact and isinstance(contact, dict):
+                    try:
+                        # Extract contact ID
+                        contact_id = str(contact.get('ContactId', ''))
+                        if not contact_id:
+                            continue
+                        
+                        # Extract name from actual LACRM format
+                        name = str(contact.get('CompanyName', '') or 'Unknown Contact')
+                        
+                        # Extract email (LACRM format: list of dicts with 'Text' field)
+                        email_raw = contact.get('Email', '')
+                        if isinstance(email_raw, list) and len(email_raw) > 0:
+                            first_email = email_raw[0]
+                            if isinstance(first_email, dict):
+                                email_text = first_email.get('Text', '')
+                                email = email_text.split(' (')[0] if email_text else ''
+                            else:
+                                email = str(first_email)
+                        elif isinstance(email_raw, dict):
+                            email = str(email_raw.get('Text', '') or email_raw.get('Value', '') or '')
+                        else:
+                            email = str(email_raw or '')
+                        
+                        # Company name
+                        company_name = str(contact.get('CompanyName', '') or '')
+                        
+                        # Extract phone (LACRM format: list of dicts with 'Text' field)
+                        phone_raw = contact.get('Phone', '')
+                        if isinstance(phone_raw, list) and len(phone_raw) > 0:
+                            first_phone = phone_raw[0]
+                            if isinstance(first_phone, dict):
+                                phone_text = first_phone.get('Text', '')
+                                phone = phone_text.split(' (')[0] if phone_text else ''
+                            else:
+                                phone = str(first_phone)
+                        elif isinstance(phone_raw, dict):
+                            phone = str(phone_raw.get('Text', '') or phone_raw.get('Value', '') or '')
+                        else:
+                            phone = str(phone_raw or '')
+                        
+                        contact_data = {
+                            'id': contact_id,
+                            'name': name,
+                            'email': email,
+                            'company': company_name,
+                            'phone': phone,
+                            'last_updated': datetime.now().isoformat()
+                        }
+                        contacts.append(contact_data)
+                        
+                    except Exception as contact_error:
+                        logger.error(f"Error processing contact {contact.get('ContactId', 'unknown')}: {contact_error}")
+                        continue
                 
                 # Store in PostgreSQL cache
                 try:
