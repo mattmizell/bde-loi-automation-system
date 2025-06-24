@@ -37,17 +37,29 @@ class DatabaseManager:
         self.SessionLocal = None
         self._initialized = False
         
-        # Database configuration
-        self.db_config = {
-            'host': 'localhost',
-            'port': 5432,
-            'database': 'loi_automation',
-            'username': 'mattmizell',
-            'password': 'training1'
-        }
+        # Database configuration from environment variables or defaults
+        import os
+        self.database_url = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost:5432/loi_automation")
         
-        # Connection string
-        self.database_url = f"postgresql://{self.db_config['username']}:{self.db_config['password']}@{self.db_config['host']}:{self.db_config['port']}/{self.db_config['database']}"
+        # Parse database URL for individual components (if needed)
+        if self.database_url.startswith('postgresql://'):
+            url_parts = self.database_url.replace('postgresql://', '').split('/')
+            user_host_part = url_parts[0]
+            self.db_config = {
+                'database': url_parts[1] if len(url_parts) > 1 else 'loi_automation',
+                'host': 'production' if 'DATABASE_URL' in os.environ else 'localhost',
+                'port': 5432,
+                'username': user_host_part.split('@')[0].split(':')[0] if '@' in user_host_part else 'mattmizell',
+                'password': '***'  # Don't expose password in logs
+            }
+        else:
+            self.db_config = {
+                'host': 'localhost',
+                'port': 5432,
+                'database': 'loi_automation',
+                'username': 'mattmizell',
+                'password': 'training1'
+            }
         
         logger.info("🗄️ Database manager initialized")
     

@@ -14,6 +14,8 @@ import logging
 from pathlib import Path
 import threading
 import time
+import hashlib
+import secrets
 from signature_storage import TamperEvidentSignatureStorage
 from html_to_pdf_generator import HTMLLOIPDFGenerator
 
@@ -27,6 +29,88 @@ logger = logging.getLogger(__name__)
 # Initialize components
 signature_storage = TamperEvidentSignatureStorage()
 pdf_generator = HTMLLOIPDFGenerator("1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W")
+
+# User Authentication System
+AUTHORIZED_USERS = {
+    "matt.mizell@gmail.com": {
+        "name": "Matt Mizell",
+        "role": "admin",
+        "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # 'password123'
+        "permissions": ["create_loi", "view_all", "admin_access", "crm_access"]
+    },
+    "adam@betterdayenergy.com": {
+        "name": "Adam Castelli", 
+        "role": "manager",
+        "password_hash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",  # 'password123'
+        "permissions": ["create_loi", "view_all", "crm_access"]
+    }
+}
+
+# Session storage (in production, this would be in database)
+user_sessions = {}
+
+def hash_password(password):
+    """Hash password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def generate_session_token():
+    """Generate a secure session token"""
+    return secrets.token_urlsafe(32)
+
+def authenticate_user(email, password):
+    """Authenticate user credentials"""
+    if email not in AUTHORIZED_USERS:
+        return None
+    
+    user = AUTHORIZED_USERS[email]
+    if hash_password(password) == user["password_hash"]:
+        # Create session
+        session_token = generate_session_token()
+        user_sessions[session_token] = {
+            "email": email,
+            "name": user["name"],
+            "role": user["role"],
+            "permissions": user["permissions"],
+            "login_time": datetime.now(),
+            "expires": datetime.now() + timedelta(hours=8)
+        }
+        return session_token
+    return None
+
+def get_user_from_session(session_token):
+    """Get user info from session token"""
+    if not session_token or session_token not in user_sessions:
+        return None
+    
+    session = user_sessions[session_token]
+    if datetime.now() > session["expires"]:
+        del user_sessions[session_token]
+        return None
+    
+    return session
+
+def require_auth(handler_method):
+    """Decorator to require authentication"""
+    def wrapper(self, *args, **kwargs):
+        # Check for session cookie
+        cookie_header = self.headers.get('Cookie', '')
+        session_token = None
+        
+        for cookie in cookie_header.split(';'):
+            if 'session_token=' in cookie:
+                session_token = cookie.split('session_token=')[1].strip()
+                break
+        
+        user = get_user_from_session(session_token)
+        if not user:
+            self.send_login_page()
+            return
+        
+        # Add user to request context
+        self.current_user = user
+        return handler_method(self, *args, **kwargs)
+    
+    return wrapper
 
 # Load signature request data
 def load_signature_requests():
@@ -65,7 +149,11 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             verification_code = path.split("/audit-report/")[1]
             self.serve_audit_report(verification_code)
         elif path == "/admin":
-            self.serve_admin_dashboard()
+            self.serve_admin_dashboard_with_auth()
+        elif path == "/login":
+            self.serve_login_page()
+        elif path == "/logout":
+            self.handle_logout()
         else:
             self.send_error(404)
     
@@ -93,6 +181,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.handle_get_crm_contacts()
         elif self.path == "/api/sync-status":
             self.handle_sync_status()
+        elif self.path == "/api/login":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_login(post_data)
         else:
             self.send_error(404)
     
@@ -724,6 +816,238 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html.encode('utf-8'))
     
+    def serve_admin_dashboard_with_auth(self):
+        """Serve admin dashboard with authentication check"""
+        # Check for session cookie
+        cookie_header = self.headers.get('Cookie', '')
+        session_token = None
+        
+        for cookie in cookie_header.split(';'):
+            if 'session_token=' in cookie:
+                session_token = cookie.split('session_token=')[1].strip()
+                break
+        
+        user = get_user_from_session(session_token)
+        if not user:
+            self.serve_login_page()
+            return
+        
+        # User is authenticated, serve the dashboard
+        self.current_user = user
+        self.serve_admin_dashboard()
+    
+    def serve_login_page(self):
+        """Serve login page"""
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Better Day Energy - Login</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{ 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: linear-gradient(135deg, #1f4e79, #2c5aa0);
+                    min-height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }}
+                .login-container {{
+                    background: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                    width: 100%;
+                    max-width: 400px;
+                }}
+                .login-header {{
+                    text-align: center;
+                    margin-bottom: 30px;
+                }}
+                .login-header h1 {{
+                    color: #1f4e79;
+                    font-size: 24px;
+                    margin-bottom: 10px;
+                }}
+                .login-header p {{
+                    color: #666;
+                    font-size: 14px;
+                }}
+                .form-group {{
+                    margin-bottom: 20px;
+                }}
+                .form-group label {{
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #1f4e79;
+                }}
+                .form-group input {{
+                    width: 100%;
+                    padding: 12px;
+                    border: 2px solid #e9ecef;
+                    border-radius: 6px;
+                    font-size: 16px;
+                }}
+                .form-group input:focus {{
+                    outline: none;
+                    border-color: #007bff;
+                }}
+                .btn {{
+                    background: #28a745;
+                    color: white;
+                    padding: 15px 30px;
+                    border: none;
+                    border-radius: 6px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    width: 100%;
+                }}
+                .btn:hover {{
+                    background: #218838;
+                }}
+                .error-msg {{
+                    background: #f8d7da;
+                    color: #721c24;
+                    padding: 10px;
+                    border-radius: 4px;
+                    margin-bottom: 20px;
+                    display: none;
+                }}
+                .user-note {{
+                    background: #e7f3ff;
+                    border: 1px solid #007bff;
+                    padding: 15px;
+                    border-radius: 6px;
+                    margin-top: 20px;
+                    font-size: 14px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="login-container">
+                <div class="login-header">
+                    <h1>🎯 Better Day Energy</h1>
+                    <p>LOI Administration System</p>
+                </div>
+                
+                <div id="error-msg" class="error-msg"></div>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="email">Email Address:</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn">🔑 Login</button>
+                </form>
+                
+                <div class="user-note">
+                    <strong>Authorized Users:</strong><br>
+                    • Matt Mizell (matt.mizell@gmail.com)<br>
+                    • Adam Castelli (adam@betterdayenergy.com)<br><br>
+                    <em>Initial password: password123</em>
+                </div>
+            </div>
+            
+            <script>
+                document.getElementById('login-form').addEventListener('submit', async function(e) {{
+                    e.preventDefault();
+                    
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    const errorDiv = document.getElementById('error-msg');
+                    
+                    try {{
+                        const response = await fetch('/api/login', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ email, password }})
+                        }});
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {{
+                            // Set session cookie and redirect
+                            document.cookie = `session_token=${{result.session_token}}; path=/; max-age=28800`; // 8 hours
+                            window.location.href = '/admin';
+                        }} else {{
+                            errorDiv.textContent = result.error || 'Login failed';
+                            errorDiv.style.display = 'block';
+                        }}
+                    }} catch (error) {{
+                        errorDiv.textContent = 'Connection error: ' + error.message;
+                        errorDiv.style.display = 'block';
+                    }}
+                }});
+            </script>
+        </body>
+        </html>
+        """
+        
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(html.encode('utf-8'))
+    
+    def handle_login(self, post_data):
+        """Handle login request"""
+        try:
+            data = json.loads(post_data.decode('utf-8'))
+            email = data.get('email', '').strip().lower()
+            password = data.get('password', '')
+            
+            session_token = authenticate_user(email, password)
+            
+            if session_token:
+                user = AUTHORIZED_USERS[email]
+                response_data = {{
+                    "success": True,
+                    "session_token": session_token,
+                    "user": {{
+                        "name": user["name"],
+                        "email": email,
+                        "role": user["role"],
+                        "permissions": user["permissions"]
+                    }}
+                }}
+                logger.info(f"User logged in: {{email}} ({{user['role']}})")
+            else:
+                response_data = {{
+                    "success": False,
+                    "error": "Invalid email or password"
+                }}
+                logger.warning(f"Failed login attempt: {{email}}")
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
+            
+        except Exception as e:
+            logger.error(f"Login error: {{str(e)}}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {{"success": False, "error": str(e)}}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def handle_logout(self):
+        """Handle logout request"""
+        # Clear session cookie and redirect to login
+        self.send_response(302)
+        self.send_header('Location', '/login')
+        self.send_header('Set-Cookie', 'session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT')
+        self.end_headers()
+    
     def serve_admin_dashboard(self):
         """Serve CRM-integrated admin dashboard for creating LOIs"""
         html = """
@@ -876,6 +1200,11 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     <h1>🎯 Better Day Energy - LOI Creation System</h1>
                     <p>Professional LOI Creation with Background CRM Sync</p>
                     <p><strong>Workflow:</strong> Customer Info → Deal Terms → Generate LOI → Route → Sign → Background CRM Sync</p>
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 6px; font-size: 14px;">
+                        <span style="float: left;">👤 Logged in as: <strong>{getattr(self, 'current_user', {}).get('name', 'Unknown')} ({getattr(self, 'current_user', {}).get('role', 'guest')})</strong></span>
+                        <span style="float: right;"><a href="/logout" style="color: white; text-decoration: none;">🚪 Logout</a></span>
+                        <div style="clear: both;"></div>
+                    </div>
                 </div>
                 
                 <div class="content">
@@ -2414,12 +2743,13 @@ def main():
     print("- /admin - CRM-integrated LOI admin dashboard")
     print("- 🔄 Background CRM delta sync every 5 minutes")
     
-    # Start background CRM delta sync
+    # Start background CRM delta sync (non-blocking)
     try:
         crm_bidirectional_sync.start_background_sync()
-        print("✅ CRM delta sync service started")
+        print("✅ CRM bidirectional sync service started (with database queue)")
     except Exception as e:
-        print(f"⚠️ CRM delta sync failed to start: {e}")
+        print(f"⚠️ CRM sync failed to start (database issue): {e}")
+        print("📝 Note: System will work without CRM sync, but won't create CRM records automatically")
     
     try:
         httpd.serve_forever()
