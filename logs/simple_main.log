@@ -1,0 +1,33 @@
+2025-06-24 18:44:58,134 - __main__ - INFO - 🚀 Starting Better Day Energy LOI Automation System
+2025-06-24 18:44:58,143 - __main__ - INFO - 📊 Dashboard will be available at: http://localhost:8000/dashboard
+2025-06-24 18:44:58,145 - __main__ - INFO - 🌐 API documentation at: http://localhost:8000/docs
+INFO:     Started server process [72138]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-06-24 18:45:28,600 - __main__ - INFO - 🔍 Getting CRM customers with API key: 1073223-403628436005...
+2025-06-24 18:45:28,604 - __main__ - INFO - 🔍 Making CRM request: {'Function': 'GetContacts', 'Parameters': {}}
+2025-06-24 18:45:29,503 - __main__ - INFO - 🔍 Response status: 200
+2025-06-24 18:45:29,504 - __main__ - INFO - 🔍 Response headers: {'Date': 'Tue, 24 Jun 2025 18:45:29 GMT', 'Content-Type': 'text/html; charset=UTF-8', 'Transfer-Encoding': 'chunked', 'Connection': 'keep-alive', 'Server': 'cloudflare', 'Vary': 'accept-encoding', 'Pragma': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Accept-Ch': 'Sec-CH-UA-Platform-Version', 'Cache-Control': 'no-cache, no-store, must-revalidate, private', 'Expires': '0', 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains', 'Permissions-Policy': 'interest-cohort=()', 'X-Frame-Options': 'SAMEORIGIN', 'Content-Security-Policy': "frame-ancestors 'self';", 'Content-Encoding': 'gzip', 'Cf-Cache-Status': 'DYNAMIC', 'Set-Cookie': 'Session_LACRM=l8qoc6fjnj5mk3qk4jaja8me7r; HttpOnly; Secure; Path=/; Domain=lessannoyingcrm.com; Max-Age=8640000; Expires=Thu, 02 Oct 2025 18:45:28 GMT', 'CF-RAY': '954e61e56efc7e6b-ORD'}
+2025-06-24 18:45:29,509 - __main__ - INFO - 🔍 Response text length: 317896 chars
+2025-06-24 18:45:29,511 - __main__ - INFO - 🔍 Response preview: {"HasMoreResults":true,"Results":[{"ContactId":"4035468683725586617984784099511","AssignedTo":1073223,"IsCompany":false,"CompanyId":"4035468675486809546064254777913","Name":{"Salutation":"","FirstName...
+2025-06-24 18:45:29,520 - __main__ - INFO - 🔍 Parsed unknown contacts
+2025-06-24 18:45:29,533 - __main__ - INFO - 🔍 Found 500 contacts in Results array
+INFO:     127.0.0.1:50708 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+2025-06-24 18:47:52,361 - __main__ - INFO - 🔍 Getting CRM customers with API key: 1073223-403628436005...
+2025-06-24 18:47:52,364 - __main__ - INFO - 🔍 Making CRM request: {'Function': 'GetContacts', 'Parameters': {}}
+2025-06-24 18:47:53,535 - __main__ - INFO - 🔍 Response status: 200
+2025-06-24 18:47:53,535 - __main__ - INFO - 🔍 Response headers: {'Date': 'Tue, 24 Jun 2025 18:47:53 GMT', 'Content-Type': 'text/html; charset=UTF-8', 'Transfer-Encoding': 'chunked', 'Connection': 'keep-alive', 'Server': 'cloudflare', 'Vary': 'accept-encoding', 'Pragma': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Accept-Ch': 'Sec-CH-UA-Platform-Version', 'Cache-Control': 'no-cache, no-store, must-revalidate, private', 'Expires': '0', 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains', 'Permissions-Policy': 'interest-cohort=()', 'X-Frame-Options': 'SAMEORIGIN', 'Content-Security-Policy': "frame-ancestors 'self';", 'Content-Encoding': 'gzip', 'Cf-Cache-Status': 'DYNAMIC', 'Set-Cookie': 'Session_LACRM=erkjtei0dk99bkjm4kq8dkpcm0; HttpOnly; Secure; Path=/; Domain=lessannoyingcrm.com; Max-Age=8640000; Expires=Thu, 02 Oct 2025 18:47:52 GMT', 'CF-RAY': '954e6567bb3f1e95-ORD'}
+2025-06-24 18:47:53,560 - __main__ - INFO - 🔍 Response text length: 317896 chars
+2025-06-24 18:47:53,565 - __main__ - INFO - 🔍 Response preview: {"HasMoreResults":true,"Results":[{"ContactId":"4035468683725586617984784099511","AssignedTo":1073223,"IsCompany":false,"CompanyId":"4035468675486809546064254777913","Name":{"Salutation":"","FirstName...
+2025-06-24 18:47:53,569 - __main__ - INFO - 🔍 Parsed unknown contacts
+2025-06-24 18:47:53,573 - __main__ - INFO - 🔍 Found 500 contacts in Results array
+INFO:     127.0.0.1:34172 - "GET /api/v1/crm/customers HTTP/1.1" 200 OK
+2025-06-24 18:48:45,902 - __main__ - INFO - 🔍 Testing direct PostgreSQL connection...
+2025-06-24 18:48:45,965 - __main__ - INFO - ✅ Database connection successful!
+INFO:     127.0.0.1:45236 - "GET /api/v1/database/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49278 - "GET /docs HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [72138]

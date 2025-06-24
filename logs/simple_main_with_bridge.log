@@ -1,0 +1,19 @@
+2025-06-24 19:40:51,530 - __main__ - INFO - 🚀 Starting Better Day Energy LOI Automation System
+2025-06-24 19:40:51,532 - __main__ - INFO - 📊 Dashboard will be available at: http://localhost:8000/dashboard
+2025-06-24 19:40:51,532 - __main__ - INFO - 🌐 API documentation at: http://localhost:8000/docs
+INFO:     Started server process [74342]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50062 - "GET /api/v1/crm-bridge/auth/verify HTTP/1.1" 405 Method Not Allowed
+2025-06-24 19:43:25,984 - __main__ - INFO - 🔐 CRM Bridge access granted to: adam_sales_app
+INFO:     127.0.0.1:39540 - "POST /api/v1/crm-bridge/auth/verify HTTP/1.1" 200 OK
+2025-06-24 19:43:48,687 - __main__ - INFO - 🔐 CRM Bridge access granted to: adam_sales_app
+2025-06-24 19:43:49,333 - __main__ - INFO - 🌐 Using production database cache
+2025-06-24 19:43:49,523 - __main__ - INFO - ⚡ CRM Bridge: Served 3 contacts to adam_sales_app
+INFO:     127.0.0.1:49034 - "GET /api/v1/crm-bridge/contacts?limit=3 HTTP/1.1" 200 OK
+2025-06-24 19:44:04,385 - __main__ - INFO - 🔐 CRM Bridge access granted to: bolt_sales_tool
+2025-06-24 19:44:05,113 - __main__ - INFO - 🔍 CRM Bridge: Search 'gas station' returned 1 results for bolt_sales_tool
+INFO:     127.0.0.1:33132 - "POST /api/v1/crm-bridge/contacts/search HTTP/1.1" 200 OK
+2025-06-24 19:45:41,028 - __main__ - INFO - 🔐 CRM Bridge access granted to: loi_automation
+INFO:     127.0.0.1:38948 - "GET /api/v1/crm-bridge/stats HTTP/1.1" 200 OK
