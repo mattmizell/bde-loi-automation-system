@@ -880,13 +880,37 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                 
                 <div class="content">
                     <div class="workflow-status">
-                        <h3>📋 Streamlined LOI Workflow</h3>
-                        <p>1️⃣ Enter customer information → 2️⃣ Enter deal terms → 3️⃣ Generate LOI → 4️⃣ Route for signature → 5️⃣ Background CRM sync</p>
+                        <h3>📋 Smart LOI Workflow</h3>
+                        <p>1️⃣ Quick CRM search → 2️⃣ Enter/select customer → 3️⃣ Deal terms → 4️⃣ Generate LOI → 5️⃣ Route for signature</p>
                     </div>
                     
-                    <!-- STEP 1: Customer Information -->
+                    <!-- STEP 1: Quick CRM Search -->
                     <div class="step-section active" id="step-1">
-                        <h2>👤 Step 1: Customer Information</h2>
+                        <h2>🔍 Step 1: Quick Customer Check</h2>
+                        <p style="color: #666; margin-bottom: 20px;">Search CRM first to avoid duplicates. If not found, we'll create new record.</p>
+                        
+                        <div class="form-group">
+                            <label for="quick-search">Search by company name or contact name:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="quick-search" placeholder="e.g., Smith's Gas Station or John Smith" style="flex: 1;">
+                                <button type="button" class="btn" onclick="quickSearchCRM()" style="width: auto;">🔍 Search</button>
+                            </div>
+                        </div>
+                        
+                        <div id="quick-search-results" class="hidden" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9;">
+                            <!-- Search results will appear here -->
+                        </div>
+                        
+                        <div style="text-align: center; margin: 20px 0; color: #666;">
+                            <strong>OR</strong>
+                        </div>
+                        
+                        <button type="button" class="btn btn-success" onclick="skipToNewCustomer()">➕ Skip Search - Add New Customer</button>
+                    </div>
+                    
+                    <!-- STEP 2: Customer Information -->
+                    <div class="step-section hidden" id="step-2">
+                        <h2>👤 Step 2: Customer Information</h2>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="customer-name">Contact Name: <span style="color: red;">*</span></label>
@@ -912,41 +936,13 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                             <input type="text" id="customer-address" placeholder="e.g., 123 Main St, St. Louis, MO 63101">
                         </div>
                         <button type="button" class="btn btn-success" onclick="proceedToDealTerms()">Next: Deal Terms →</button>
+                        <button type="button" class="btn" onclick="showStep(1)" style="background: #6c757d;">← Back to Search</button>
                         
                         <div id="selected-customer-info" class="hidden" style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin-top: 15px;">
                             <!-- Selected customer info will appear here -->
                         </div>
                     </div>
                     
-                    <!-- STEP 2: Customer Information (if not found) -->
-                    <div class="step-section hidden" id="step-2">
-                        <h2>👤 Step 2: Add New Customer to CRM</h2>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="customer-name">Customer Name:</label>
-                                <input type="text" id="customer-name" placeholder="John Smith" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="customer-email">Email Address:</label>
-                                <input type="email" id="customer-email" placeholder="john@smithgas.com" required>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="company-name">Company Name:</label>
-                                <input type="text" id="company-name" placeholder="Smith's Gas Station" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="customer-phone">Phone Number:</label>
-                                <input type="tel" id="customer-phone" placeholder="(555) 123-4567">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="customer-address">Business Address:</label>
-                            <textarea id="customer-address" rows="3" placeholder="123 Main St, City, State 12345"></textarea>
-                        </div>
-                        <button type="button" class="btn btn-success" onclick="createCRMContact()">➕ Add to CRM & Continue</button>
-                    </div>
                     
                     <!-- STEP 3: Deal Terms -->
                     <div class="step-section hidden" id="step-3">
@@ -1069,6 +1065,98 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     populateCustomerDropdown(filteredCustomers);
                 }
                 
+                async function quickSearchCRM() {
+                    const query = document.getElementById('quick-search').value.trim();
+                    if (!query) {
+                        alert('Please enter a search term');
+                        return;
+                    }
+                    
+                    const searchBtn = event.target;
+                    searchBtn.disabled = true;
+                    searchBtn.innerHTML = '⏳ Searching...';
+                    
+                    try {
+                        const response = await fetch('/api/search-crm', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ query: query })
+                        });
+                        
+                        if (response.ok) {
+                            const results = await response.json();
+                            displayQuickSearchResults(results);
+                        } else {
+                            throw new Error('CRM search failed');
+                        }
+                    } catch (error) {
+                        document.getElementById('quick-search-results').innerHTML = 
+                            '<div style="color: #721c24; background: #f8d7da; padding: 10px; border-radius: 4px;">❌ Search failed: ' + error.message + '</div>';
+                        document.getElementById('quick-search-results').classList.remove('hidden');
+                    } finally {
+                        searchBtn.disabled = false;
+                        searchBtn.innerHTML = '🔍 Search';
+                    }
+                }
+                
+                function displayQuickSearchResults(results) {
+                    const resultsDiv = document.getElementById('quick-search-results');
+                    
+                    if (results.customers && results.customers.length > 0) {
+                        let html = '<h4 style="color: #155724; margin-bottom: 10px;">✅ Found in CRM:</h4>';
+                        results.customers.forEach((customer, index) => {
+                            html += `
+                                <div style="border: 1px solid #28a745; padding: 12px; margin: 8px 0; border-radius: 4px; background: white;">
+                                    <p style="margin: 0 0 5px 0;"><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
+                                    <p style="margin: 0 0 8px 0; color: #666;">📧 ${customer.email} ${customer.phone ? '| 📞 ' + customer.phone : ''}</p>
+                                    <button class="btn" onclick="selectExistingCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')" style="background: #28a745;">
+                                        ✅ Select This Customer
+                                    </button>
+                                </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = `
+                            <div style="color: #856404; background: #fff3cd; padding: 15px; border-radius: 4px; text-align: center;">
+                                <h4 style="margin: 0 0 10px 0;">❌ Not Found in CRM</h4>
+                                <p style="margin: 0 0 15px 0;">No existing customer found for "${document.getElementById('quick-search').value}"</p>
+                                <button class="btn btn-success" onclick="skipToNewCustomer()">➕ Add as New Customer</button>
+                            </div>
+                        `;
+                    }
+                    
+                    resultsDiv.classList.remove('hidden');
+                }
+                
+                function selectExistingCustomer(id, name, email, company) {
+                    currentCustomer = { 
+                        id: id, 
+                        name: name, 
+                        email: email, 
+                        company: company,
+                        existing: true  // Flag to indicate this is existing CRM record
+                    };
+                    
+                    // Display selected customer and move to deal terms
+                    document.getElementById('customer-summary').innerHTML = `
+                        <h3>✅ Selected Existing Customer:</h3>
+                        <p><strong>Name:</strong> ${name}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Company:</strong> ${company}</p>
+                        <p><strong>CRM ID:</strong> ${id}</p>
+                        <p style="color: #155724; font-style: italic;">✅ Using existing CRM record</p>
+                    `;
+                    
+                    showStep(3); // Skip to deal terms
+                }
+                
+                function skipToNewCustomer() {
+                    // Clear any search results
+                    document.getElementById('quick-search-results').classList.add('hidden');
+                    showStep(2); // Go to customer info form
+                }
+                
                 function proceedToDealTerms() {
                     // Validate required fields
                     const name = document.getElementById('customer-name').value.trim();
@@ -1089,18 +1177,19 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         email: email,
                         company: company,
                         phone: phone,
-                        address: address
+                        address: address,
+                        existing: false  // Flag to indicate this is new customer
                     };
                     
                     // Display customer summary
                     document.getElementById('customer-summary').innerHTML = `
-                        <h3>✅ Customer Information:</h3>
+                        <h3>✅ New Customer Information:</h3>
                         <p><strong>Name:</strong> ${name}</p>
                         <p><strong>Email:</strong> ${email}</p>
                         <p><strong>Company:</strong> ${company}</p>
                         ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ''}
                         ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
-                        <p style="color: #666; font-style: italic;">Note: Customer will be synced to CRM in background</p>
+                        <p style="color: #666; font-style: italic;">📤 Will be added to CRM automatically</p>
                     `;
                     
                     // Move to deal terms step
@@ -1414,27 +1503,34 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             # Add new request to memory
             signature_requests[request_key] = data
             
-            # Check if customer needs to be created in CRM (has a LOCAL_ ID)
+            # Check if customer needs to be created in CRM (has a LOCAL_ ID) and is not existing
             customer_id = data.get('crm_contact_id', '')
-            if customer_id.startswith('LOCAL_'):
+            deal_terms = data.get('deal_terms', {})
+            customer = deal_terms.get('customer', {})
+            
+            if customer_id.startswith('LOCAL_') and customer and not customer.get('existing', False):
                 # This is a new customer - queue for CRM creation
-                deal_terms = data.get('deal_terms', {})
-                customer = deal_terms.get('customer', {})
+                customer_data = {
+                    'local_id': customer_id,
+                    'name': customer.get('name', data.get('signer_name', '')),
+                    'email': customer.get('email', data.get('signer_email', '')),
+                    'company': customer.get('company', data.get('company_name', '')),
+                    'phone': customer.get('phone', ''),
+                    'address': customer.get('address', ''),
+                    'notes': f"Created via LOI System - Transaction {data['transaction_id']}"
+                }
                 
-                if customer:
-                    # Queue customer creation in background
-                    customer_data = {
-                        'local_id': customer_id,
-                        'name': customer.get('name', data.get('signer_name', '')),
-                        'email': customer.get('email', data.get('signer_email', '')),
-                        'company': customer.get('company', data.get('company_name', '')),
-                        'phone': customer.get('phone', ''),
-                        'address': customer.get('address', ''),
-                        'notes': f"Created via LOI System - Transaction {data['transaction_id']}"
-                    }
-                    
-                    queue_id = crm_bidirectional_sync.queue_crm_write('create_contact', customer_data, 'high')
-                    logger.info(f"Queued new customer {customer_data['name']} for CRM creation (queue ID: {queue_id})")
+                queue_id = crm_bidirectional_sync.queue_crm_write('create_contact', customer_data, 'high')
+                logger.info(f"Queued new customer {customer_data['name']} for CRM creation (queue ID: {queue_id})")
+            elif not customer_id.startswith('LOCAL_'):
+                # This is an existing CRM customer - add a note about the LOI
+                note_data = {
+                    'crm_id': customer_id,
+                    'note_content': f"LOI Generated - Transaction {data['transaction_id']}\n\nFuel Supply Agreement LOI created and sent for signature.\nDeal Terms: {deal_terms.get('gasoline_volume', 0):,} gal/month gasoline, {deal_terms.get('diesel_volume', 0):,} gal/month diesel\nIncentives: ${deal_terms.get('image_funding', 0):,} + ${deal_terms.get('volume_incentives', 0):,}"
+                }
+                
+                queue_id = crm_bidirectional_sync.queue_crm_write('add_note', note_data, 'normal')
+                logger.info(f"Queued LOI note for existing customer {customer_id} (queue ID: {queue_id})")
             
             # Save to file (in production, this updates the server's data)
             try:

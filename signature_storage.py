@@ -17,8 +17,9 @@ class TamperEvidentSignatureStorage:
     """Secure signature storage with PostgreSQL"""
     
     def __init__(self):
-        # Use existing PostgreSQL connection
-        self.connection_string = "postgresql://mattmizell:training1@localhost/loi_automation"
+        # Use environment variable for database connection in production, fallback to localhost for development
+        import os
+        self.connection_string = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost/loi_automation")
         self.secret_key = "BDE-signature-integrity-key-2025"
         self.ensure_signature_tables()
     

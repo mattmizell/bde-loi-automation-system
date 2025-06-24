@@ -1,9 +1,9 @@
 # Render deployment configuration for LOI Automation System
 
 services:
-  # Main LOI API Service
+  # LOI Automation System with integrated signature service
   - type: web
-    name: loi-automation-api
+    name: loi-automation-system
     env: python
     pythonVersion: "3.11"
     buildCommand: pip install -r requirements.txt
@@ -13,55 +13,14 @@ services:
         fromDatabase:
           name: loi-postgres
           property: connectionString
-      - key: CRM_API_KEY
-        sync: false # Set in Render dashboard
-      - key: SMTP_USERNAME
-        value: transaction.coordinator.agent@gmail.com
-      - key: SMTP_PASSWORD
-        sync: false # Set in Render dashboard
-      - key: SECRET_KEY
-        generateValue: true
+      - key: PORT
+        value: 8002
       - key: ENVIRONMENT
         value: production
-    
-  # Signature Service (DocuSign-like interface)
-  - type: web
-    name: loi-signature-service
-    env: python
-    pythonVersion: "3.11"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python integrated_pdf_signature_server.py
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: loi-postgres
-          property: connectionString
-      - key: SIGNATURE_SECRET_KEY
-        generateValue: true
-      - key: API_BASE_URL
-        value: https://loi-automation-api.onrender.com
-      - key: ALLOWED_ORIGINS
-        value: https://loi-signature-service.onrender.com
-      - key: SSL_REDIRECT
-        value: true
 
 databases:
-  # PostgreSQL Database
+  # PostgreSQL Database for signatures and CRM cache
   - name: loi-postgres
     databaseName: loi_automation
     user: loi_user
-    plan: starter # Upgrade to standard for production
-
-# Static site for any frontend components
-staticSites:
-  - type: web
-    name: loi-dashboard
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./build
-    headers:
-      - path: /*
-        name: X-Frame-Options
-        value: DENY
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
+    plan: starter
