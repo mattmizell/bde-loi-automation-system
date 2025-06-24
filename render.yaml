@@ -5,7 +5,8 @@ services:
   - type: web
     name: loi-automation-api
     env: python
-    buildCommand: pip install -r requirements_production.txt
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
     startCommand: python integrated_pdf_signature_server.py
     envVars:
       - key: DATABASE_URL
@@ -27,8 +28,9 @@ services:
   - type: web
     name: loi-signature-service
     env: python
-    buildCommand: pip install -r requirements_production.txt
-    startCommand: python signature_server_production.py
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: python integrated_pdf_signature_server.py
     envVars:
       - key: DATABASE_URL
         fromDatabase:
