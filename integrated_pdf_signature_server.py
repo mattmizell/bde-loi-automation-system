@@ -1360,50 +1360,51 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         if (response.ok) {
                             const result = await response.json();
                             allCustomers = result.contacts || [];
-                            populateCustomerDropdown(allCustomers);
+                            console.log(`Loaded ${allCustomers.length} CRM contacts`);
+                            // No DOM updates needed - using modern search workflow
                         } else {
                             // If no cache exists, refresh from CRM
+                            console.log('CRM cache not found, refreshing...');
                             await refreshCRMCache();
                         }
                     } catch (error) {
                         console.error('Error loading CRM contacts:', error);
-                        document.getElementById('customer-dropdown').innerHTML = '<option value="">Error loading customers</option>';
+                        // Don't attempt to update any DOM elements in error case
                     }
                 }
                 
                 function populateCustomerDropdown(customers) {
-                    const dropdown = document.getElementById('customer-dropdown');
-                    dropdown.innerHTML = '<option value="">Select a customer...</option>';
-                    
-                    customers.forEach(customer => {
-                        const option = document.createElement('option');
-                        option.value = customer.id;
-                        option.textContent = `${customer.name} - ${customer.company || 'No company'} (${customer.email})`;
-                        option.dataset.customer = JSON.stringify(customer);
-                        dropdown.appendChild(option);
-                    });
+                    // This function is kept for compatibility but does nothing since customer-dropdown doesn't exist
+                    // The current HTML workflow uses quick search instead of dropdown
+                    console.log(`Would populate dropdown with ${customers ? customers.length : 0} customers (but no dropdown element exists)`);
                 }
                 
                 function filterCustomers() {
-                    const searchTerm = document.getElementById('customer-search').value.toLowerCase();
-                    const filteredCustomers = allCustomers.filter(customer => 
-                        customer.name.toLowerCase().includes(searchTerm) ||
-                        customer.email.toLowerCase().includes(searchTerm) ||
-                        (customer.company && customer.company.toLowerCase().includes(searchTerm))
-                    );
-                    populateCustomerDropdown(filteredCustomers);
+                    // This function is kept for compatibility but is not used in current workflow
+                    // The HTML uses quick-search instead of customer-search element
+                    console.log('filterCustomers called but customer-search element does not exist');
                 }
                 
                 async function quickSearchCRM() {
-                    const query = document.getElementById('quick-search').value.trim();
+                    const searchInput = document.getElementById('quick-search');
+                    if (!searchInput) {
+                        console.error('quick-search input element not found');
+                        alert('Search input not found. Please refresh the page.');
+                        return;
+                    }
+                    
+                    const query = searchInput.value.trim();
                     if (!query) {
                         alert('Please enter a search term');
                         return;
                     }
                     
-                    const searchBtn = event.target;
-                    searchBtn.disabled = true;
-                    searchBtn.innerHTML = '⏳ Searching...';
+                    // Find the search button by selecting it from DOM instead of using undefined event
+                    const searchBtn = document.querySelector('button[onclick="quickSearchCRM()"]');
+                    if (searchBtn) {
+                        searchBtn.disabled = true;
+                        searchBtn.innerHTML = '⏳ Searching...';
+                    }
                     
                     try {
                         const response = await fetch('/api/search-crm', {
@@ -1423,13 +1424,19 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                             '<div style="color: #721c24; background: #f8d7da; padding: 10px; border-radius: 4px;">❌ Search failed: ' + error.message + '</div>';
                         document.getElementById('quick-search-results').classList.remove('hidden');
                     } finally {
-                        searchBtn.disabled = false;
-                        searchBtn.innerHTML = '🔍 Search';
+                        if (searchBtn) {
+                            searchBtn.disabled = false;
+                            searchBtn.innerHTML = '🔍 Search';
+                        }
                     }
                 }
                 
                 function displayQuickSearchResults(results) {
                     const resultsDiv = document.getElementById('quick-search-results');
+                    if (!resultsDiv) {
+                        console.error('quick-search-results element not found');
+                        return;
+                    }
                     
                     if (results.customers && results.customers.length > 0) {
                         let html = '<h4 style="color: #155724; margin-bottom: 10px;">✅ Found in CRM:</h4>';
@@ -1525,79 +1532,52 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     showStep(3);
                 }
                 
-                async function refreshCRMCache() {
-                    const refreshBtn = event.target;
-                    refreshBtn.disabled = true;
-                    refreshBtn.innerHTML = '⏳ Refreshing...';
+                async function refreshCRMCache(event = null) {
+                    // Handle case where function is called without event (e.g., from loadCRMContacts)
+                    let refreshBtn = null;
+                    if (event && event.target) {
+                        refreshBtn = event.target;
+                        refreshBtn.disabled = true;
+                        refreshBtn.innerHTML = '⏳ Refreshing...';
+                    }
                     
                     try {
                         const response = await fetch('/api/refresh-crm-cache');
                         if (response.ok) {
                             const result = await response.json();
-                            alert(`✅ CRM cache refreshed! Loaded ${result.total_contacts} contacts.`);
+                            if (refreshBtn) {
+                                alert(`✅ CRM cache refreshed! Loaded ${result.total_contacts} contacts.`);
+                            }
                             await loadCRMContacts();
                         } else {
                             throw new Error('Failed to refresh CRM cache');
                         }
                     } catch (error) {
-                        alert('❌ Error refreshing CRM cache: ' + error.message);
+                        if (refreshBtn) {
+                            alert('❌ Error refreshing CRM cache: ' + error.message);
+                        } else {
+                            console.error('Error refreshing CRM cache:', error);
+                        }
                     } finally {
-                        refreshBtn.disabled = false;
-                        refreshBtn.innerHTML = '🔄 Refresh CRM Cache';
+                        if (refreshBtn) {
+                            refreshBtn.disabled = false;
+                            refreshBtn.innerHTML = '🔄 Refresh CRM Cache';
+                        }
                     }
                 }
                 
                 async function searchCRM() {
-                    const query = document.getElementById('search-query').value.trim();
-                    if (!query) {
-                        alert('Please enter a search term');
-                        return;
-                    }
-                    
-                    try {
-                        const response = await fetch('/api/search-crm', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ query: query })
-                        });
-                        
-                        if (response.ok) {
-                            const results = await response.json();
-                            displaySearchResults(results);
-                        } else {
-                            throw new Error('CRM search failed');
-                        }
-                    } catch (error) {
-                        document.getElementById('search-results').innerHTML = 
-                            '<div class="error-box">❌ CRM search failed: ' + error.message + '</div>';
-                        document.getElementById('search-results').classList.remove('hidden');
-                    }
+                    // This function references search-query element which doesn't exist in current HTML
+                    // Current workflow uses quickSearchCRM() with quick-search element instead
+                    console.log('searchCRM called but search-query element does not exist');
+                    alert('Please use the Quick Customer Check search instead');
                 }
                 
                 function displaySearchResults(results) {
-                    const resultsDiv = document.getElementById('search-results');
-                    
-                    if (results.customers && results.customers.length > 0) {
-                        let html = '<div class="success-box"><h3>✅ Customers Found in CRM:</h3>';
-                        results.customers.forEach(customer => {
-                            html += `
-                                <div style="border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; background: white;">
-                                    <p><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
-                                    <p>📧 ${customer.email} | 📞 ${customer.phone || 'No phone'}</p>
-                                    <button class="btn" onclick="selectCustomer('${customer.id}', '${customer.name}', '${customer.email}', '${customer.company || ''}')">
-                                        ✅ Select This Customer
-                                    </button>
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
-                        resultsDiv.innerHTML = html;
-                    } else {
-                        resultsDiv.innerHTML = 
-                            '<div class="error-box">❌ No customers found. Please add as new customer.</div>';
-                    }
-                    
-                    resultsDiv.classList.remove('hidden');
+                    // This function references search-results element which doesn't exist in current HTML
+                    // Current workflow uses displayQuickSearchResults() with quick-search-results element instead
+                    console.log('displaySearchResults called but search-results element does not exist');
+                    console.log('Results:', results);
                 }
                 
                 function selectCustomer(id, name, email, company) {
