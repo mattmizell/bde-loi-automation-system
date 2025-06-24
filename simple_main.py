@@ -1333,14 +1333,17 @@ async def customers_grid():
 def main():
     """Main function to run the application"""
     
+    # Use PORT environment variable for production deployment
+    port = int(os.environ.get("PORT", 8000))
+    
     logger.info("🚀 Starting Better Day Energy LOI Automation System")
-    logger.info("📊 Dashboard will be available at: http://localhost:8000/dashboard")
-    logger.info("🌐 API documentation at: http://localhost:8000/docs")
+    logger.info(f"📊 Dashboard will be available at: http://localhost:{port}/dashboard")
+    logger.info(f"🌐 API documentation at: http://localhost:{port}/docs")
     
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=port,
         log_level="info"
     )
 
