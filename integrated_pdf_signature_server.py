@@ -1328,28 +1328,23 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             # Use the API key from pdf_generator or environment
             api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
             
-            # Search for contacts using Less Annoying CRM format
-            search_payload = {
-                "UserCode": api_key,
-                "Function": "SearchContacts",
-                "Parameters": {
-                    "SearchTerm": query
-                }
+            # LACRM API uses GET with URL parameters, not POST with JSON
+            # Extract UserCode (first part) and APIToken (rest) from the API key
+            api_parts = api_key.split('-', 1)
+            user_code = api_parts[0]  # "1073223"
+            api_token = api_key  # Full key
+            
+            # Build URL with parameters as per LACRM documentation
+            params = {
+                'APIToken': api_token,
+                'UserCode': user_code,
+                'Function': 'SearchContacts',
+                'SearchTerm': query
             }
             
-            # Add headers to mimic browser request in case LACRM blocks server calls
-            headers = {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Origin': 'https://loi-automation-api.onrender.com',
-                'Referer': 'https://loi-automation-api.onrender.com/admin'
-            }
+            response = requests.get(search_url, params=params, timeout=15)
             
-            response = requests.post(search_url, json=search_payload, headers=headers, timeout=15)
-            
-            logger.info(f"CRM search request: {search_payload}")
+            logger.info(f"CRM search request: {params}")
             logger.info(f"CRM response status: {response.status_code}")
             logger.info(f"CRM response text: {response.text[:500]}...")
             
@@ -1411,33 +1406,27 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             crm_url = "https://api.lessannoyingcrm.com"
             api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
             
-            # Create contact payload using correct LACRM format
-            create_payload = {
-                "UserCode": api_key,
-                "Function": "CreateContact",
-                "Parameters": {
-                    "Name": data.get('name', ''),
-                    "Email": data.get('email', ''),
-                    "CompanyName": data.get('company', ''),
-                    "Phone": data.get('phone', ''),
-                    "Address": data.get('address', ''),
-                    "Notes": f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                }
+            # LACRM API uses GET with URL parameters for all functions
+            api_parts = api_key.split('-', 1)
+            user_code = api_parts[0]  # "1073223"
+            api_token = api_key  # Full key
+            
+            # Build URL with parameters for CreateContact
+            params = {
+                'APIToken': api_token,
+                'UserCode': user_code,
+                'Function': 'CreateContact',
+                'Name': data.get('name', ''),
+                'Email': data.get('email', ''),
+                'CompanyName': data.get('company', ''),
+                'Phone': data.get('phone', ''),
+                'Address': data.get('address', ''),
+                'Notes': f"Created via LOI Admin System on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             }
             
-            # Add headers to mimic browser request
-            headers = {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Origin': 'https://loi-automation-api.onrender.com',
-                'Referer': 'https://loi-automation-api.onrender.com/admin'
-            }
+            response = requests.get(crm_url, params=params, timeout=15)
             
-            response = requests.post(crm_url, json=create_payload, headers=headers, timeout=15)
-            
-            logger.info(f"CRM create request: {create_payload}")
+            logger.info(f"CRM create request: {params}")
             logger.info(f"CRM create response status: {response.status_code}")
             logger.info(f"CRM create response text: {response.text[:500]}...")
             
