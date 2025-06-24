@@ -456,27 +456,27 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         <h3>Fuel Volume Commitments</h3>
                         <table>
                             <tr><th>Product</th><th>Monthly Volume</th><th>Annual Volume</th></tr>
-                            <tr><td>Gasoline</td><td>85,000 gallons</td><td>1,020,000 gallons</td></tr>
-                            <tr><td>Diesel</td><td>25,000 gallons</td><td>300,000 gallons</td></tr>
-                            <tr><td><strong>Total</strong></td><td><strong>110,000 gallons</strong></td><td><strong>1,320,000 gallons</strong></td></tr>
+                            <tr><td>Gasoline</td><td>{signature_request.get('deal_terms', {}).get('gasoline_volume', 0):,} gallons</td><td>{signature_request.get('deal_terms', {}).get('gasoline_volume', 0) * 12:,} gallons</td></tr>
+                            <tr><td>Diesel</td><td>{signature_request.get('deal_terms', {}).get('diesel_volume', 0):,} gallons</td><td>{signature_request.get('deal_terms', {}).get('diesel_volume', 0) * 12:,} gallons</td></tr>
+                            <tr><td><strong>Total</strong></td><td><strong>{signature_request.get('deal_terms', {}).get('gasoline_volume', 0) + signature_request.get('deal_terms', {}).get('diesel_volume', 0):,} gallons</strong></td><td><strong>{(signature_request.get('deal_terms', {}).get('gasoline_volume', 0) + signature_request.get('deal_terms', {}).get('diesel_volume', 0)) * 12:,} gallons</strong></td></tr>
                         </table>
                         
                         <div class="financial-highlight">
                             <h3>Financial Incentive Package</h3>
                             <table>
                                 <tr><th>Incentive Type</th><th>Amount</th></tr>
-                                <tr><td>Image Program Funding</td><td>$75,000</td></tr>
-                                <tr><td>Volume Incentives (Annual)</td><td>$50,000</td></tr>
-                                <tr><td><strong>Total First Year Value</strong></td><td><strong>$125,000</strong></td></tr>
+                                <tr><td>Image Program Funding</td><td>${signature_request.get('deal_terms', {}).get('image_funding', 0):,}</td></tr>
+                                <tr><td>Volume Incentives (Annual)</td><td>${signature_request.get('deal_terms', {}).get('volume_incentives', 0):,}</td></tr>
+                                <tr><td><strong>Total First Year Value</strong></td><td><strong>${signature_request.get('deal_terms', {}).get('image_funding', 0) + signature_request.get('deal_terms', {}).get('volume_incentives', 0):,}</strong></td></tr>
                             </table>
                         </div>
                         
                         <h3>Key Terms & Conditions</h3>
                         <ul>
-                            <li>Contract Duration: 36 months</li>
+                            <li>Contract Duration: {signature_request.get('deal_terms', {}).get('contract_duration', 36)} months</li>
                             <li>Exclusive fuel purchasing agreement</li>
-                            <li>Minimum monthly volume: 110,000 gallons</li>
-                            <li>Target conversion date: August 1, 2025</li>
+                            <li>Minimum monthly volume: {signature_request.get('deal_terms', {}).get('gasoline_volume', 0) + signature_request.get('deal_terms', {}).get('diesel_volume', 0):,} gallons</li>
+                            <li>Target conversion date: {signature_request.get('deal_terms', {}).get('conversion_date', 'TBD')}</li>
                             <li>Dedicated account management</li>
                             <li>24/7 emergency fuel supply</li>
                             <li>Competitive pricing with quarterly reviews</li>
