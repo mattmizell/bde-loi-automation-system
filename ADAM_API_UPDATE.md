@@ -27,7 +27,7 @@ We've made significant improvements to the CRM integration. Here's what you need
 #### 1. Get All Contacts
 ```
 GET /api/contacts
-Authorization: Bearer bde_adam_auth_f8c7e2c5a9b3d1e6f4a8c2b9d5e1f3a7
+Authorization: Bearer bde_adam_auth_2f93111a6ca5b0a443afbaed625d3268
 
 Response:
 {
@@ -49,7 +49,7 @@ Response:
 #### 2. Search Contacts
 ```
 POST /api/search_contacts
-Authorization: Bearer bde_adam_auth_f8c7e2c5a9b3d1e6f4a8c2b9d5e1f3a7
+Authorization: Bearer bde_adam_auth_2f93111a6ca5b0a443afbaed625d3268
 Content-Type: application/json
 
 {
@@ -62,7 +62,7 @@ Response: Same format as above, filtered results
 #### 3. Create Contact
 ```
 POST /api/create_contact
-Authorization: Bearer bde_adam_auth_f8c7e2c5a9b3d1e6f4a8c2b9d5e1f3a7
+Authorization: Bearer bde_adam_auth_2f93111a6ca5b0a443afbaed625d3268
 Content-Type: application/json
 
 {
@@ -81,7 +81,7 @@ For your Bolt.new AI application, here's a complete working example:
 // CRM Integration for Bolt.new
 const CRM_API = {
   baseUrl: 'https://loi-automation-api.onrender.com',
-  token: 'bde_adam_auth_f8c7e2c5a9b3d1e6f4a8c2b9d5e1f3a7',
+  token: 'bde_adam_auth_2f93111a6ca5b0a443afbaed625d3268',
   
   // Fetch all contacts
   async getAllContacts() {
