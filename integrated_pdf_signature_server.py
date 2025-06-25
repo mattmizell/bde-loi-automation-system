@@ -3604,7 +3604,7 @@ Transaction ID: {loi_data['transaction_id']}
             
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    SELECT contact_id, name, email, company_name, phone, last_updated
+                    SELECT contact_id, name, email, company_name, phone, updated_at
                     FROM crm_contacts_cache 
                     ORDER BY name
                 """)
