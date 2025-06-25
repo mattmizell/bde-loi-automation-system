@@ -16,6 +16,11 @@ class HTMLLOIPDFGenerator:
     def __init__(self, crm_api_key):
         self.crm_api_key = crm_api_key
         self.base_url = "https://api.lessannoyingcrm.com"
+        # Parse the API key to get user code
+        if '-' in crm_api_key:
+            self.user_code = crm_api_key.split('-')[0]
+        else:
+            self.user_code = "1073223"
     
     def create_signed_loi_html(self, signature_data, audit_report):
         """Create print-ready HTML for PDF conversion"""

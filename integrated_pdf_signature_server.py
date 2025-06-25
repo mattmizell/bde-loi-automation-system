@@ -3664,18 +3664,31 @@ Transaction ID: {loi_data['transaction_id']}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
     
     def proxy_to_modular_api(self, method, endpoint):
-        """Proxy requests to the unified modular API"""
+        """Handle modular API requests directly (temporary solution)"""
         import urllib.request
         import urllib.parse
+        import json
+        import os
         
         try:
             # Read request body if present
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length) if content_length > 0 else None
             
-            # Build URL for unified modular API
-            base_url = "https://loi-automation-api.onrender.com"
-            full_url = base_url + endpoint
+            # Handle specific endpoints directly instead of proxying to avoid loops
+            if endpoint == '/api/contacts' or endpoint.startswith('/api/contacts?'):
+                return self.handle_direct_contacts_api(post_data)
+            elif endpoint == '/api/search_contacts':
+                return self.handle_direct_search_api(post_data)
+            elif endpoint == '/health' or endpoint == '/status':
+                return self.handle_direct_health_api()
+            
+            # For other endpoints, return not implemented
+            self.send_response(501)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": "Endpoint not implemented in integrated server"}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
             
             # Add query parameters if GET request
             if method == 'GET' and '?' in self.path:
