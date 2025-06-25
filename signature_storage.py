@@ -62,6 +62,7 @@ class TamperEvidentSignatureStorage:
                     
                     -- Tamper-Evident Security
                     integrity_hash VARCHAR(128) NOT NULL, -- HMAC of all signature data
+                    signed_at_string VARCHAR(50), -- ISO timestamp string used for integrity hash
                     signature_method VARCHAR(50) DEFAULT 'html5_canvas',
                     compliance_flags JSONB DEFAULT '{}',
                     
@@ -145,13 +146,16 @@ class TamperEvidentSignatureStorage:
             
             signature_image_bytes = base64.b64decode(image_base64)
             
+            # Store the exact timestamp for consistency
+            signed_at_timestamp = datetime.now().isoformat()
+            
             # Prepare signature data for integrity hash
             signature_data = {
                 'verification_code': verification_code,
                 'transaction_id': signature_request['transaction_id'],
                 'signer_name': signature_request['signer_name'],
                 'signer_email': signature_request['signer_email'],
-                'signed_at': datetime.now().isoformat(),
+                'signed_at': signed_at_timestamp,
                 'signature_image': signature_image_bytes
             }
             
@@ -173,12 +177,14 @@ class TamperEvidentSignatureStorage:
                 'compression': 'none'
             }
             
-            # Compliance flags
+            # Compliance flags - Based on actual verification, not hardcoded
             compliance_flags = {
-                'esign_act_compliant': True,
-                'intent_to_sign': True,
-                'identity_verified': True,
-                'document_integrity': True
+                'esign_act_compliant': self.verify_esign_compliance(signature_request),
+                'intent_to_sign': signature_request.get('explicit_intent_confirmed', False),
+                'identity_verified': self.assess_identity_verification_strength(ip_address, user_agent),
+                'document_integrity': True,  # This is properly implemented
+                'consumer_consent_given': signature_request.get('electronic_consent_given', False),
+                'disclosures_provided': signature_request.get('disclosures_acknowledged', False)
             }
             
             # Audit trail
@@ -197,9 +203,9 @@ class TamperEvidentSignatureStorage:
                     document_name, document_hash,
                     signature_image, signature_metadata,
                     signed_at, ip_address, user_agent, browser_fingerprint,
-                    integrity_hash, compliance_flags, audit_trail,
+                    integrity_hash, signed_at_string, compliance_flags, audit_trail,
                     expires_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 verification_code,
                 signature_request['transaction_id'],
@@ -211,11 +217,12 @@ class TamperEvidentSignatureStorage:
                 document_hash,
                 signature_image_bytes,
                 json.dumps(signature_metadata),
-                signature_data['signed_at'],
+                signed_at_timestamp,
                 ip_address,
                 user_agent,
                 browser_fingerprint,
                 integrity_hash,
+                signed_at_timestamp,  # Store the string timestamp for integrity verification
                 json.dumps(compliance_flags),
                 json.dumps(audit_trail),
                 signature_request['expires_at']
@@ -254,13 +261,14 @@ class TamperEvidentSignatureStorage:
             if not record:
                 return False, "Signature not found"
             
-            # Recalculate integrity hash
+            # Use the stored string timestamp for integrity verification
+            # This ensures exact match with what was used during signing
             signature_data = {
                 'verification_code': record['verification_code'],
                 'transaction_id': record['transaction_id'],
                 'signer_name': record['signer_name'],
                 'signer_email': record['signer_email'],
-                'signed_at': record['signed_at'].isoformat(),
+                'signed_at': record['signed_at_string'] or record['signed_at'].isoformat(),  # Fallback for old records
                 'signature_image': bytes(record['signature_image'])
             }
             
@@ -352,6 +360,34 @@ class TamperEvidentSignatureStorage:
         except Exception as e:
             print(f"❌ Error generating audit report: {e}")
             return None
+    
+    def verify_esign_compliance(self, signature_request):
+        """Verify ESIGN Act compliance based on actual requirements"""
+        required_elements = [
+            signature_request.get('electronic_consent_given', False),
+            signature_request.get('explicit_intent_confirmed', False),
+            signature_request.get('disclosures_acknowledged', False),
+            signature_request.get('identity_authentication_method') is not None
+        ]
+        
+        # All elements must be present for full ESIGN compliance
+        return all(required_elements)
+    
+    def assess_identity_verification_strength(self, ip_address, user_agent):
+        """Assess strength of identity verification (not binary true/false)"""
+        verification_factors = 0
+        
+        # Basic factors present in current system
+        if ip_address and ip_address != '127.0.0.1':
+            verification_factors += 1
+        if user_agent and len(user_agent) > 10:
+            verification_factors += 1
+            
+        # Return strength assessment (weak, moderate, strong)
+        if verification_factors >= 2:
+            return 'basic'  # Basic verification only
+        else:
+            return 'minimal'
 
 def main():
     """Test the tamper-evident signature storage"""

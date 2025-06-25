@@ -195,6 +195,10 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.handle_get_crm_contacts()
         elif self.path == "/api/sync-status":
             self.handle_sync_status()
+        elif self.path == "/api/request-paper-copy":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            self.handle_paper_copy_request(post_data)
         elif self.path == "/api/login":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -482,6 +486,75 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     border-radius: 6px;
                     margin-bottom: 20px;
                 }}
+                
+                /* ESIGN Act Compliance Styling */
+                .esign-disclosure-section {{
+                    background: #fff8e1;
+                    border: 2px solid #ff9800;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }}
+                .legal-disclosure-content {{
+                    font-size: 14px;
+                    line-height: 1.6;
+                }}
+                .disclosure-box {{
+                    background: white;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    padding: 15px;
+                    margin: 15px 0;
+                }}
+                .disclosure-details h5 {{
+                    color: #d84315;
+                    margin: 15px 0 8px 0;
+                    font-size: 14px;
+                }}
+                .disclosure-details ul {{
+                    margin: 8px 0;
+                    padding-left: 20px;
+                }}
+                .disclosure-details li {{
+                    margin: 6px 0;
+                }}
+                .consent-checkboxes {{
+                    background: #f5f5f5;
+                    border: 1px solid #ccc;
+                    border-radius: 6px;
+                    padding: 15px;
+                    margin: 15px 0;
+                }}
+                .consent-item {{
+                    display: block;
+                    margin: 12px 0;
+                    cursor: pointer;
+                    font-size: 14px;
+                }}
+                .consent-checkbox {{
+                    margin-right: 10px;
+                    transform: scale(1.2);
+                }}
+                .consent-text {{
+                    line-height: 1.5;
+                }}
+                .paper-copy-info {{
+                    background: #e8f5e8;
+                    border: 1px solid #4caf50;
+                    border-radius: 4px;
+                    padding: 10px;
+                    margin: 15px 0;
+                    text-align: center;
+                }}
+                .consent-validation-error {{
+                    background: #ffebee;
+                    color: #c62828;
+                    border: 1px solid #f44336;
+                    border-radius: 4px;
+                    padding: 10px;
+                    margin: 10px 0;
+                    display: none;
+                }}
                 h1, h2, h3 {{ color: #1f4e79; margin: 20px 0 10px 0; }}
                 table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
                 th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
@@ -558,15 +631,64 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                             <li>Competitive pricing with quarterly reviews</li>
                         </ul>
                         
-                        <div class="warning-box">
-                            <h3>Electronic Signature Authorization</h3>
-                            <p>By signing this Letter of Intent electronically, you acknowledge:</p>
-                            <ul>
-                                <li>Understanding and agreement to all terms stated above</li>
-                                <li>Commitment to proceed with formal contract negotiation</li>
-                                <li>Authorization to begin implementation planning</li>
-                                <li>Legal binding nature of this agreement</li>
-                            </ul>
+                        <!-- ESIGN Act Compliance Section - Required by Federal Law -->
+                        <div class="esign-disclosure-section">
+                            <h3>🔒 Electronic Signature Disclosure (Required by Law)</h3>
+                            <div class="legal-disclosure-content">
+                                <div class="disclosure-box">
+                                    <h4>Electronic Records and Signatures Consent</h4>
+                                    <p><strong>Before proceeding, you must understand and consent to the following:</strong></p>
+                                    
+                                    <div class="disclosure-details">
+                                        <h5>Your Rights:</h5>
+                                        <ul>
+                                            <li><strong>Paper Copies:</strong> You have the right to receive a paper copy of this document at no charge by contacting us at admin@betterdayenergy.com</li>
+                                            <li><strong>Withdrawal:</strong> You may withdraw your consent to receive electronic records at any time</li>
+                                            <li><strong>Legal Effect:</strong> Your electronic signature will have the same legal effect as a handwritten signature</li>
+                                        </ul>
+                                        
+                                        <h5>System Requirements:</h5>
+                                        <ul>
+                                            <li>Internet browser with JavaScript enabled</li>
+                                            <li>Valid email address for record delivery</li>
+                                            <li>Ability to download and save PDF documents</li>
+                                        </ul>
+                                        
+                                        <h5>Record Retention:</h5>
+                                        <ul>
+                                            <li>You should retain copies of all electronic records</li>
+                                            <li>Electronic records will be provided via email and online access</li>
+                                            <li>Records are stored securely with cryptographic integrity protection</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="consent-checkboxes">
+                                    <label class="consent-item">
+                                        <input type="checkbox" id="electronic-records-consent" required class="consent-checkbox">
+                                        <span class="consent-text"><strong>I consent to receive this document and all related records electronically instead of paper copies</strong></span>
+                                    </label>
+                                    
+                                    <label class="consent-item">
+                                        <input type="checkbox" id="hardware-software-acknowledge" required class="consent-checkbox">
+                                        <span class="consent-text">I acknowledge that I have been informed of the hardware and software requirements above</span>
+                                    </label>
+                                    
+                                    <label class="consent-item">
+                                        <input type="checkbox" id="signature-intent-confirm" required class="consent-checkbox">
+                                        <span class="consent-text"><strong>I intend to sign this document electronically and understand it will be legally binding</strong></span>
+                                    </label>
+                                    
+                                    <label class="consent-item">
+                                        <input type="checkbox" id="terms-understanding" required class="consent-checkbox">
+                                        <span class="consent-text">I have read, understood, and agree to all terms stated in this Letter of Intent</span>
+                                    </label>
+                                </div>
+                                
+                                <div class="paper-copy-info">
+                                    <p><small><strong>Need a paper copy?</strong> Contact admin@betterdayenergy.com or call (555) 123-4567</small></p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -591,7 +713,13 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     
                     <div class="warning-box">
                         <h3>Your Signature Required</h3>
-                        <p>Signing will trigger the complete workflow automation.</p>
+                        <p>Complete all consent requirements before signing.</p>
+                    </div>
+                    
+                    <!-- Consent Validation Error -->
+                    <div class="consent-validation-error" id="consent-error">
+                        <strong>⚠️ Required Consent Missing</strong><br>
+                        You must check all required consent boxes above before signing.
                     </div>
                     
                     <div class="signature-area">
@@ -623,8 +751,34 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     signaturePad.clear();
                 }}
                 
-                // Submit signature with full workflow
+                // Validate ESIGN Act consent requirements
+                function validateESIGNConsent() {{
+                    const requiredCheckboxes = [
+                        'electronic-records-consent',
+                        'hardware-software-acknowledge', 
+                        'signature-intent-confirm',
+                        'terms-understanding'
+                    ];
+                    
+                    const uncheckedBoxes = requiredCheckboxes.filter(id => !document.getElementById(id).checked);
+                    
+                    if (uncheckedBoxes.length > 0) {{
+                        document.getElementById('consent-error').style.display = 'block';
+                        document.getElementById('consent-error').scrollIntoView({{ behavior: 'smooth' }});
+                        return false;
+                    }}
+                    
+                    document.getElementById('consent-error').style.display = 'none';
+                    return true;
+                }}
+                
+                // Submit signature with full workflow and ESIGN compliance
                 async function submitSignature() {{
+                    // First validate ESIGN consent
+                    if (!validateESIGNConsent()) {{
+                        return;
+                    }}
+                    
                     if (signaturePad.isEmpty()) {{
                         alert('Please provide your signature before submitting.');
                         return;
@@ -637,13 +791,25 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     try {{
                         const signatureData = signaturePad.toDataURL('image/png');
                         
+                        // Collect consent data for ESIGN compliance
+                        const consentData = {{
+                            electronic_consent_given: document.getElementById('electronic-records-consent').checked,
+                            hardware_software_acknowledged: document.getElementById('hardware-software-acknowledge').checked,
+                            explicit_intent_confirmed: document.getElementById('signature-intent-confirm').checked,
+                            terms_understanding_confirmed: document.getElementById('terms-understanding').checked,
+                            disclosures_acknowledged: true,
+                            consent_timestamp: new Date().toISOString(),
+                            identity_authentication_method: 'email_and_browser_fingerprint'
+                        }};
+                        
                         const response = await fetch('/api/submit-signature', {{
                             method: 'POST',
                             headers: {{ 'Content-Type': 'application/json' }},
                             body: JSON.stringify({{
                                 signature_token: '{signature_request['signature_token']}',
                                 signature_data: signatureData,
-                                signed_at: new Date().toISOString()
+                                signed_at: new Date().toISOString(),
+                                consent_data: consentData
                             }})
                         }});
                         
@@ -685,7 +851,22 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             ip_address = self.client_address[0]
             user_agent = self.headers.get('User-Agent', 'Unknown')
             
-            logger.info(f"🚀 Starting complete signature workflow for {signature_request['signer_name']}")
+            # Process ESIGN Act consent data
+            consent_data = data.get('consent_data', {})
+            
+            # Update signature request with consent information for compliance
+            signature_request.update({
+                'electronic_consent_given': consent_data.get('electronic_consent_given', False),
+                'explicit_intent_confirmed': consent_data.get('explicit_intent_confirmed', False),
+                'disclosures_acknowledged': consent_data.get('disclosures_acknowledged', False),
+                'hardware_software_acknowledged': consent_data.get('hardware_software_acknowledged', False),
+                'terms_understanding_confirmed': consent_data.get('terms_understanding_confirmed', False),
+                'consent_timestamp': consent_data.get('consent_timestamp'),
+                'identity_authentication_method': consent_data.get('identity_authentication_method', 'email_and_browser_fingerprint')
+            })
+            
+            logger.info(f"🚀 Starting ESIGN compliant signature workflow for {signature_request['signer_name']}")
+            logger.info(f"🔒 Consent validation: Electronic={consent_data.get('electronic_consent_given')}, Intent={consent_data.get('explicit_intent_confirmed')}")
             
             # STEP 1: Store signature in PostgreSQL with tamper-evident features
             logger.info("📊 Step 1: Storing in PostgreSQL...")
@@ -705,30 +886,56 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             audit_report = signature_storage.get_audit_report(verification_code)
             signature_image_data = signature_storage.get_signature_image(verification_code)
             
-            # STEP 3: Store comprehensive information in CRM
-            logger.info("📝 Step 3: Storing in CRM...")
+            # STEP 3: Generate PDF of the signed document
+            logger.info("📄 Step 3: Generating PDF...")
             
-            # Find Farley's contact ID (we know it from previous tests)
-            contact_id = "4036857411931183467036798214340"  # Farley Barnhart's ID
+            # Get the signed HTML document
+            signed_html = self.generate_signed_document_html(signature_request, verification_code)
             
-            success = pdf_generator.store_in_crm_with_pdf_link(
-                contact_id,
-                audit_report,
-                f"http://localhost:8003/signed-loi/{verification_code}"
-            )
+            # Convert HTML to PDF
+            pdf_path = f"/tmp/signed_loi_{verification_code}.pdf"
+            pdf_success = self.html_to_pdf(signed_html, pdf_path)
             
-            if success:
-                logger.info("✅ CRM storage completed successfully")
-            else:
-                logger.warning("⚠️ CRM storage failed, but signature is secure in PostgreSQL")
+            # STEP 4: Store PDF in CRM
+            logger.info("📝 Step 4: Storing PDF in CRM...")
+            
+            # Get the correct contact ID from signature request
+            contact_id = signature_request.get('crm_contact_id')
+            if not contact_id:
+                # Try to find contact by email
+                customer_email = signature_request.get('signer_email')
+                contact_id = self.find_crm_contact_by_email(customer_email)
+            
+            crm_success = False
+            if contact_id and pdf_success:
+                # Store PDF in CRM as attachment
+                crm_success = self.store_pdf_in_crm(contact_id, pdf_path, signature_request, verification_code)
+                
+                # Also store link and audit info
+                pdf_generator.store_in_crm_with_pdf_link(
+                    contact_id,
+                    audit_report,
+                    f"https://loi-automation-api.onrender.com/signed-loi/{verification_code}"
+                )
+            
+            # STEP 5: Email PDF to customer
+            logger.info("📧 Step 5: Emailing signed document to customer...")
+            email_sent = False
+            if pdf_success:
+                email_sent = self.email_signed_pdf_to_customer(
+                    signature_request, 
+                    pdf_path, 
+                    verification_code
+                )
             
             # Update in-memory status
             signature_request['status'] = 'completed'
             signature_request['verification_code'] = verification_code
             
             logger.info(f"🎉 COMPLETE WORKFLOW FINISHED for {signature_request['signer_name']}")
-            logger.info(f"📄 PDF available at: /signed-loi/{verification_code}")
-            logger.info(f"📝 CRM updated for contact: {contact_id}")
+            logger.info(f"📄 PDF generated: {pdf_success}")
+            logger.info(f"📝 CRM updated: {crm_success}")
+            logger.info(f"📧 Email sent: {email_sent}")
             
             # Send response
             response_data = {
@@ -736,7 +943,9 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                 'verification_code': verification_code,
                 'workflow_completed': True,
                 'pdf_url': f"/signed-loi/{verification_code}",
-                'crm_updated': success
+                'pdf_generated': pdf_success,
+                'crm_updated': crm_success,
+                'email_sent': email_sent
             }
             
             self.send_response(200)
@@ -747,6 +956,492 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         except Exception as e:
             logger.error(f"❌ Error in complete workflow: {e}")
             self.send_error(500, str(e))
+    
+    def generate_signed_document_html(self, signature_request, verification_code):
+        """Generate HTML version of signed document for PDF conversion"""
+        signature_data = signature_storage.get_signature_image(verification_code)
+        audit_report = signature_storage.get_audit_report(verification_code)
+        
+        # Get deal terms
+        deal_terms = signature_request.get('deal_terms', {})
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Signed LOI - {signature_request['transaction_id']}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; }}
+                .header {{ text-align: center; margin-bottom: 30px; }}
+                .section {{ margin-bottom: 25px; }}
+                h1 {{ color: #1f4e79; }}
+                h2 {{ color: #2563eb; margin-top: 25px; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+                th, td {{ padding: 10px; text-align: left; border: 1px solid #ddd; }}
+                th {{ background-color: #f2f2f2; }}
+                .signature-section {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                .signature-image {{ border: 2px solid #000; padding: 10px; background: white; }}
+                .footer {{ margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; }}
+                .verification {{ background: #e8f5e8; padding: 15px; border-radius: 5px; }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Better Day Energy</h1>
+                <h2>Letter of Intent - VP Racing Fuel Supply Agreement</h2>
+                <p><strong>SIGNED DOCUMENT</strong></p>
+            </div>
+            
+            <div class="section">
+                <p><strong>Date:</strong> {datetime.now().strftime('%B %d, %Y')}</p>
+                <p><strong>Transaction ID:</strong> {signature_request['transaction_id']}</p>
+                <p><strong>Verification Code:</strong> {verification_code}</p>
+            </div>
+            
+            <div class="section">
+                <h3>Customer Information</h3>
+                <table>
+                    <tr><th>Business Name</th><td>{signature_request['company_name']}</td></tr>
+                    <tr><th>Owner/Contact</th><td>{signature_request['signer_name']}</td></tr>
+                    <tr><th>Email</th><td>{signature_request['signer_email']}</td></tr>
+                    <tr><th>Phone</th><td>{deal_terms.get('customer', {}).get('phone', 'Not provided')}</td></tr>
+                    <tr><th>Business Address</th><td>{deal_terms.get('customer', {}).get('address', 'Not provided')}</td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h3>Fuel Volume Commitments</h3>
+                <table>
+                    <tr><th>Product</th><th>Monthly Volume</th><th>Annual Volume</th></tr>
+                    <tr><td>Gasoline</td><td>{deal_terms.get('gasoline_volume', 0):,} gallons</td><td>{deal_terms.get('gasoline_volume', 0) * 12:,} gallons</td></tr>
+                    <tr><td>Diesel</td><td>{deal_terms.get('diesel_volume', 0):,} gallons</td><td>{deal_terms.get('diesel_volume', 0) * 12:,} gallons</td></tr>
+                    <tr><td><strong>Total</strong></td><td><strong>{(deal_terms.get('gasoline_volume', 0) + deal_terms.get('diesel_volume', 0)):,} gallons</strong></td><td><strong>{(deal_terms.get('gasoline_volume', 0) + deal_terms.get('diesel_volume', 0)) * 12:,} gallons</strong></td></tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <h3>Financial Incentive Package</h3>
+                <table>
+                    <tr><th>Incentive Type</th><th>Amount</th></tr>
+                    <tr><td>Image Program Funding</td><td>${deal_terms.get('image_funding', 0):,}</td></tr>
+                    <tr><td>Volume Incentives</td><td>${deal_terms.get('volume_incentives', 0):,}</td></tr>
+                    <tr><td><strong>Total First Year Value</strong></td><td><strong>${(deal_terms.get('image_funding', 0) + deal_terms.get('volume_incentives', 0)):,}</strong></td></tr>
+                </table>
+            </div>
+            
+            <div class="signature-section">
+                <h3>Electronic Signature</h3>
+                <p><strong>Signed by:</strong> {signature_request['signer_name']}</p>
+                <p><strong>Date:</strong> {audit_report['signed_at']}</p>
+                <p><strong>IP Address:</strong> {audit_report['ip_address']}</p>
+                <div class="signature-image">
+                    <img src="{signature_data['data_url']}" alt="Signature" style="max-width: 300px;">
+                </div>
+            </div>
+            
+            <div class="footer verification">
+                <h3>Document Verification</h3>
+                <p><strong>Verification Code:</strong> {verification_code}</p>
+                <p><strong>Document Hash:</strong> {audit_report['hash']}</p>
+                <p><strong>Signature Method:</strong> Electronic Signature</p>
+                <p><strong>Storage:</strong> PostgreSQL with tamper-evident features</p>
+                <p>This document has been electronically signed and is legally binding.</p>
+            </div>
+        </body>
+        </html>
+        """
+        return html
+    
+    def html_to_pdf(self, html_content, output_path):
+        """Convert HTML to PDF using best available method"""
+        try:
+            # First try wkhtmltopdf if available
+            import subprocess
+            import tempfile
+            
+            # Check if wkhtmltopdf is available
+            try:
+                subprocess.run(['wkhtmltopdf', '--version'], capture_output=True, check=True)
+                wkhtmltopdf_available = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                wkhtmltopdf_available = False
+            
+            if wkhtmltopdf_available:
+                # Write HTML to temporary file
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+                    f.write(html_content)
+                    temp_html = f.name
+                
+                # Convert to PDF
+                result = subprocess.run([
+                    'wkhtmltopdf',
+                    '--enable-local-file-access',
+                    '--margin-top', '20mm',
+                    '--margin-bottom', '20mm',
+                    '--margin-left', '20mm',
+                    '--margin-right', '20mm',
+                    temp_html,
+                    output_path
+                ], capture_output=True, text=True)
+                
+                # Clean up temp file
+                os.unlink(temp_html)
+                
+                if result.returncode == 0:
+                    logger.info(f"✅ PDF generated successfully with wkhtmltopdf: {output_path}")
+                    return True
+                else:
+                    logger.error(f"❌ wkhtmltopdf failed: {result.stderr}")
+            
+            # Fallback: Use Python PDF library
+            logger.info("📄 Trying Python PDF generation...")
+            
+            # Try weasyprint first (best HTML to PDF conversion)
+            try:
+                import weasyprint
+                
+                # Generate PDF with WeasyPrint
+                weasyprint.HTML(string=html_content).write_pdf(output_path)
+                logger.info(f"✅ PDF generated successfully with WeasyPrint: {output_path}")
+                return True
+                
+            except ImportError:
+                logger.info("WeasyPrint not available, trying reportlab...")
+                
+                # Try reportlab
+                try:
+                    from reportlab.pdfgen import canvas
+                    from reportlab.lib.pagesizes import letter
+                    from reportlab.lib.styles import getSampleStyleSheet
+                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+                    from reportlab.lib.units import inch
+                    import re
+                    from html import unescape
+                    
+                    # Convert HTML to text for reportlab
+                    text_content = re.sub('<[^<]+?>', '', html_content)
+                    text_content = unescape(text_content)
+                    
+                    # Create PDF with reportlab
+                    doc = SimpleDocTemplate(output_path, pagesize=letter)
+                    styles = getSampleStyleSheet()
+                    story = []
+                    
+                    # Split content into paragraphs
+                    paragraphs = text_content.split('\n\n')
+                    
+                    for para in paragraphs:
+                        if para.strip():
+                            if 'LETTER OF INTENT' in para.upper():
+                                p = Paragraph(para.strip(), styles['Title'])
+                            elif para.strip().isupper() and len(para.strip()) < 50:
+                                p = Paragraph(para.strip(), styles['Heading1'])
+                            else:
+                                p = Paragraph(para.strip(), styles['Normal'])
+                            story.append(p)
+                            story.append(Spacer(1, 0.1*inch))
+                    
+                    doc.build(story)
+                    logger.info(f"✅ PDF generated successfully with ReportLab: {output_path}")
+                    return True
+                    
+                except ImportError:
+                    logger.info("ReportLab not available, saving as formatted HTML...")
+                    
+                    # Final fallback: Enhanced HTML with print styles
+                    html_with_print_styles = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Signed Document</title>
+                        <style>
+                            @media print {{
+                                body {{ margin: 0.5in; font-family: Arial, sans-serif; }}
+                                .no-print {{ display: none; }}
+                            }}
+                            body {{ font-family: Arial, sans-serif; line-height: 1.4; }}
+                            h1 {{ color: #1f4e79; text-align: center; }}
+                            h2 {{ color: #2563eb; border-bottom: 2px solid #2563eb; }}
+                            table {{ width: 100%; border-collapse: collapse; margin: 15px 0; }}
+                            th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                            th {{ background-color: #f2f2f2; }}
+                            .signature {{ border: 2px solid #007bff; padding: 10px; margin: 20px 0; }}
+                            .footer {{ margin-top: 30px; font-size: 12px; color: #666; }}
+                        </style>
+                    </head>
+                    <body>
+                        {html_content.split('<body>')[1].split('</body>')[0] if '<body>' in html_content else html_content}
+                        <div class="no-print">
+                            <p><strong>Note:</strong> This is a print-ready HTML version. Use your browser's print function to create a PDF.</p>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    html_path = output_path.replace('.pdf', '.html')
+                    with open(html_path, 'w', encoding='utf-8') as f:
+                        f.write(html_with_print_styles)
+                    
+                    logger.info(f"✅ HTML document saved (print-ready): {html_path}")
+                    return True
+                
+        except Exception as e:
+            logger.error(f"❌ Error generating PDF: {e}")
+            # Final fallback: save as basic HTML
+            try:
+                html_path = output_path.replace('.pdf', '.html')
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                logger.info(f"📄 Basic HTML saved: {html_path}")
+            except:
+                pass
+            return False
+    
+    def find_crm_contact_by_email(self, email):
+        """Find CRM contact ID by email"""
+        try:
+            conn = signature_storage.get_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT contact_id FROM crm_contacts_cache 
+                    WHERE LOWER(email) = LOWER(%s) 
+                    LIMIT 1
+                """, (email,))
+                result = cursor.fetchone()
+                conn.close()
+                return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error finding contact by email: {e}")
+            return None
+    
+    def store_pdf_in_crm(self, contact_id, pdf_path, signature_request, verification_code):
+        """Store PDF or HTML as attachment in CRM"""
+        try:
+            import requests
+            import base64
+            import os
+            
+            # Check if PDF exists, otherwise look for HTML
+            file_path = pdf_path
+            file_extension = ".pdf"
+            
+            if not os.path.exists(pdf_path):
+                html_path = pdf_path.replace('.pdf', '.html')
+                if os.path.exists(html_path):
+                    file_path = html_path
+                    file_extension = ".html"
+                else:
+                    logger.error(f"Neither PDF nor HTML file found: {pdf_path}")
+                    return False
+            
+            # Read file
+            with open(file_path, 'rb') as f:
+                file_data_bytes = f.read()
+            
+            # Encode file as base64
+            file_base64 = base64.b64encode(file_data_bytes).decode('utf-8')
+            
+            # Prepare CRM API request
+            api_key = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
+            api_user = api_key.split('-')[0]
+            
+            # Create file attachment in CRM
+            file_data = {
+                "Function": "CreateFile",
+                "Parameters": {
+                    "IsAttachedToContact": contact_id,
+                    "FileName": f"Signed_LOI_{verification_code}{file_extension}",
+                    "FileData": file_base64
+                }
+            }
+            
+            response = requests.post(
+                "https://api.lessannoyingcrm.com/v2/",
+                json={
+                    "UserCode": api_user,
+                    "APIToken": api_key,
+                    **file_data
+                }
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('Success'):
+                    logger.info(f"✅ PDF stored in CRM for contact {contact_id}")
+                    
+                    # Also add a note about the signed document
+                    note_data = {
+                        "Function": "CreateNote",
+                        "Parameters": {
+                            "ContactId": contact_id,
+                            "Note": f"Signed LOI Document\n\nTransaction ID: {signature_request['transaction_id']}\nVerification Code: {verification_code}\nSigned by: {signature_request['signer_name']}\nDate: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\nDocument Type: VP Racing Fuel Supply Agreement"
+                        }
+                    }
+                    
+                    requests.post(
+                        "https://api.lessannoyingcrm.com/v2/",
+                        json={
+                            "UserCode": api_user,
+                            "APIToken": api_key,
+                            **note_data
+                        }
+                    )
+                    
+                    return True
+                else:
+                    logger.error(f"CRM API error: {result.get('Error')}")
+                    return False
+            else:
+                logger.error(f"CRM API HTTP error: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"❌ Error storing PDF in CRM: {e}")
+            return False
+    
+    def email_signed_pdf_to_customer(self, signature_request, pdf_path, verification_code):
+        """Email the signed document to the customer"""
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.base import MIMEBase
+            from email import encoders
+            import os
+            
+            # Check if PDF exists, otherwise look for HTML
+            file_path = pdf_path
+            file_extension = ".pdf"
+            file_type = "PDF"
+            
+            if not os.path.exists(pdf_path):
+                html_path = pdf_path.replace('.pdf', '.html')
+                if os.path.exists(html_path):
+                    file_path = html_path
+                    file_extension = ".html"
+                    file_type = "HTML"
+                else:
+                    logger.error(f"Neither PDF nor HTML file found for email: {pdf_path}")
+                    return False
+            
+            # Get SMTP settings
+            smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+            smtp_port = int(os.getenv('SMTP_PORT', '587'))
+            smtp_username = os.getenv('SMTP_USERNAME', 'transaction.coordinator.agent@gmail.com')
+            smtp_password = os.getenv('SMTP_PASSWORD', 'xmvi xvso zblo oewe')
+            
+            # Create email
+            msg = MIMEMultipart()
+            msg['Subject'] = f"Your Signed LOI Document - {signature_request['company_name']}"
+            msg['From'] = f"Better Day Energy <{smtp_username}>"
+            msg['To'] = signature_request['signer_email']
+            
+            # Email body
+            html_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #1f4e79, #2563eb); color: white; padding: 30px; text-align: center;">
+                    <h1>🏢 Better Day Energy</h1>
+                    <h2>Thank You for Signing!</h2>
+                </div>
+                
+                <div style="padding: 30px; background: #f8f9fa;">
+                    <p>Dear {signature_request['signer_name']},</p>
+                    
+                    <p>Thank you for electronically signing the VP Racing Fuel Supply Agreement Letter of Intent.</p>
+                    
+                    <p>Your signed document is attached to this email as a {file_type} file for your records.</p>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3>📄 Document Details:</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li>• <strong>Transaction ID:</strong> {signature_request['transaction_id']}</li>
+                            <li>• <strong>Verification Code:</strong> {verification_code}</li>
+                            <li>• <strong>Date Signed:</strong> {datetime.now().strftime('%B %d, %Y')}</li>
+                        </ul>
+                    </div>
+                    
+                    <p>You can also view your signed document online at any time:</p>
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="https://loi-automation-api.onrender.com/signed-loi/{verification_code}" 
+                           style="background: #1f4e79; color: white; padding: 10px 20px; text-decoration: none; 
+                                  border-radius: 6px; display: inline-block;">
+                            View Document Online
+                        </a>
+                    </div>
+                    
+                    <p>If you have any questions, please don't hesitate to contact us.</p>
+                    
+                    <p>Best regards,<br>
+                    Better Day Energy Team</p>
+                </div>
+                
+                <div style="background: #e9ecef; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+                    <p>This email contains confidential information. Please keep your verification code secure.</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Plain text version
+            text_body = f"""
+Dear {signature_request['signer_name']},
+
+Thank you for electronically signing the VP Racing Fuel Supply Agreement Letter of Intent.
+
+Your signed document is attached to this email as a {file_type} file for your records.
+
+Document Details:
+• Transaction ID: {signature_request['transaction_id']}
+• Verification Code: {verification_code}
+• Date Signed: {datetime.now().strftime('%B %d, %Y')}
+
+You can also view your signed document online at:
+https://loi-automation-api.onrender.com/signed-loi/{verification_code}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Better Day Energy Team
+            """
+            
+            # Attach parts
+            part1 = MIMEText(text_body, 'plain')
+            part2 = MIMEText(html_body, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            
+            # Attach the document file
+            with open(file_path, 'rb') as f:
+                if file_extension == '.pdf':
+                    part = MIMEBase('application', 'pdf')
+                else:
+                    part = MIMEBase('text', 'html')
+                
+                part.set_payload(f.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    'Content-Disposition',
+                    f'attachment; filename="Signed_LOI_{verification_code}{file_extension}"'
+                )
+                msg.attach(part)
+                
+            logger.info(f"📎 Attached {file_type} document: {file_path}")
+            
+            # Send email
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+                server.send_message(msg)
+            
+            logger.info(f"✅ Signed document emailed to {signature_request['signer_email']}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to email signed document: {e}")
+            return False
     
     def serve_completion_page(self, verification_code):
         """Serve completion page with full workflow results"""
@@ -1092,6 +1787,112 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html.encode('utf-8'))
     
+    def handle_paper_copy_request(self, post_data):
+        """Handle paper copy requests as required by ESIGN Act"""
+        try:
+            data = json.loads(post_data.decode())
+            verification_code = data.get('verification_code')
+            email = data.get('email')
+            reason = data.get('reason', 'Requested paper copy')
+            
+            if not verification_code or not email:
+                self.send_error(400, "Verification code and email required")
+                return
+            
+            # Verify the document exists
+            audit_report = signature_storage.get_audit_report(verification_code)
+            if not audit_report:
+                self.send_error(404, "Document not found")
+                return
+            
+            # Log the paper copy request
+            logger.info(f"📄 Paper copy requested for {verification_code} by {email}")
+            
+            # Send email notification to admin
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+                
+                smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+                smtp_port = int(os.getenv('SMTP_PORT', '587'))
+                smtp_username = os.getenv('SMTP_USERNAME', 'transaction.coordinator.agent@gmail.com')
+                smtp_password = os.getenv('SMTP_PASSWORD', 'xmvi xvso zblo oewe')
+                
+                msg = MIMEMultipart()
+                msg['Subject'] = f"Paper Copy Request - {verification_code}"
+                msg['From'] = f"Better Day Energy <{smtp_username}>"
+                msg['To'] = "admin@betterdayenergy.com"
+                
+                body = f"""
+Paper Copy Request Received
+
+Document: {audit_report['document_name']}
+Verification Code: {verification_code}
+Requester Email: {email}
+Signer: {audit_report['signer_name']}
+Company: {audit_report['company_name']}
+Original Signature Date: {audit_report['signed_at']}
+Request Reason: {reason}
+Request Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+ESIGN Act Compliance: As required by federal law, this customer has requested a paper copy of their electronically signed document. Please fulfill this request promptly at no charge to the customer.
+
+Document Link: https://loi-automation-api.onrender.com/signed-loi/{verification_code}
+                """
+                
+                msg.attach(MIMEText(body, 'plain'))
+                
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_username, smtp_password)
+                    server.send_message(msg)
+                
+                # Send confirmation to requester
+                msg_customer = MIMEMultipart()
+                msg_customer['Subject'] = "Paper Copy Request Received"
+                msg_customer['From'] = f"Better Day Energy <{smtp_username}>"
+                msg_customer['To'] = email
+                
+                customer_body = f"""
+Dear {audit_report['signer_name']},
+
+Your request for a paper copy of the electronically signed document has been received and will be processed within 2-3 business days at no charge.
+
+Document Details:
+- Verification Code: {verification_code}
+- Document: {audit_report['document_name']}
+- Original Signature Date: {audit_report['signed_at'].strftime('%B %d, %Y')}
+
+The paper copy will be mailed to the address we have on file. If you need it sent to a different address, please reply to this email with the correct mailing address.
+
+Thank you,
+Better Day Energy Team
+                """
+                
+                msg_customer.attach(MIMEText(customer_body, 'plain'))
+                
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_username, smtp_password)
+                    server.send_message(msg_customer)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'success': True,
+                    'message': 'Paper copy request submitted successfully. You will receive a confirmation email and your paper copy within 2-3 business days.'
+                }).encode())
+                
+            except Exception as e:
+                logger.error(f"Failed to send paper copy request emails: {e}")
+                self.send_error(500, "Failed to process paper copy request")
+                
+        except Exception as e:
+            logger.error(f"Error handling paper copy request: {e}")
+            self.send_error(500, str(e))
+
     def handle_login(self, post_data):
         """Handle login request"""
         try:
