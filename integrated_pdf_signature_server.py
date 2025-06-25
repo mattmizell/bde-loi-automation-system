@@ -178,21 +178,35 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             self.handle_create_loi(post_data)
         elif self.path == "/api/search-crm":
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            self.handle_crm_search(post_data)
+            # Redirect to new modular API
+            self.proxy_to_modular_api('POST', '/api/search_contacts')
+        elif self.path == "/api/search_contacts":
+            # New modular endpoint
+            self.proxy_to_modular_api('POST', '/api/search_contacts')
         elif self.path == "/api/create-crm-contact":
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            self.handle_create_crm_contact(post_data)
+            # Redirect to new modular API
+            self.proxy_to_modular_api('POST', '/api/create_contact')
+        elif self.path == "/api/create_contact":
+            # New modular endpoint
+            self.proxy_to_modular_api('POST', '/api/create_contact')
         elif self.path == "/api/update-crm-contact":
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            self.handle_update_crm_contact(post_data)
+            # Redirect to new modular API
+            self.proxy_to_modular_api('PUT', '/api/contacts')
+        elif self.path.startswith("/api/contacts/") and len(self.path.split('/')) == 4:
+            # New modular endpoint for contact updates
+            self.proxy_to_modular_api('PUT', self.path)
         elif self.path == "/api/refresh-crm-cache":
-            self.handle_refresh_crm_cache()
+            # Redirect to new modular API
+            self.proxy_to_modular_api('POST', '/api/sync')
+        elif self.path == "/api/sync":
+            # New modular endpoint
+            self.proxy_to_modular_api('POST', '/api/sync')
         elif self.path == "/api/get-crm-contacts":
-            self.handle_get_crm_contacts()
+            # Redirect to new modular API
+            self.proxy_to_modular_api('GET', '/api/contacts')
+        elif self.path == "/api/contacts" or self.path.startswith("/api/contacts?"):
+            # New modular endpoint
+            self.proxy_to_modular_api('GET', self.path)
         elif self.path == "/api/sync-status":
             self.handle_sync_status()
         elif self.path == "/api/request-paper-copy":
@@ -2251,7 +2265,12 @@ Better Day Energy Team
                 
                 async function loadCRMContacts() {
                     try {
-                        const response = await fetch('/api/get-crm-contacts');
+                        const response = await fetch('/api/contacts?limit=1000', {
+                            headers: {
+                                'Authorization': 'ApiKey loi-service-key',
+                                'Content-Type': 'application/json'
+                            }
+                        });
                         if (response.ok) {
                             const result = await response.json();
                             allCustomers = result.contacts || [];
@@ -2302,10 +2321,13 @@ Better Day Energy Team
                     }
                     
                     try {
-                        const response = await fetch('/api/search-crm', {
+                        const response = await fetch('/api/search_contacts', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ query: query })
+                            headers: {
+                                'Authorization': 'ApiKey loi-service-key',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ query: query, limit: 10 })
                         });
                         
                         if (response.ok) {
@@ -2333,9 +2355,11 @@ Better Day Energy Team
                         return;
                     }
                     
-                    if (results.customers && results.customers.length > 0) {
+                    // Handle both old and new API response formats
+                    const customers = results.customers || results.results || results.contacts || [];
+                    if (customers && customers.length > 0) {
                         let html = '<h4 style="color: #155724; margin-bottom: 10px;">✅ Found in CRM:</h4>';
-                        results.customers.forEach((customer, index) => {
+                        customers.forEach((customer, index) => {
                             // Create data attributes to avoid string escaping issues
                             const customerId = customer.id || '';
                             const customerName = customer.name || '';
@@ -2534,7 +2558,12 @@ Better Day Energy Team
                 
                 async function updateCRMCustomer(customer) {
                     try {
-                        const response = await fetch('/api/update-crm-contact', {
+                        const response = await fetch('/api/contacts/' + contactId, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': 'ApiKey loi-service-key',
+                                'Content-Type': 'application/json'
+                            },
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -2605,7 +2634,14 @@ Better Day Energy Team
                     }
                     
                     try {
-                        const response = await fetch('/api/refresh-crm-cache');
+                        const response = await fetch('/api/sync', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'ApiKey loi-service-key',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ force: true })
+                        });
                         if (response.ok) {
                             const result = await response.json();
                             if (refreshBtn) {
@@ -2669,7 +2705,11 @@ Better Day Energy Team
                     };
                     
                     try {
-                        const response = await fetch('/api/create-crm-contact', {
+                        const response = await fetch('/api/create_contact', {
+                            headers: {
+                                'Authorization': 'ApiKey loi-service-key',
+                                'Content-Type': 'application/json'
+                            },
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(customerData)
@@ -3615,6 +3655,64 @@ Transaction ID: {loi_data['transaction_id']}
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             error_response = {"success": False, "error": str(e)}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def proxy_to_modular_api(self, method, endpoint):
+        """Proxy requests to the unified modular API"""
+        import urllib.request
+        import urllib.parse
+        
+        try:
+            # Read request body if present
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length) if content_length > 0 else None
+            
+            # Build URL for unified modular API
+            base_url = "https://loi-automation-api.onrender.com"
+            full_url = base_url + endpoint
+            
+            # Add query parameters if GET request
+            if method == 'GET' and '?' in self.path:
+                query_string = self.path.split('?', 1)[1]
+                full_url += '?' + query_string
+            
+            # Create request
+            req = urllib.request.Request(full_url, data=post_data, method=method)
+            
+            # Add headers
+            req.add_header('Authorization', 'ApiKey loi-service-key')
+            req.add_header('Content-Type', 'application/json')
+            
+            # Make request
+            with urllib.request.urlopen(req) as response:
+                # Forward response
+                self.send_response(response.getcode())
+                
+                # Copy headers
+                for header, value in response.headers.items():
+                    if header.lower() not in ['connection', 'transfer-encoding']:
+                        self.send_header(header, value)
+                self.end_headers()
+                
+                # Copy body
+                response_data = response.read()
+                self.wfile.write(response_data)
+                
+        except urllib.error.HTTPError as e:
+            # Forward HTTP error
+            self.send_response(e.code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            error_data = e.read()
+            self.wfile.write(error_data)
+            
+        except Exception as e:
+            # Internal error
+            logger.error(f"Proxy error: {str(e)}")
+            self.send_response(500)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            error_response = {"success": False, "error": "Proxy error: " + str(e)}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
 class CRMBidirectionalSync:
