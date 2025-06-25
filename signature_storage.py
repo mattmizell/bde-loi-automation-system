@@ -19,19 +19,14 @@ class TamperEvidentSignatureStorage:
     def __init__(self):
         # Use environment variable for database connection in production, fallback to localhost for development
         import os
-        from urllib.parse import urlparse, unquote
         
         db_url = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost/loi_automation")
         
-        # Parse DATABASE_URL to handle special characters properly
-        if db_url and db_url.startswith('postgresql://'):
-            try:
-                parsed = urlparse(db_url)
-                # Reconstruct the connection string with properly decoded components
-                self.connection_string = f"postgresql://{unquote(parsed.username)}:{unquote(parsed.password)}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
-            except Exception as e:
-                # Fallback to original URL if parsing fails
-                self.connection_string = db_url
+        # For Render's DATABASE_URL, we need to handle it carefully
+        # The URL format: postgresql://user:password@host:port/database
+        if db_url and 'render.com' in db_url:
+            # Render provides URLs that psycopg2 can handle directly
+            self.connection_string = db_url
         else:
             self.connection_string = db_url
             
@@ -40,7 +35,39 @@ class TamperEvidentSignatureStorage:
     
     def get_connection(self):
         """Get PostgreSQL connection"""
-        return psycopg2.connect(self.connection_string)
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # If the connection string looks like a Render DATABASE_URL, use DSN parsing
+        if self.connection_string and self.connection_string.startswith('postgresql://'):
+            try:
+                # Try direct connection first
+                return psycopg2.connect(self.connection_string)
+            except Exception as e:
+                # Log the connection string structure for debugging (hide password)
+                import re
+                safe_url = re.sub(r':([^@]+)@', ':***@', self.connection_string)
+                logger.error(f"Failed to connect with URL: {safe_url}")
+                logger.error(f"Original error: {str(e)}")
+                
+                # If that fails, try to parse components manually
+                # Match postgresql://user:pass@host:port/dbname
+                match = re.match(r'postgresql://([^:]+):([^@]+)@([^:/]+)(?::(\d+))?/(.+)', self.connection_string)
+                if match:
+                    user, password, host, port, dbname = match.groups()
+                    logger.info(f"Parsed connection - user: {user}, host: {host}, port: {port or 5432}, db: {dbname}")
+                    return psycopg2.connect(
+                        host=host,
+                        port=port or 5432,
+                        user=user,
+                        password=password,
+                        database=dbname
+                    )
+                else:
+                    logger.error(f"Could not parse DATABASE_URL format")
+                    raise e
+        else:
+            return psycopg2.connect(self.connection_string)
     
     def ensure_signature_tables(self):
         """Create secure signature storage tables"""
