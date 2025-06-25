@@ -154,6 +154,15 @@ signature_requests = load_signature_requests()
 class IntegratedSignatureHandler(BaseHTTPRequestHandler):
     """Complete signature handler with PDF generation and CRM storage"""
     
+    def do_HEAD(self):
+        """Handle HEAD requests (for health checks)"""
+        if self.path == "/" or self.path == "/health":
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html')
+            self.end_headers()
+        else:
+            self.send_error(404)
+    
     def do_GET(self):
         """Handle GET requests"""
         parsed_path = urlparse(self.path)
