@@ -338,9 +338,12 @@ class CRMBridge:
         try:
             contact_data = queue_data["data"]
             
+            # Extract UserCode from API key
+            user_code = LACRM_API_KEY.split('-')[0]  # Gets '1073223'
+            
             params = {
                 'APIToken': LACRM_API_KEY,
-                'UserCode': 'BDE_CRM_BRIDGE',
+                'UserCode': user_code,
                 'Function': 'CreateContact',
                 'Name': contact_data["name"],
                 'Email': contact_data.get("email", ""),
@@ -352,7 +355,8 @@ class CRMBridge:
                 'Notes': contact_data.get("notes", "")
             }
             
-            response = requests.post(LACRM_BASE_URL, json=params, timeout=30)
+            # LACRM returns text/html, not JSON - need to handle properly
+            response = requests.post(LACRM_BASE_URL, data=params, timeout=30)
             
             if response.status_code == 200:
                 result = json.loads(response.text)
@@ -383,13 +387,17 @@ class CRMBridge:
             cur = conn.cursor()
             
             # Get contacts from LACRM API using the working method
+            # Extract UserCode from API key
+            user_code = LACRM_API_KEY.split('-')[0]  # Gets '1073223'
+            
             params = {
                 'APIToken': LACRM_API_KEY,
-                'UserCode': 'BDE_CRM_BRIDGE',
+                'UserCode': user_code,
                 'Function': 'GetContacts'
             }
             
-            response = requests.post(LACRM_BASE_URL, json=params, timeout=60)
+            # LACRM returns text/html, not JSON - need to handle properly
+            response = requests.post(LACRM_BASE_URL, data=params, timeout=60)
             
             if response.status_code == 200:
                 data = json.loads(response.text)
