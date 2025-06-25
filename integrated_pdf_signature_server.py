@@ -450,6 +450,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                             <tr><th>Business Name</th><td>{signature_request['company_name']}</td></tr>
                             <tr><th>Owner/Contact</th><td>{signature_request['signer_name']}</td></tr>
                             <tr><th>Email</th><td>{signature_request['signer_email']}</td></tr>
+                            <tr><th>Phone</th><td>{signature_request.get('deal_terms', {}).get('customer', {}).get('phone', 'Not provided')}</td></tr>
+                            <tr><th>Business Address</th><td>{signature_request.get('deal_terms', {}).get('customer', {}).get('address', 'Not provided')}</td></tr>
                             <tr><th>Business Type</th><td>Independent Gas Station</td></tr>
                         </table>
                         
