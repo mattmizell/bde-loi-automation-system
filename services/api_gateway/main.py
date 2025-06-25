@@ -8,10 +8,10 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import logging
 import requests
+import os
 from urllib.parse import urlparse, parse_qs
 from datetime import datetime
 import sys
-import os
 
 # Configure logging
 logging.basicConfig(
@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 class APIGatewayHandler(BaseHTTPRequestHandler):
     """HTTP handler for API gateway routing"""
     
-    # Service endpoints
-    CRM_SERVICE_URL = "http://localhost:8001"
-    DOCUMENT_SERVICE_URL = "http://localhost:8002"
-    GATEWAY_PORT = 8000
+    # Service endpoints (configurable via environment variables)
+    CRM_SERVICE_URL = os.getenv('CRM_SERVICE_URL', "http://localhost:8001")
+    DOCUMENT_SERVICE_URL = os.getenv('DOCUMENT_SERVICE_URL', "http://localhost:8002")
+    GATEWAY_PORT = int(os.getenv('PORT', 8000))
     
     def do_GET(self):
         """Handle GET requests"""
@@ -261,7 +261,7 @@ def main():
     """Start the API Gateway"""
     logger.info("🚪 Starting Better Day Energy API Gateway")
     
-    port = APIGatewayHandler.GATEWAY_PORT
+    port = int(os.getenv('PORT', 8000))
     server_address = ('', port)
     httpd = HTTPServer(server_address, APIGatewayHandler)
     

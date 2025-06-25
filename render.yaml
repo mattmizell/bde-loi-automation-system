@@ -1,13 +1,59 @@
-# Render deployment configuration for LOI Automation System
+# Render deployment configuration for Better Day Energy Modular Architecture
 
 services:
-  # LOI Automation System with integrated signature service
+  # API Gateway - Main entry point (Port 8000)
   - type: web
-    name: loi-automation-system
+    name: bde-api-gateway
     env: python
     pythonVersion: "3.11"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python simple_main.py
+    buildCommand: |
+      pip install -r requirements.txt &&
+      pip install requests
+    startCommand: python services/deploy_startup.py gateway
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: CRM_SERVICE_URL
+        value: https://bde-crm-service.onrender.com
+      - key: DOCUMENT_SERVICE_URL
+        value: https://bde-document-service.onrender.com
+    healthCheckPath: /health
+
+  # CRM Service - Contact management and LACRM sync (Port 8001)  
+  - type: web
+    name: bde-crm-service
+    env: python
+    pythonVersion: "3.11"
+    buildCommand: |
+      pip install -r requirements.txt &&
+      pip install psycopg2-binary requests difflib
+    startCommand: python services/deploy_startup.py crm
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loi-postgres
+          property: connectionString
+      - key: PORT
+        value: 8001
+      - key: ENVIRONMENT
+        value: production
+      - key: LACRM_API_TOKEN
+        value: "14d1b7eb88cc6b51e75a6b00b2b6e41c"
+      - key: LACRM_API_BASE
+        value: "https://api.lessannoyingcrm.com"
+    healthCheckPath: /health
+
+  # Document Service - Document processing and signatures (Port 8002)
+  - type: web
+    name: bde-document-service
+    env: python
+    pythonVersion: "3.11"
+    buildCommand: |
+      pip install -r requirements.txt &&
+      pip install psycopg2-binary reportlab weasyprint
+    startCommand: python services/deploy_startup.py document
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -17,9 +63,36 @@ services:
         value: 8002
       - key: ENVIRONMENT
         value: production
+      - key: PDF_TEMP_DIR
+        value: /tmp/pdf_generation
+      - key: SMTP_SERVER
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+    healthCheckPath: /health
+
+  # Legacy LOI Service - Backward compatibility (Port 8080)
+  - type: web
+    name: bde-loi-legacy
+    env: python
+    pythonVersion: "3.11"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python integrated_pdf_signature_server.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: loi-postgres
+          property: connectionString
+      - key: PORT
+        value: 8080
+      - key: ENVIRONMENT
+        value: production
+      - key: API_GATEWAY_URL
+        value: https://bde-api-gateway.onrender.com
+    healthCheckPath: /admin
 
 databases:
-  # PostgreSQL Database for signatures and CRM cache
+  # PostgreSQL Database for all services
   - name: loi-postgres
     databaseName: loi_automation
     user: loi_user

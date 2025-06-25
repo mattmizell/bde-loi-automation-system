@@ -1,9 +1,15 @@
 # Better Day Energy LOI Automation System API Documentation
 
 ## 🚀 New Modular Architecture (January 2025)
-**API Gateway**: `http://localhost:8000` (Development) | `https://loi-automation-api.onrender.com` (Production)
+**API Gateway**: `http://localhost:8000` (Development) | `https://bde-api-gateway.onrender.com` (Production)
 
 The system has been modularized into microservices while maintaining full backward compatibility.
+
+### 🌐 Production Service URLs
+- **API Gateway**: `https://bde-api-gateway.onrender.com`
+- **CRM Service**: `https://bde-crm-service.onrender.com` 
+- **Document Service**: `https://bde-document-service.onrender.com`
+- **Legacy LOI**: `https://bde-loi-legacy.onrender.com` (backward compatibility)
 
 ### 🏗️ Service Architecture
 - **API Gateway (Port 8000)**: Central routing and load balancing
@@ -11,9 +17,10 @@ The system has been modularized into microservices while maintaining full backwa
 - **Document Service (Port 8002)**: Document processing and digital signatures
 
 ### 📋 Quick Reference for Adam & Bolt.new
-- **Base URL**: `http://localhost:8000` (Development)
+- **Development**: `http://localhost:8000`
+- **Production**: `https://bde-api-gateway.onrender.com`
 - **Auth Header**: `Authorization: ApiKey loi-service-key`
-- **Legacy Endpoints**: All existing endpoints work unchanged (just change port 8080 → 8000)
+- **Legacy Endpoints**: All existing endpoints work unchanged (just change URL)
 - **Health Check**: `GET /status` - Shows all service health
 - **Contact Search**: `POST /api/search_contacts` - Advanced fuzzy search
 - **Create Contact**: `POST /api/create_contact` - Add new contacts

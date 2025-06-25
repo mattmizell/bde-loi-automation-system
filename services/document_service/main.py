@@ -212,7 +212,7 @@ def main():
     logger.info("📄 Starting Better Day Energy Document Management Service")
     
     # Start HTTP server
-    port = DOCUMENT_SERVICE_CONFIG['port']
+    port = int(os.getenv('PORT', DOCUMENT_SERVICE_CONFIG['port']))
     server_address = ('', port)
     httpd = HTTPServer(server_address, DocumentServiceHandler)
     

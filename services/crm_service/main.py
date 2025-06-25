@@ -161,7 +161,7 @@ def main():
     sync_service.start_service()
     
     # Start HTTP server
-    port = CRM_SERVICE_CONFIG['port']
+    port = int(os.getenv('PORT', CRM_SERVICE_CONFIG['port']))
     server_address = ('', port)
     httpd = HTTPServer(server_address, CRMServiceHandler)
     
