@@ -1879,6 +1879,13 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         if (response.ok) {
                             const result = await response.json();
                             displayFinalLOI(loiData, result);
+                            
+                            // Show email status
+                            if (result.email_sent) {
+                                alert('✅ LOI created and signature request email sent successfully!');
+                            } else {
+                                alert('⚠️ LOI created but email could not be sent. Please copy and send the email template manually.');
+                            }
                         } else {
                             throw new Error('Failed to create LOI');
                         }
@@ -2038,13 +2045,17 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 logger.error(f"Failed to save LOI data to file: {str(e)}")
                 # Continue anyway since we have it in memory
             
+            # Send signature request email
+            email_sent = self.send_signature_email(data)
+            
             # Send success response
             response_data = {
                 "success": True,
                 "message": "LOI created successfully",
                 "transaction_id": data["transaction_id"],
                 "signature_token": data["signature_token"],
-                "signature_url": f"https://loi-automation-api.onrender.com/sign/{data['signature_token']}"
+                "signature_url": f"https://loi-automation-api.onrender.com/sign/{data['signature_token']}",
+                "email_sent": email_sent
             }
             
             self.send_response(200)
@@ -2059,6 +2070,128 @@ Transaction ID: ${loiData.transaction_id}</textarea>
             self.end_headers()
             error_response = {"success": False, "error": str(e)}
             self.wfile.write(json.dumps(error_response).encode('utf-8'))
+    
+    def send_signature_email(self, loi_data):
+        """Send signature request email using SMTP"""
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Get SMTP settings from environment
+            smtp_host = os.getenv('SMTP_HOST', 'smtp.gmail.com')
+            smtp_port = int(os.getenv('SMTP_PORT', '587'))
+            smtp_username = os.getenv('SMTP_USERNAME', 'transaction.coordinator.agent@gmail.com')
+            smtp_password = os.getenv('SMTP_PASSWORD', 'xmvi xvso zblo oewe')
+            
+            if not smtp_username or not smtp_password:
+                logger.warning("SMTP credentials not configured - email not sent")
+                return False
+            
+            # Extract data
+            deal_terms = loi_data.get('deal_terms', {})
+            customer = deal_terms.get('customer', {})
+            to_email = loi_data.get('signer_email')
+            to_name = loi_data.get('signer_name')
+            company = loi_data.get('company_name')
+            
+            # Calculate totals
+            total_monthly = deal_terms.get('gasoline_volume', 0) + deal_terms.get('diesel_volume', 0)
+            total_incentives = deal_terms.get('image_funding', 0) + deal_terms.get('volume_incentives', 0)
+            
+            # Create email
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = "VP Racing Fuel Supply Agreement - Electronic Signature Required"
+            msg['From'] = f"Better Day Energy <{smtp_username}>"
+            msg['To'] = to_email
+            
+            # HTML email body
+            html_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #1f4e79, #2563eb); color: white; padding: 30px; text-align: center;">
+                    <h1>🏢 Better Day Energy</h1>
+                    <h2>VP Racing Fuel Supply Agreement</h2>
+                </div>
+                
+                <div style="padding: 30px; background: #f8f9fa;">
+                    <p>Dear {to_name},</p>
+                    
+                    <p>Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.</p>
+                    
+                    <p>Please review and electronically sign the Letter of Intent for our VP Racing Fuel Supply Agreement:</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://loi-automation-api.onrender.com/sign/{loi_data['signature_token']}" 
+                           style="background: #1f4e79; color: white; padding: 15px 30px; text-decoration: none; 
+                                  border-radius: 6px; font-weight: bold; display: inline-block;">
+                            ✍️ Sign Document Now
+                        </a>
+                    </div>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3>📊 Deal Summary:</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li>• <strong>Total Incentive Package:</strong> ${total_incentives:,}</li>
+                            <li>• <strong>Monthly Volume:</strong> {total_monthly:,} gallons</li>
+                            <li>• <strong>Contract Duration:</strong> {deal_terms.get('contract_duration', 36)} months</li>
+                            <li>• <strong>Target Conversion:</strong> {deal_terms.get('conversion_date', 'TBD')}</li>
+                        </ul>
+                    </div>
+                    
+                    <p><strong>This document expires in 30 days.</strong> Please complete your signature at your earliest convenience.</p>
+                    
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #dee2e6;">
+                    
+                    <p>Best regards,<br>
+                    Better Day Energy Team<br>
+                    <small>Transaction ID: {loi_data['transaction_id']}</small></p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Plain text version
+            text_body = f"""
+Dear {to_name},
+
+Thank you for your interest in partnering with Better Day Energy for your fuel supply needs.
+
+Please review and electronically sign the Letter of Intent for our VP Racing Fuel Supply Agreement:
+
+Sign Document: https://loi-automation-api.onrender.com/sign/{loi_data['signature_token']}
+
+Deal Summary:
+• Total Incentive Package: ${total_incentives:,}
+• Monthly Volume: {total_monthly:,} gallons
+• Contract Duration: {deal_terms.get('contract_duration', 36)} months
+• Target Conversion: {deal_terms.get('conversion_date', 'TBD')}
+
+This document expires in 30 days. Please complete your signature at your earliest convenience.
+
+Best regards,
+Better Day Energy Team
+Transaction ID: {loi_data['transaction_id']}
+            """
+            
+            # Attach parts
+            part1 = MIMEText(text_body, 'plain')
+            part2 = MIMEText(html_body, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            
+            # Send email
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+                server.send_message(msg)
+            
+            logger.info(f"✅ Signature request email sent to {to_email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to send signature email: {str(e)}")
+            return False
     
     def handle_crm_search(self, post_data):
         """Handle CRM customer search using local database cache"""
