@@ -211,47 +211,121 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
         html = """
         <html>
         <head>
-            <title>Better Day Energy - Complete Signature System</title>
+            <title>Better Day Energy - Document Signature System</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-                .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; }
-                .header { text-align: center; color: #1f4e79; margin-bottom: 30px; }
-                .features { background: #e8f5e8; padding: 20px; border-radius: 5px; margin: 20px 0; }
-                .workflow { background: #e7f3ff; padding: 20px; border-radius: 5px; margin: 20px 0; }
+                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+                .container { max-width: 1200px; margin: 0 auto; }
+                .header { text-align: center; color: #1f4e79; margin-bottom: 40px; background: white; padding: 30px; border-radius: 10px; }
+                .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+                .form-card {
+                    background: white;
+                    border-radius: 10px;
+                    padding: 30px;
+                    text-align: center;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    transition: transform 0.2s, box-shadow 0.2s;
+                }
+                .form-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+                }
+                .form-icon { font-size: 48px; margin-bottom: 15px; }
+                .form-title { font-size: 24px; color: #1f4e79; margin-bottom: 10px; }
+                .form-subtitle { color: #666; margin-bottom: 20px; font-size: 14px; }
+                .form-description { color: #333; margin-bottom: 25px; line-height: 1.5; }
+                .form-button {
+                    background: #1f4e79;
+                    color: white;
+                    padding: 12px 30px;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    display: inline-block;
+                    font-weight: bold;
+                    transition: background 0.2s;
+                }
+                .form-button:hover { background: #2563eb; }
+                .coming-soon {
+                    background: #ccc;
+                    cursor: not-allowed;
+                    opacity: 0.6;
+                }
+                .info-section {
+                    background: white;
+                    padding: 30px;
+                    border-radius: 10px;
+                    margin-bottom: 20px;
+                }
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Better Day Energy</h1>
-                    <h2>Complete Electronic Signature System</h2>
-                    <p>Full workflow: Sign → PostgreSQL → PDF → CRM Storage</p>
+                    <h1>🏢 Better Day Energy</h1>
+                    <h2>Document Signature System</h2>
+                    <p>Select a document type to create and route for signature</p>
                 </div>
                 
-                <div class="features">
-                    <h3>🔐 Security Features</h3>
+                <div class="form-grid">
+                    <!-- VP Racing LOI -->
+                    <div class="form-card">
+                        <div class="form-icon">⛽</div>
+                        <h3 class="form-title">VP Racing LOI</h3>
+                        <p class="form-subtitle">Fuel Supply Agreement</p>
+                        <p class="form-description">
+                            Letter of Intent for VP Racing fuel supply partnership. 
+                            Configure volumes, incentives, and contract terms.
+                        </p>
+                        <a href="/admin" class="form-button">► Create New</a>
+                    </div>
+                    
+                    <!-- Phillips 66 LOI -->
+                    <div class="form-card">
+                        <div class="form-icon">🛢️</div>
+                        <h3 class="form-title">Phillips 66 LOI</h3>
+                        <p class="form-subtitle">Fuel Supply Agreement</p>
+                        <p class="form-description">
+                            Letter of Intent for Phillips 66 fuel supply partnership. 
+                            P66-specific terms and branding.
+                        </p>
+                        <a href="#" class="form-button coming-soon" onclick="alert('P66 LOI coming soon!'); return false;">Coming Soon</a>
+                    </div>
+                    
+                    <!-- EFT Setup Form -->
+                    <div class="form-card">
+                        <div class="form-icon">🏦</div>
+                        <h3 class="form-title">EFT Setup</h3>
+                        <p class="form-subtitle">Bank Authorization</p>
+                        <p class="form-description">
+                            Electronic Funds Transfer authorization form for automatic 
+                            payment setup and processing.
+                        </p>
+                        <a href="#" class="form-button coming-soon" onclick="alert('EFT Form coming soon!'); return false;">Coming Soon</a>
+                    </div>
+                    
+                    <!-- Customer Setup -->
+                    <div class="form-card">
+                        <div class="form-icon">📋</div>
+                        <h3 class="form-title">Customer Setup</h3>
+                        <p class="form-subtitle">Onboarding Document</p>
+                        <p class="form-description">
+                            Comprehensive customer onboarding form for new business 
+                            relationships and account setup.
+                        </p>
+                        <a href="#" class="form-button coming-soon" onclick="alert('Customer Setup coming soon!'); return false;">Coming Soon</a>
+                    </div>
+                </div>
+                
+                <div class="info-section">
+                    <h3>📊 System Features</h3>
                     <ul>
-                        <li>✅ PostgreSQL tamper-evident storage</li>
-                        <li>✅ Cryptographic integrity verification</li>
-                        <li>✅ Complete audit trail logging</li>
-                        <li>✅ ESIGN Act compliance</li>
-                        <li>✅ Browser fingerprinting</li>
+                        <li>🔍 Customer search and CRM integration</li>
+                        <li>✍️ Electronic signature capture</li>
+                        <li>📧 Automatic email notifications</li>
+                        <li>🔒 Secure document storage</li>
+                        <li>📈 Real-time status tracking</li>
+                        <li>🏢 Multi-document support</li>
                     </ul>
                 </div>
-                
-                <div class="workflow">
-                    <h3>📄 Document Workflow</h3>
-                    <ol>
-                        <li>📧 Customer receives signature email</li>
-                        <li>🖊️ Customer signs LOI electronically</li>
-                        <li>💾 Signature stored in PostgreSQL</li>
-                        <li>📄 PDF-ready HTML generated</li>
-                        <li>📝 Complete record stored in CRM</li>
-                        <li>🔗 PDF accessible via browser</li>
-                    </ol>
-                </div>
-                
-                <p style="text-align: center;">Click the signature link in your email to start the process.</p>
             </div>
         </body>
         </html>
