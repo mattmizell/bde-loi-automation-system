@@ -164,6 +164,12 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
             self.handle_logout()
         elif path.startswith("/api/v1/crm-bridge/"):
             self.handle_crm_bridge_get(path, parsed_path)
+        elif path == "/api/contacts" or path.startswith("/api/contacts?"):
+            # New modular endpoint
+            self.proxy_to_modular_api('GET', self.path)
+        elif path == "/health" or path == "/status":
+            # Health check endpoints for new modular API
+            self.proxy_to_modular_api('GET', self.path)
         else:
             self.send_error(404)
     
