@@ -3677,11 +3677,17 @@ Transaction ID: {loi_data['transaction_id']}
             
             # Handle specific endpoints directly instead of proxying to avoid loops
             if endpoint == '/api/contacts' or endpoint.startswith('/api/contacts?'):
-                return self.handle_direct_contacts_api(post_data)
+                return self.handle_get_crm_contacts()
             elif endpoint == '/api/search_contacts':
-                return self.handle_direct_search_api(post_data)
+                return self.handle_crm_search(post_data)
             elif endpoint == '/health' or endpoint == '/status':
-                return self.handle_direct_health_api()
+                # Return health status
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                health_response = {"status": "healthy", "service": "integrated_pdf_signature_server"}
+                self.wfile.write(json.dumps(health_response).encode('utf-8'))
+                return
             
             # For other endpoints, return not implemented
             self.send_response(501)
