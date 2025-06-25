@@ -1467,15 +1467,17 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                             const customerEmail = customer.email || '';
                             const customerCompany = customer.company || '';
                             const customerPhone = customer.phone || '';
+                            const customerAddress = customer.address || '';
                             
                             html += `
                                 <div style="border: 1px solid #28a745; padding: 12px; margin: 8px 0; border-radius: 4px; background: white;">
                                     <p style="margin: 0 0 5px 0;"><strong>${customer.name}</strong> - ${customer.company || 'No company'}</p>
                                     <p style="margin: 0 0 8px 0; color: #666;">📧 ${customer.email} ${customer.phone ? '| 📞 ' + customer.phone : ''}</p>
-                                    <button class="btn" data-customer-id="${customerId}" data-customer-name="${customerName}" data-customer-email="${customerEmail}" data-customer-company="${customerCompany}" onclick="selectExistingCustomerSafe(this)" style="background: #28a745; margin-right: 8px;">
+                                    ${customer.address ? `<p style="margin: 0 0 8px 0; color: #666;">📍 ${customer.address}</p>` : ''}
+                                    <button class="btn" data-customer-id="${customerId}" data-customer-name="${customerName}" data-customer-email="${customerEmail}" data-customer-company="${customerCompany}" data-customer-address="${customerAddress}" onclick="selectExistingCustomerSafe(this)" style="background: #28a745; margin-right: 8px;">
                                         ✅ Select This Customer
                                     </button>
-                                    <button class="btn" data-customer-id="${customerId}" data-customer-name="${customerName}" data-customer-email="${customerEmail}" data-customer-company="${customerCompany}" data-customer-phone="${customerPhone}" onclick="editExistingCustomerSafe(this)" style="background: #ffc107; color: #000;">
+                                    <button class="btn" data-customer-id="${customerId}" data-customer-name="${customerName}" data-customer-email="${customerEmail}" data-customer-company="${customerCompany}" data-customer-phone="${customerPhone}" data-customer-address="${customerAddress}" onclick="editExistingCustomerSafe(this)" style="background: #ffc107; color: #000;">
                                         ✏️ Edit & Use
                                     </button>
                                 </div>
@@ -1495,12 +1497,13 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     resultsDiv.classList.remove('hidden');
                 }
                 
-                function selectExistingCustomer(id, name, email, company) {
+                function selectExistingCustomer(id, name, email, company, address) {
                     currentCustomer = { 
                         id: id, 
                         name: name, 
                         email: email, 
                         company: company,
+                        address: address || '',
                         existing: true  // Flag to indicate this is existing CRM record
                     };
                     
@@ -1510,6 +1513,7 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         <p><strong>Name:</strong> ${name}</p>
                         <p><strong>Email:</strong> ${email}</p>
                         <p><strong>Company:</strong> ${company}</p>
+                        ${address ? `<p><strong>Address:</strong> ${address}</p>` : ''}
                         <p><strong>CRM ID:</strong> ${id}</p>
                         <p style="color: #155724; font-style: italic;">✅ Using existing CRM record</p>
                     `;
@@ -1517,7 +1521,7 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     showStep(3); // Skip to deal terms
                 }
                 
-                function editExistingCustomer(id, name, email, company, phone) {
+                function editExistingCustomer(id, name, email, company, phone, address) {
                     // Set up for editing existing customer
                     currentCustomer = { 
                         id: id, 
@@ -1525,6 +1529,7 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                         email: email, 
                         company: company,
                         phone: phone,
+                        address: address || '',
                         existing: true,
                         editing: true  // Flag to indicate this is an edit operation
                     };
@@ -1534,9 +1539,7 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     document.getElementById('customer-email').value = email || '';
                     document.getElementById('company-name').value = company || '';
                     document.getElementById('customer-phone').value = phone || '';
-                    
-                    // Clear address field for user to fill
-                    document.getElementById('customer-address').value = '';
+                    document.getElementById('customer-address').value = address || '';
                     
                     // Show step 2 with pre-filled data for editing
                     showStep(2);
@@ -1566,7 +1569,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     const name = button.getAttribute('data-customer-name');
                     const email = button.getAttribute('data-customer-email');
                     const company = button.getAttribute('data-customer-company');
-                    selectExistingCustomer(id, name, email, company);
+                    const address = button.getAttribute('data-customer-address');
+                    selectExistingCustomer(id, name, email, company, address);
                 }
                 
                 function editExistingCustomerSafe(button) {
@@ -1575,7 +1579,8 @@ class IntegratedSignatureHandler(BaseHTTPRequestHandler):
                     const email = button.getAttribute('data-customer-email');
                     const company = button.getAttribute('data-customer-company');
                     const phone = button.getAttribute('data-customer-phone');
-                    editExistingCustomer(id, name, email, company, phone);
+                    const address = button.getAttribute('data-customer-address');
+                    editExistingCustomer(id, name, email, company, phone, address);
                 }
                 
                 function skipToNewCustomer() {
@@ -2232,7 +2237,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                 # Update local cache
                 cursor.execute("""
                     UPDATE crm_contacts_cache 
-                    SET name = %s, email = %s, company_name = %s, phone = %s, 
+                    SET name = %s, email = %s, company_name = %s, phone = %s, address = %s,
                         updated_at = CURRENT_TIMESTAMP, sync_status = %s
                     WHERE contact_id = %s
                 """, (
@@ -2240,6 +2245,7 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                     data.get('email', ''),
                     data.get('company_name', ''),
                     data.get('phone', ''),
+                    data.get('address', ''),
                     'updated_pending_sync',
                     contact_id
                 ))
@@ -2248,14 +2254,15 @@ Transaction ID: ${loiData.transaction_id}</textarea>
                     # Contact not found in cache, create new entry
                     cursor.execute("""
                         INSERT INTO crm_contacts_cache 
-                        (contact_id, name, email, company_name, phone, sync_status)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        (contact_id, name, email, company_name, phone, address, sync_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (
                         contact_id,
                         data.get('name', ''),
                         data.get('email', ''),
                         data.get('company_name', ''),
                         data.get('phone', ''),
+                        data.get('address', ''),
                         'updated_pending_sync'
                     ))
                 
