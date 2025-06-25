@@ -18,7 +18,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: LACRM_API_TOKEN
-        value: "14d1b7eb88cc6b51e75a6b00b2b6e41c"
+        value: "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
       - key: LACRM_API_BASE
         value: "https://api.lessannoyingcrm.com"
 

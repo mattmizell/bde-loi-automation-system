@@ -22,8 +22,8 @@ DATABASE_CONFIG = {
 
 # LACRM API configuration
 LACRM_CONFIG = {
-    'api_key': "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W",
-    'base_url': "https://api.lessannoyingcrm.com/v2/",
+    'api_key': os.getenv('LACRM_API_TOKEN', "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"),
+    'base_url': os.getenv('LACRM_API_BASE', "https://api.lessannoyingcrm.com") + "/v2/",
     'timeout': int(os.getenv('LACRM_TIMEOUT', 30)),
     'retry_attempts': int(os.getenv('LACRM_RETRY_ATTEMPTS', 3)),
 }
