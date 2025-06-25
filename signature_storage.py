@@ -19,7 +19,22 @@ class TamperEvidentSignatureStorage:
     def __init__(self):
         # Use environment variable for database connection in production, fallback to localhost for development
         import os
-        self.connection_string = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost/loi_automation")
+        from urllib.parse import urlparse, unquote
+        
+        db_url = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost/loi_automation")
+        
+        # Parse DATABASE_URL to handle special characters properly
+        if db_url and db_url.startswith('postgresql://'):
+            try:
+                parsed = urlparse(db_url)
+                # Reconstruct the connection string with properly decoded components
+                self.connection_string = f"postgresql://{unquote(parsed.username)}:{unquote(parsed.password)}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            except Exception as e:
+                # Fallback to original URL if parsing fails
+                self.connection_string = db_url
+        else:
+            self.connection_string = db_url
+            
         self.secret_key = "BDE-signature-integrity-key-2025"
         self.ensure_signature_tables()
     

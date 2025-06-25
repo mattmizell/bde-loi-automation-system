@@ -113,7 +113,20 @@ async def verify_api_token(credentials: HTTPAuthorizationCredentials = Depends(s
 def get_db_connection():
     """Get database connection for cache operations"""
     try:
-        return psycopg2.connect(DATABASE_URL)
+        from urllib.parse import urlparse, unquote
+        
+        # Parse DATABASE_URL to handle special characters properly
+        if DATABASE_URL and DATABASE_URL.startswith('postgresql://'):
+            try:
+                parsed = urlparse(DATABASE_URL)
+                # Reconstruct the connection string with properly decoded components
+                connection_string = f"postgresql://{unquote(parsed.username)}:{unquote(parsed.password)}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+                return psycopg2.connect(connection_string)
+            except Exception as parse_error:
+                # Fallback to original URL if parsing fails
+                return psycopg2.connect(DATABASE_URL)
+        else:
+            return psycopg2.connect(DATABASE_URL)
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         return None

@@ -8,7 +8,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 import uuid
 from datetime import datetime, timedelta
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, unquote
 import base64
 import logging
 from pathlib import Path
@@ -37,6 +37,26 @@ logger = logging.getLogger(__name__)
 # Initialize components
 signature_storage = TamperEvidentSignatureStorage()
 pdf_generator = HTMLLOIPDFGenerator("1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W")
+
+def get_safe_db_connection(db_url=None):
+    """Get database connection with proper URL parsing to handle special characters"""
+    import psycopg2
+    
+    if not db_url:
+        db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
+    
+    # Parse DATABASE_URL to handle special characters properly
+    if db_url and db_url.startswith('postgresql://'):
+        try:
+            parsed = urlparse(db_url)
+            # Reconstruct the connection string with properly decoded components
+            connection_string = f"postgresql://{unquote(parsed.username)}:{unquote(parsed.password)}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            return psycopg2.connect(connection_string)
+        except Exception as parse_error:
+            # Fallback to original URL if parsing fails
+            return psycopg2.connect(db_url)
+    else:
+        return psycopg2.connect(db_url)
 
 # User Authentication System
 AUTHORIZED_USERS = {
@@ -4484,7 +4504,7 @@ def handle_crm_bridge_contacts(self, auth_info, limit):
         import psycopg2
         db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
         
-        with psycopg2.connect(db_url) as conn:
+        with get_safe_db_connection(db_url) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     SELECT contact_id, name, company_name, email, phone, created_at 
@@ -4532,7 +4552,7 @@ def handle_crm_bridge_stats(self, auth_info):
         import psycopg2
         db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
         
-        with psycopg2.connect(db_url) as conn:
+        with get_safe_db_connection(db_url) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("SELECT COUNT(*) FROM crm_contacts_cache")
                 total_contacts = cursor.fetchone()[0]
@@ -4577,7 +4597,7 @@ def handle_crm_bridge_search(self, auth_info, post_data):
         import psycopg2
         db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
         
-        with psycopg2.connect(db_url) as conn:
+        with get_safe_db_connection(db_url) as conn:
             with conn.cursor() as cursor:
                 # Improved fuzzy search with better pattern matching
                 search_pattern = f"%{query}%"
@@ -4669,7 +4689,7 @@ def handle_crm_bridge_create(self, auth_info, post_data):
         import psycopg2
         db_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:bde123@localhost/loi_automation')
         
-        with psycopg2.connect(db_url) as conn:
+        with get_safe_db_connection(db_url) as conn:
             with conn.cursor() as cursor:
                 # Add to write queue
                 cursor.execute("""
