@@ -64,11 +64,103 @@ if forms_router:
 @app.get("/", response_class=HTMLResponse)
 async def main_dashboard():
     """Serve the main customer onboarding dashboard"""
-    try:
-        with open("index.html", "r") as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
+    # HARDCODED RESPONSE TO BYPASS FILE ISSUES
+    return HTMLResponse(content="""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARDCODED TEST - Better Day Energy Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #ff4444, #ff8800);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .header {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .timestamp {
+            background: rgba(255,255,255,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .forms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .form-card {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #1f4e79;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚨 HARDCODED TEST RESPONSE</h1>
+            <p>Customer Onboarding Portal - BYPASSING FILE SYSTEM</p>
+        </div>
+        
+        <div class="timestamp">
+            🔥 HARDCODED RESPONSE ACTIVE<br>
+            THIS PROVES THE SERVER CODE IS RUNNING
+        </div>
+        
+        <div class="forms-grid">
+            <div class="form-card">
+                <h3>🏦 EFT Authorization</h3>
+                <p>Electronic Funds Transfer authorization.</p>
+                <a href="eft_form.html" class="btn">EFT Form</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>🏢 Customer Setup</h3>
+                <p>Complete business application.</p>
+                <a href="customer_setup_form.html" class="btn">Setup Form</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>⛽ Phillips 66 LOI</h3>
+                <p>Letter of Intent for P66 fuel.</p>
+                <a href="p66_loi_form.html" class="btn">LOI Form</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>""")
 
 @app.get("/test")
 async def test():
