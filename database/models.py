@@ -526,3 +526,186 @@ Index('idx_signature_requests_expires', SignatureRequest.expires_at)
 Index('idx_signature_requests_customer_email', SignatureRequest.customer_email)
 Index('idx_signature_audit_log_request', SignatureAuditLog.signature_request_id)
 Index('idx_signature_audit_log_timestamp', SignatureAuditLog.timestamp)
+
+# =====================================================
+# CUSTOMER ONBOARDING FORM MODELS
+# =====================================================
+
+class EFTFormData(Base):
+    """Electronic Funds Transfer (EFT) authorization form data"""
+    __tablename__ = 'eft_form_data'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False)
+    
+    # Bank Account Information
+    bank_name = Column(String(255), nullable=False)
+    bank_address = Column(String(500))
+    bank_city = Column(String(100))
+    bank_state = Column(String(50))
+    bank_zip = Column(String(20))
+    account_holder_name = Column(String(255), nullable=False)
+    account_type = Column(String(50))  # checking, savings
+    account_number = Column(String(100))  # Encrypted
+    routing_number = Column(String(50))  # Encrypted
+    
+    # Authorization Details
+    authorized_by_name = Column(String(255), nullable=False)
+    authorized_by_title = Column(String(100))
+    authorization_date = Column(DateTime, nullable=False)
+    
+    # Signature
+    signature_data = Column(Text)  # Base64 encoded signature image
+    signature_ip = Column(INET)
+    signature_timestamp = Column(DateTime)
+    
+    # Metadata
+    form_status = Column(String(50), default='draft')  # draft, pending, completed, cancelled
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    customer = relationship("Customer", backref="eft_forms")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_eft_customer', 'customer_id'),
+        Index('idx_eft_status', 'form_status'),
+        Index('idx_eft_created', 'created_at'),
+    )
+
+class CustomerSetupFormData(Base):
+    """Customer setup document form data"""
+    __tablename__ = 'customer_setup_form_data'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False)
+    
+    # Business Information
+    legal_business_name = Column(String(255), nullable=False)
+    dba_name = Column(String(255))
+    federal_tax_id = Column(String(50))  # Encrypted
+    state_tax_id = Column(String(50))  # Encrypted
+    business_type = Column(String(100))  # corporation, llc, partnership, sole_proprietor
+    
+    # Location Details
+    physical_address = Column(String(500))
+    physical_city = Column(String(100))
+    physical_state = Column(String(50))
+    physical_zip = Column(String(20))
+    mailing_address = Column(String(500))
+    mailing_city = Column(String(100))
+    mailing_state = Column(String(50))
+    mailing_zip = Column(String(20))
+    
+    # Contact Information
+    primary_contact_name = Column(String(255))
+    primary_contact_title = Column(String(100))
+    primary_contact_phone = Column(String(50))
+    primary_contact_email = Column(String(255))
+    accounts_payable_contact = Column(String(255))
+    accounts_payable_email = Column(String(255))
+    accounts_payable_phone = Column(String(50))
+    
+    # Business Details
+    years_in_business = Column(Integer)
+    annual_fuel_volume = Column(Float)
+    number_of_locations = Column(Integer, default=1)
+    current_fuel_brands = Column(JSONB)  # Array of current brands
+    
+    # Equipment Information
+    tank_sizes = Column(JSONB)  # Array of tank configurations
+    dispenser_count = Column(Integer)
+    pos_system = Column(String(100))
+    
+    # Financial Information
+    bank_references = Column(JSONB)  # Array of bank reference objects
+    trade_references = Column(JSONB)  # Array of trade reference objects
+    
+    # Agreements and Signatures
+    authorized_signer_name = Column(String(255))
+    authorized_signer_title = Column(String(100))
+    signature_data = Column(Text)  # Base64 encoded signature
+    signature_date = Column(DateTime)
+    signature_ip = Column(INET)
+    
+    # Form Status
+    form_status = Column(String(50), default='draft')  # draft, pending, completed, cancelled
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    customer = relationship("Customer", backref="setup_forms")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_setup_customer', 'customer_id'),
+        Index('idx_setup_status', 'form_status'),
+        Index('idx_setup_created', 'created_at'),
+    )
+
+class P66LOIFormData(Base):
+    """Phillips 66 Letter of Intent form data"""
+    __tablename__ = 'p66_loi_form_data'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False)
+    transaction_id = Column(UUID(as_uuid=True), ForeignKey('loi_transactions.id'))
+    
+    # Station Information
+    station_name = Column(String(255), nullable=False)
+    station_address = Column(String(500))
+    station_city = Column(String(100))
+    station_state = Column(String(50))
+    station_zip = Column(String(20))
+    
+    # Current Operation Details
+    current_brand = Column(String(100))
+    brand_expiration_date = Column(DateTime)
+    
+    # Fuel Volume Commitments
+    monthly_gasoline_gallons = Column(Float)
+    monthly_diesel_gallons = Column(Float)
+    total_monthly_gallons = Column(Float)
+    
+    # Contract Terms
+    contract_start_date = Column(DateTime)
+    contract_term_years = Column(Integer, default=10)
+    
+    # Incentive Programs
+    volume_incentive_requested = Column(Float)
+    image_funding_requested = Column(Float)
+    equipment_funding_requested = Column(Float)
+    total_incentives_requested = Column(Float)
+    
+    # Additional Requirements
+    canopy_replacement = Column(Boolean, default=False)
+    dispenser_replacement = Column(Boolean, default=False)
+    tank_replacement = Column(Boolean, default=False)
+    pos_upgrade = Column(Boolean, default=False)
+    special_requirements = Column(Text)
+    
+    # Signature Section
+    authorized_representative = Column(String(255))
+    representative_title = Column(String(100))
+    signature_data = Column(Text)  # Base64 encoded signature
+    signature_date = Column(DateTime)
+    signature_ip = Column(INET)
+    
+    # Form Management
+    form_status = Column(String(50), default='draft')  # draft, pending, completed, cancelled
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    submitted_at = Column(DateTime)
+    
+    # Relationships
+    customer = relationship("Customer", backref="p66_loi_forms")
+    transaction = relationship("LOITransaction", backref="p66_loi_form")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_p66_loi_customer', 'customer_id'),
+        Index('idx_p66_loi_transaction', 'transaction_id'),
+        Index('idx_p66_loi_status', 'form_status'),
+        Index('idx_p66_loi_created', 'created_at'),
+    )

@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phillips 66 Letter of Intent - Better Day Energy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ee0000, #cc0000);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white" font-size="40" font-weight="bold">P66</text></svg>') no-repeat center;
+            background-size: contain;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .form-content {
+            padding: 40px;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .form-section h3 {
+            color: #cc0000;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group label .required {
+            color: #dc3545;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #cc0000;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .incentive-display {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .incentive-display h4 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        
+        .incentive-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #c8e6c9;
+        }
+        
+        .incentive-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            margin-top: 10px;
+            padding-top: 15px;
+            border-top: 2px solid #4caf50;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: #fee;
+            border-radius: 8px;
+            border: 1px solid #fcc;
+        }
+        
+        .signature-pad-container {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin: 20px 0;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .signature-pad {
+            display: block;
+            width: 100%;
+            height: 200px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        
+        .signature-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #adb5bd;
+            font-style: italic;
+            pointer-events: none;
+            font-size: 18px;
+        }
+        
+        .signature-placeholder.hidden {
+            display: none;
+        }
+        
+        .signature-controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-primary {
+            background: #cc0000;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #990000;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert-info {
+            background: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            color: #084298;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            color: #664d03;
+        }
+        
+        .legal-notice {
+            background: #fee;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #fcc;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #cc0000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .highlight-box {
+            background: #fffde7;
+            border: 2px solid #f9a825;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .highlight-box h4 {
+            color: #f57c00;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-content {
+                padding: 20px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Phillips 66 Letter of Intent</h1>
+            <p>Fuel Supply Agreement Application</p>
+        </div>
+        
+        <div class="form-content">
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.</span>
+            </div>
+            
+            <form id="p66-loi-form">
+                <!-- Station Information -->
+                <div class="form-section">
+                    <h3>⛽ Station Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="station-name">Station Name <span class="required">*</span></label>
+                            <input type="text" id="station-name" name="station_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="current-brand">Current Brand <span class="required">*</span></label>
+                            <input type="text" id="current-brand" name="current_brand" required placeholder="e.g., Shell, BP, Unbranded">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="station-address">Station Address <span class="required">*</span></label>
+                            <input type="text" id="station-address" name="station_address" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="station-city">City <span class="required">*</span></label>
+                            <input type="text" id="station-city" name="station_city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="station-state">State <span class="required">*</span></label>
+                            <input type="text" id="station-state" name="station_state" maxlength="2" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="station-zip">ZIP Code <span class="required">*</span></label>
+                            <input type="text" id="station-zip" name="station_zip" pattern="[0-9]{5}(-[0-9]{4})?" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="brand-expiration">Current Brand Contract Expiration</label>
+                            <input type="date" id="brand-expiration" name="brand_expiration_date">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fuel Volume Commitments -->
+                <div class="form-section">
+                    <h3>📊 Fuel Volume Commitments</h3>
+                    <div class="alert alert-warning">
+                        <span>⚠️</span>
+                        <span>Please provide accurate monthly fuel volumes. These figures will be used to calculate your incentive package.</span>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="gasoline-volume">Monthly Gasoline Volume (gallons) <span class="required">*</span></label>
+                            <input type="number" id="gasoline-volume" name="monthly_gasoline_gallons" min="0" step="1" required onchange="calculateTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label for="diesel-volume">Monthly Diesel Volume (gallons) <span class="required">*</span></label>
+                            <input type="number" id="diesel-volume" name="monthly_diesel_gallons" min="0" step="1" required onchange="calculateTotal()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="total-volume">Total Monthly Volume (gallons)</label>
+                            <input type="number" id="total-volume" name="total_monthly_gallons" readonly style="background: #f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contract Terms -->
+                <div class="form-section">
+                    <h3>📅 Contract Terms</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start-date">Requested Contract Start Date <span class="required">*</span></label>
+                            <input type="date" id="start-date" name="contract_start_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contract-term">Contract Term (years) <span class="required">*</span></label>
+                            <select id="contract-term" name="contract_term_years" required>
+                                <option value="">Select Term</option>
+                                <option value="5">5 Years</option>
+                                <option value="7">7 Years</option>
+                                <option value="10" selected>10 Years (Recommended)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Incentive Programs -->
+                <div class="form-section">
+                    <h3>💰 Incentive Program Requests</h3>
+                    
+                    <div class="highlight-box">
+                        <h4>Available Incentive Programs</h4>
+                        <p>Based on your fuel volumes and contract terms, you may qualify for the following incentives:</p>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="volume-incentive">Volume Incentive Request ($) <span class="required">*</span></label>
+                            <input type="number" id="volume-incentive" name="volume_incentive_requested" min="0" step="0.01" required onchange="calculateTotalIncentives()">
+                        </div>
+                        <div class="form-group">
+                            <label for="image-funding">Image Funding Request ($) <span class="required">*</span></label>
+                            <input type="number" id="image-funding" name="image_funding_requested" min="0" step="0.01" required onchange="calculateTotalIncentives()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="equipment-funding">Equipment Funding Request ($)</label>
+                            <input type="number" id="equipment-funding" name="equipment_funding_requested" min="0" step="0.01" value="0" onchange="calculateTotalIncentives()">
+                        </div>
+                    </div>
+                    
+                    <div class="incentive-display">
+                        <h4>Total Incentive Package Summary</h4>
+                        <div class="incentive-row">
+                            <span>Volume Incentive:</span>
+                            <span id="volume-display">$0.00</span>
+                        </div>
+                        <div class="incentive-row">
+                            <span>Image Funding:</span>
+                            <span id="image-display">$0.00</span>
+                        </div>
+                        <div class="incentive-row">
+                            <span>Equipment Funding:</span>
+                            <span id="equipment-display">$0.00</span>
+                        </div>
+                        <div class="incentive-row">
+                            <span>Total Incentives Requested:</span>
+                            <span id="total-incentives">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Requirements -->
+                <div class="form-section">
+                    <h3>🔧 Additional Requirements</h3>
+                    <p>Please indicate any equipment or infrastructure needs:</p>
+                    
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="canopy" name="canopy_replacement" value="true">
+                            <label for="canopy">Canopy Replacement/Rebranding</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dispensers" name="dispenser_replacement" value="true">
+                            <label for="dispensers">Dispenser Replacement</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="tanks" name="tank_replacement" value="true">
+                            <label for="tanks">Tank Replacement/Upgrade</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="pos" name="pos_upgrade" value="true">
+                            <label for="pos">POS System Upgrade</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="special-requirements">Special Requirements or Notes</label>
+                        <textarea id="special-requirements" name="special_requirements" rows="4" placeholder="Please describe any special circumstances or additional needs..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Authorization -->
+                <div class="form-section">
+                    <h3>✍️ Authorization</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="representative-name">Authorized Representative Name <span class="required">*</span></label>
+                            <input type="text" id="representative-name" name="authorized_representative" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="representative-title">Title <span class="required">*</span></label>
+                            <input type="text" id="representative-title" name="representative_title" required placeholder="e.g., Owner, President, CEO">
+                        </div>
+                    </div>
+                    
+                    <div class="legal-notice">
+                        <h4>Letter of Intent Agreement</h4>
+                        <p>By signing below, I certify that:</p>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>I have the authority to enter into this Letter of Intent on behalf of the station</li>
+                            <li>All information provided is accurate and complete</li>
+                            <li>I understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
+                            <li>I agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
+                            <li>I understand that final terms and incentives are subject to Phillips 66 approval</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Signature Section -->
+                    <div class="signature-section">
+                        <h4>Electronic Signature Required</h4>
+                        <p>Please sign below to submit your Letter of Intent:</p>
+                        
+                        <div class="signature-pad-container">
+                            <canvas id="signature-pad" class="signature-pad" width="820" height="200"></canvas>
+                            <div id="signature-placeholder" class="signature-placeholder">
+                                Sign here with your mouse or touch device
+                            </div>
+                            
+                            <div class="signature-controls">
+                                <button type="button" id="clear-signature" class="btn btn-secondary">
+                                    🗑️ Clear Signature
+                                </button>
+                                <span id="signature-status" style="color: #6c757d; font-style: italic;">
+                                    Signature required
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="saveDraft()">
+                        💾 Save Draft
+                    </button>
+                    <button type="submit" id="submit-btn" class="btn btn-success" disabled>
+                        ✅ Submit Letter of Intent
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing your Letter of Intent...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Calculate total fuel volume
+        function calculateTotal() {
+            const gasoline = parseFloat(document.getElementById('gasoline-volume').value) || 0;
+            const diesel = parseFloat(document.getElementById('diesel-volume').value) || 0;
+            const total = gasoline + diesel;
+            document.getElementById('total-volume').value = total;
+        }
+        
+        // Calculate total incentives
+        function calculateTotalIncentives() {
+            const volume = parseFloat(document.getElementById('volume-incentive').value) || 0;
+            const image = parseFloat(document.getElementById('image-funding').value) || 0;
+            const equipment = parseFloat(document.getElementById('equipment-funding').value) || 0;
+            const total = volume + image + equipment;
+            
+            // Update display
+            document.getElementById('volume-display').textContent = '$' + volume.toFixed(2).toLocaleString();
+            document.getElementById('image-display').textContent = '$' + image.toFixed(2).toLocaleString();
+            document.getElementById('equipment-display').textContent = '$' + equipment.toFixed(2).toLocaleString();
+            document.getElementById('total-incentives').textContent = '$' + total.toFixed(2).toLocaleString();
+            
+            // Store in hidden field
+            const hiddenTotal = document.getElementById('total-incentives-requested');
+            if (!hiddenTotal) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.id = 'total-incentives-requested';
+                input.name = 'total_incentives_requested';
+                document.getElementById('p66-loi-form').appendChild(input);
+            }
+            document.getElementById('total-incentives-requested').value = total;
+        }
+        
+        // Signature pad functionality
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('signature-placeholder');
+        const clearButton = document.getElementById('clear-signature');
+        const submitButton = document.getElementById('submit-btn');
+        const signatureStatus = document.getElementById('signature-status');
+        const form = document.getElementById('p66-loi-form');
+        const loading = document.getElementById('loading');
+        
+        let isDrawing = false;
+        let hasSignature = false;
+        
+        // Canvas setup
+        function setupCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            return { scaleX, scaleY };
+        }
+        
+        const { scaleX, scaleY } = setupCanvas();
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            if (!hasSignature) {
+                placeholder.classList.add('hidden');
+                hasSignature = true;
+                updateSignatureStatus();
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+        
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            placeholder.classList.remove('hidden');
+            updateSignatureStatus();
+        }
+        
+        function updateSignatureStatus() {
+            if (hasSignature) {
+                signatureStatus.textContent = 'Signature captured ✓';
+                signatureStatus.style.color = '#28a745';
+                checkFormValidity();
+            } else {
+                signatureStatus.textContent = 'Signature required';
+                signatureStatus.style.color = '#6c757d';
+                submitButton.disabled = true;
+            }
+        }
+        
+        function checkFormValidity() {
+            const requiredFields = form.querySelectorAll('[required]');
+            let allValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    allValid = false;
+                }
+            });
+            
+            submitButton.disabled = !(allValid && hasSignature);
+        }
+        
+        // Event listeners
+        clearButton.addEventListener('click', clearSignature);
+        form.addEventListener('input', checkFormValidity);
+        
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!hasSignature) {
+                alert('Please provide your signature before submitting.');
+                return;
+            }
+            
+            // Show loading
+            form.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Get form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // Handle checkboxes
+            data.canopy_replacement = formData.get('canopy_replacement') === 'true';
+            data.dispenser_replacement = formData.get('dispenser_replacement') === 'true';
+            data.tank_replacement = formData.get('tank_replacement') === 'true';
+            data.pos_upgrade = formData.get('pos_upgrade') === 'true';
+            
+            // Add signature data
+            data.signature_data = canvas.toDataURL('image/png');
+            data.signature_date = new Date().toISOString();
+            
+            // Calculate totals
+            calculateTotal();
+            calculateTotalIncentives();
+            data.total_monthly_gallons = parseFloat(document.getElementById('total-volume').value);
+            data.total_incentives_requested = parseFloat(document.getElementById('total-incentives-requested').value);
+            
+            try {
+                // Submit to API
+                const response = await fetch('/api/v1/forms/p66-loi/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    window.location.href = `/forms/p66-loi/complete/${result.id}`;
+                } else {
+                    throw new Error('Failed to submit form');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                form.style.display = 'block';
+                alert('Error submitting form. Please try again.');
+            }
+        });
+        
+        // Save draft functionality
+        function saveDraft() {
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            if (hasSignature) {
+                data.signature_data = canvas.toDataURL('image/png');
+            }
+            
+            localStorage.setItem('p66_loi_draft', JSON.stringify(data));
+            alert('Draft saved successfully!');
+        }
+        
+        // Load draft on page load
+        window.addEventListener('load', () => {
+            const draft = localStorage.getItem('p66_loi_draft');
+            if (draft) {
+                const data = JSON.parse(draft);
+                Object.keys(data).forEach(key => {
+                    const field = form.elements[key];
+                    if (field && key !== 'signature_data') {
+                        if (field.type === 'checkbox') {
+                            field.checked = data[key] === 'true';
+                        } else {
+                            field.value = data[key];
+                        }
+                    }
+                });
+                
+                if (data.signature_data) {
+                    // Load signature from draft
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0);
+                        hasSignature = true;
+                        placeholder.classList.add('hidden');
+                        updateSignatureStatus();
+                    };
+                    img.src = data.signature_data;
+                }
+                
+                // Recalculate totals
+                calculateTotal();
+                calculateTotalIncentives();
+            }
+            
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').min = today;
+            document.getElementById('brand-expiration').min = today;
+        });
+    </script>
+</body>
+</html>

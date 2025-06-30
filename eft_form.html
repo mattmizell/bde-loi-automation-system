@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EFT Authorization Form - Better Day Energy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1f4e79, #2563eb);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .form-content {
+            padding: 40px;
+        }
+        
+        .form-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .form-section h3 {
+            color: #1f4e79;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group label .required {
+            color: #dc3545;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border: 1px solid #bbdefb;
+        }
+        
+        .signature-pad-container {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            margin: 20px 0;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .signature-pad {
+            display: block;
+            width: 100%;
+            height: 200px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        
+        .signature-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #adb5bd;
+            font-style: italic;
+            pointer-events: none;
+            font-size: 18px;
+        }
+        
+        .signature-placeholder.hidden {
+            display: none;
+        }
+        
+        .signature-controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1f4e79;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert-info {
+            background: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            color: #084298;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            color: #664d03;
+        }
+        
+        .legal-notice {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #bbdefb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f4e79;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .form-content {
+                padding: 20px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 Electronic Funds Transfer Authorization</h1>
+            <p>Authorize Better Day Energy to process ACH payments for fuel purchases</p>
+        </div>
+        
+        <div class="form-content">
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>This form authorizes Better Day Energy to debit your bank account for fuel purchases. All information is encrypted and secure.</span>
+            </div>
+            
+            <form id="eft-form">
+                <!-- Company Information -->
+                <div class="form-section">
+                    <h3>🏢 Company Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="company-name">Company Name <span class="required">*</span></label>
+                            <input type="text" id="company-name" name="company_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customer-id">Customer Number</label>
+                            <input type="text" id="customer-id" name="customer_id" readonly>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bank Information -->
+                <div class="form-section">
+                    <h3>🏦 Bank Account Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bank-name">Bank Name <span class="required">*</span></label>
+                            <input type="text" id="bank-name" name="bank_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="account-type">Account Type <span class="required">*</span></label>
+                            <select id="account-type" name="account_type" required>
+                                <option value="">Select Account Type</option>
+                                <option value="checking">Checking</option>
+                                <option value="savings">Savings</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bank-address">Bank Address</label>
+                            <input type="text" id="bank-address" name="bank_address" placeholder="Street Address">
+                        </div>
+                        <div class="form-group">
+                            <label for="bank-city">City</label>
+                            <input type="text" id="bank-city" name="bank_city">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bank-state">State</label>
+                            <input type="text" id="bank-state" name="bank_state" maxlength="2">
+                        </div>
+                        <div class="form-group">
+                            <label for="bank-zip">ZIP Code</label>
+                            <input type="text" id="bank-zip" name="bank_zip" pattern="[0-9]{5}(-[0-9]{4})?" placeholder="12345">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="account-holder">Account Holder Name <span class="required">*</span></label>
+                            <input type="text" id="account-holder" name="account_holder_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="routing-number">Routing Number <span class="required">*</span></label>
+                            <input type="text" id="routing-number" name="routing_number" pattern="[0-9]{9}" maxlength="9" required placeholder="9 digits">
+                        </div>
+                        <div class="form-group">
+                            <label for="account-number">Account Number <span class="required">*</span></label>
+                            <input type="text" id="account-number" name="account_number" required>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <span>⚠️</span>
+                        <span>Please double-check your routing and account numbers. Incorrect information may result in payment delays.</span>
+                    </div>
+                </div>
+                
+                <!-- Authorization -->
+                <div class="form-section">
+                    <h3>✍️ Authorization</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="authorized-name">Authorized By (Full Name) <span class="required">*</span></label>
+                            <input type="text" id="authorized-name" name="authorized_by_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="authorized-title">Title <span class="required">*</span></label>
+                            <input type="text" id="authorized-title" name="authorized_by_title" required placeholder="e.g., Owner, CFO, Controller">
+                        </div>
+                    </div>
+                    
+                    <div class="legal-notice">
+                        <h4>Authorization Agreement</h4>
+                        <p>By signing below, I authorize Better Day Energy to initiate electronic debit entries to my account at the financial institution listed above. This authorization will remain in effect until revoked in writing.</p>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>I understand that electronic debits will be made for fuel purchases</li>
+                            <li>I have the authority to authorize transactions on this account</li>
+                            <li>I can revoke this authorization with 30 days written notice</li>
+                            <li>All information provided is accurate and complete</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Signature Section -->
+                    <div class="signature-section">
+                        <h4>Electronic Signature Required</h4>
+                        <p>Please sign below to authorize EFT payments:</p>
+                        
+                        <div class="signature-pad-container">
+                            <canvas id="signature-pad" class="signature-pad" width="720" height="200"></canvas>
+                            <div id="signature-placeholder" class="signature-placeholder">
+                                Sign here with your mouse or touch device
+                            </div>
+                            
+                            <div class="signature-controls">
+                                <button type="button" id="clear-signature" class="btn btn-secondary">
+                                    🗑️ Clear Signature
+                                </button>
+                                <span id="signature-status" style="color: #6c757d; font-style: italic;">
+                                    Signature required
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="saveDraft()">
+                        💾 Save Draft
+                    </button>
+                    <button type="submit" id="submit-btn" class="btn btn-success" disabled>
+                        ✅ Submit Authorization
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Loading State -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing your authorization...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Signature pad functionality
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('signature-placeholder');
+        const clearButton = document.getElementById('clear-signature');
+        const submitButton = document.getElementById('submit-btn');
+        const signatureStatus = document.getElementById('signature-status');
+        const form = document.getElementById('eft-form');
+        const loading = document.getElementById('loading');
+        
+        let isDrawing = false;
+        let hasSignature = false;
+        
+        // Canvas setup
+        function setupCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            return { scaleX, scaleY };
+        }
+        
+        const { scaleX, scaleY } = setupCanvas();
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouch);
+        canvas.addEventListener('touchmove', handleTouch);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            if (!hasSignature) {
+                placeholder.classList.add('hidden');
+                hasSignature = true;
+                updateSignatureStatus();
+            }
+        }
+        
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.beginPath();
+            }
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }
+        
+        function clearSignature() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hasSignature = false;
+            placeholder.classList.remove('hidden');
+            updateSignatureStatus();
+        }
+        
+        function updateSignatureStatus() {
+            if (hasSignature) {
+                signatureStatus.textContent = 'Signature captured ✓';
+                signatureStatus.style.color = '#28a745';
+                checkFormValidity();
+            } else {
+                signatureStatus.textContent = 'Signature required';
+                signatureStatus.style.color = '#6c757d';
+                submitButton.disabled = true;
+            }
+        }
+        
+        function checkFormValidity() {
+            const requiredFields = form.querySelectorAll('[required]');
+            let allValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    allValid = false;
+                }
+            });
+            
+            submitButton.disabled = !(allValid && hasSignature);
+        }
+        
+        // Event listeners
+        clearButton.addEventListener('click', clearSignature);
+        form.addEventListener('input', checkFormValidity);
+        
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!hasSignature) {
+                alert('Please provide your signature before submitting.');
+                return;
+            }
+            
+            // Show loading
+            form.style.display = 'none';
+            loading.style.display = 'block';
+            
+            // Get form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // Add signature data
+            data.signature_data = canvas.toDataURL('image/png');
+            data.signature_timestamp = new Date().toISOString();
+            data.authorization_date = new Date().toISOString();
+            
+            try {
+                // Submit to API
+                const response = await fetch('/api/v1/forms/eft/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    window.location.href = `/forms/eft/complete/${result.id}`;
+                } else {
+                    throw new Error('Failed to submit form');
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                form.style.display = 'block';
+                alert('Error submitting form. Please try again.');
+            }
+        });
+        
+        // Save draft functionality
+        function saveDraft() {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            if (hasSignature) {
+                data.signature_data = canvas.toDataURL('image/png');
+            }
+            
+            localStorage.setItem('eft_form_draft', JSON.stringify(data));
+            alert('Draft saved successfully!');
+        }
+        
+        // Load draft on page load
+        window.addEventListener('load', () => {
+            const draft = localStorage.getItem('eft_form_draft');
+            if (draft) {
+                const data = JSON.parse(draft);
+                Object.keys(data).forEach(key => {
+                    const field = form.elements[key];
+                    if (field && key !== 'signature_data') {
+                        field.value = data[key];
+                    }
+                });
+                
+                if (data.signature_data) {
+                    // Load signature from draft
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.drawImage(img, 0, 0);
+                        hasSignature = true;
+                        placeholder.classList.add('hidden');
+                        updateSignatureStatus();
+                    };
+                    img.src = data.signature_data;
+                }
+            }
+            
+            // Load customer info if available
+            const urlParams = new URLSearchParams(window.location.search);
+            const customerId = urlParams.get('customer_id');
+            if (customerId) {
+                document.getElementById('customer-id').value = customerId;
+                // Could load more customer data here
+            }
+        });
+    </script>
+</body>
+</html>

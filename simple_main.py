@@ -24,12 +24,20 @@ import uvicorn
 import hashlib
 import secrets
 
-# Configure logging
+# Configure logging first
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Import forms API router
+try:
+    from api.forms_api import router as forms_router
+    logger.info("✅ Forms API router imported successfully")
+except ImportError as e:
+    logger.warning(f"Forms API not available - continuing without forms endpoints: {e}")
+    forms_router = None
 
 # Create FastAPI app
 app = FastAPI(
@@ -42,10 +50,57 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,  # Set to False when using allow_origins=["*"]
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Include forms API router
+if forms_router:
+    app.include_router(forms_router)
+    logger.info("✅ Forms API endpoints included")
+
+# Dashboard endpoint  
+@app.get("/", response_class=HTMLResponse)
+async def dashboard():
+    """Serve the main dashboard"""
+    try:
+        with open("index.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Dashboard not found</h1>", status_code=404)
+
+@app.get("/test")
+async def test():
+    return {"message": "Server is working!", "timestamp": datetime.now().isoformat()}
+
+# Static file endpoints for forms
+@app.get("/customer_setup_form.html", response_class=HTMLResponse)
+async def customer_setup_form():
+    """Serve customer setup form"""
+    try:
+        with open("customer_setup_form.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Form not found</h1>", status_code=404)
+
+@app.get("/eft_form.html", response_class=HTMLResponse)  
+async def eft_form():
+    """Serve EFT form"""
+    try:
+        with open("eft_form.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Form not found</h1>", status_code=404)
+
+@app.get("/p66_loi_form.html", response_class=HTMLResponse)
+async def p66_loi_form():
+    """Serve P66 LOI form"""
+    try:
+        with open("p66_loi_form.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Form not found</h1>", status_code=404)
 
 # CRM Bridge Models
 class ContactCreateRequest(BaseModel):
@@ -365,6 +420,28 @@ async def dashboard():
                 </div>
             </div>
             
+            <div class="section">
+                <h3>📋 Customer Onboarding Forms</h3>
+                <p style="margin-bottom: 20px; color: #666;">Complete customer onboarding process with electronic signature capture</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border: 1px solid #4caf50;">
+                        <h4 style="color: #2e7d32; margin-bottom: 10px;">🏦 EFT Authorization</h4>
+                        <p style="margin-bottom: 15px; font-size: 14px;">Electronic Funds Transfer authorization for ACH payments</p>
+                        <a href="/forms/eft" class="btn" style="background: #4caf50;">Complete EFT Form</a>
+                    </div>
+                    <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border: 1px solid #2196f3;">
+                        <h4 style="color: #1976d2; margin-bottom: 10px;">🏢 Customer Setup</h4>
+                        <p style="margin-bottom: 15px; font-size: 14px;">Complete business information and credit application</p>
+                        <a href="/forms/customer-setup" class="btn" style="background: #2196f3;">Start Application</a>
+                    </div>
+                    <div style="background: #fee; padding: 20px; border-radius: 8px; border: 1px solid #f44336;">
+                        <h4 style="color: #d32f2f; margin-bottom: 10px;">⛽ Phillips 66 LOI</h4>
+                        <p style="margin-bottom: 15px; font-size: 14px;">Letter of Intent for Phillips 66 branded fuel supply</p>
+                        <a href="/forms/p66-loi" class="btn" style="background: #ee0000;">Submit LOI</a>
+                    </div>
+                </div>
+            </div>
+            
             <div class="actions">
                 <button class="btn" onclick="submitTestLOI()">🧪 Submit Test LOI</button>
                 <button class="btn" onclick="testCRMConnection()">🔗 Test CRM Connection</button>
@@ -376,6 +453,34 @@ async def dashboard():
         </body>
     </html>
     """
+
+# Form serving routes
+@app.get("/forms/eft", response_class=HTMLResponse)
+async def serve_eft_form():
+    """Serve EFT authorization form"""
+    try:
+        with open(os.path.join(current_dir, "templates", "eft_form.html"), "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="EFT form not found")
+
+@app.get("/forms/customer-setup", response_class=HTMLResponse)
+async def serve_customer_setup_form():
+    """Serve customer setup document form"""
+    try:
+        with open(os.path.join(current_dir, "templates", "customer_setup_form.html"), "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Customer setup form not found")
+
+@app.get("/forms/p66-loi", response_class=HTMLResponse)
+async def serve_p66_loi_form():
+    """Serve Phillips 66 Letter of Intent form"""
+    try:
+        with open(os.path.join(current_dir, "templates", "p66_loi_form.html"), "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="P66 LOI form not found")
 
 @app.get("/api/v1/status")
 async def get_system_status():
@@ -1302,9 +1407,10 @@ def main():
     
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host="0.0.0.0",  # Required for Render deployment
         port=port,
-        log_level="info"
+        log_level="info",
+        access_log=True
     )
 
 if __name__ == "__main__":
