@@ -3,235 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Better Day Energy - Customer Onboarding Dashboard</title>
+    <title>PRODUCTION TEST - Better Day Energy Dashboard</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #1f4e79, #2563eb);
             min-height: 100vh;
+            margin: 0;
             padding: 20px;
+            color: white;
         }
-        
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            text-align: center;
         }
-        
         .header {
-            background: linear-gradient(135deg, #1f4e79, #2563eb);
-            color: white;
+            background: rgba(255,255,255,0.1);
             padding: 40px;
             border-radius: 15px;
-            text-align: center;
             margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
         }
-        
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 3rem;
             margin-bottom: 10px;
         }
-        
-        .header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-        
-        .section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        
-        .section h2 {
-            color: #1f4e79;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-        }
-        
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .status-item {
-            background: #e8f5e9;
+        .timestamp {
+            background: rgba(255,255,255,0.2);
             padding: 20px;
             border-radius: 10px;
-            text-align: center;
-            border: 2px solid #4caf50;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
         }
-        
-        .status-item .icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-        
         .forms-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 30px;
             margin: 30px 0;
         }
-        
         .form-card {
-            background: white;
+            background: rgba(255,255,255,0.95);
+            color: #333;
             border-radius: 15px;
             padding: 30px;
             text-align: center;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: 3px solid transparent;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
         }
-        
         .form-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
         }
-        
-        .form-card.eft {
-            border-color: #4caf50;
-            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-        }
-        
-        .form-card.setup {
-            border-color: #2196f3;
-            background: linear-gradient(135deg, #e3f2fd, #f0f7ff);
-        }
-        
-        .form-card.loi {
-            border-color: #ee0000;
-            background: linear-gradient(135deg, #fee, #fff0f0);
-        }
-        
-        .form-card .icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-        }
-        
-        .form-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .form-card p {
-            color: #666;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        }
-        
         .btn {
             display: inline-block;
             padding: 15px 30px;
-            border-radius: 8px;
+            background: #1f4e79;
+            color: white;
             text-decoration: none;
+            border-radius: 8px;
             font-weight: 600;
             font-size: 1.1rem;
             transition: all 0.3s ease;
-            cursor: pointer;
         }
-        
-        .btn-green {
-            background: #4caf50;
-            color: white;
-        }
-        
-        .btn-green:hover {
-            background: #45a049;
+        .btn:hover {
+            background: #2563eb;
             transform: translateY(-2px);
         }
-        
-        .btn-blue {
-            background: #2196f3;
-            color: white;
-        }
-        
-        .btn-blue:hover {
-            background: #1976d2;
-            transform: translateY(-2px);
-        }
-        
-        .btn-red {
-            background: #ee0000;
-            color: white;
-        }
-        
-        .btn-red:hover {
-            background: #cc0000;
-            transform: translateY(-2px);
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .feature {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #1f4e79;
-        }
-        
-        .feature h4 {
-            color: #1f4e79;
-            margin-bottom: 10px;
-        }
-        
-        .links {
-            text-align: center;
-            margin-top: 30px;
-        }
-        
-        .links a {
-            display: inline-block;
-            margin: 10px;
-            padding: 12px 25px;
-            background: #6c757d;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: background 0.3s ease;
-        }
-        
-        .links a:hover {
-            background: #5a6268;
-        }
-        
+        .btn-green { background: #4caf50; }
+        .btn-red { background: #ee0000; }
         .alert {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            color: #856404;
+            background: rgba(255,193,7,0.9);
+            color: #333;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        @media (max-width: 768px) {
-            .forms-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .header p {
-                font-size: 1rem;
-            }
+            margin: 20px 0;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -239,143 +86,51 @@
     <div class="container">
         <div class="header">
             <h1>🏢 Better Day Energy</h1>
-            <p>Customer Onboarding Portal - Fuel Supply Partnership</p>
+            <p>Customer Onboarding Portal - PRODUCTION DEPLOYMENT TEST</p>
+        </div>
+        
+        <div class="timestamp">
+            🕐 Page Generated: <span id="timestamp"></span><br>
+            📍 Status: PRODUCTION TEST - NEW DEPLOYMENT
         </div>
         
         <div class="alert">
-            <strong>📋 Welcome to the Customer Onboarding System!</strong><br>
-            Complete the forms below to start your fuel supply partnership with Better Day Energy. Each form includes electronic signature capture for a seamless experience.
+            🚀 <strong>NEW DEPLOYMENT ACTIVE!</strong><br>
+            This page was freshly deployed to test production updates.
         </div>
         
-        <div class="section">
-            <h2>🚀 System Status</h2>
-            <div class="status-grid">
-                <div class="status-item">
-                    <div class="icon">✅</div>
-                    <h4>Forms System</h4>
-                    <p>Operational</p>
-                </div>
-                <div class="status-item">
-                    <div class="icon">📝</div>
-                    <h4>E-Signatures</h4>
-                    <p>Ready</p>
-                </div>
-                <div class="status-item">
-                    <div class="icon">🔒</div>
-                    <h4>Security</h4>
-                    <p>Encrypted</p>
-                </div>
-                <div class="status-item">
-                    <div class="icon">📊</div>
-                    <h4>Dashboard</h4>
-                    <p>Active</p>
-                </div>
+        <div class="forms-grid">
+            <div class="form-card">
+                <h3>🏦 EFT Authorization</h3>
+                <p>Electronic Funds Transfer authorization for ACH payments.</p>
+                <a href="eft_form.html" class="btn btn-green">Complete EFT Form</a>
             </div>
-        </div>
-        
-        <div class="section">
-            <h2>📋 Customer Onboarding Forms</h2>
-            <p style="text-align: center; margin-bottom: 30px; font-size: 1.1rem; color: #666;">
-                Complete your fuel partnership application with our secure, electronic signature-enabled forms
-            </p>
             
-            <div class="forms-grid">
-                <div class="form-card eft">
-                    <div class="icon">🏦</div>
-                    <h3>EFT Authorization</h3>
-                    <p>Electronic Funds Transfer authorization for ACH payments. Set up automatic billing for fuel purchases with bank-level security.</p>
-                    <a href="eft_form.html" class="btn btn-green">Complete EFT Form</a>
-                </div>
-                
-                <div class="form-card setup">
-                    <div class="icon">🏢</div>
-                    <h3>Customer Setup Document</h3>
-                    <p>Complete business information and credit application. Multi-step process covering company details, references, and equipment specifications.</p>
-                    <a href="customer_setup_form.html" class="btn btn-blue">Start Application</a>
-                </div>
-                
-                <div class="form-card loi">
-                    <div class="icon">⛽</div>
-                    <h3>Phillips 66 Letter of Intent</h3>
-                    <p>Letter of Intent for Phillips 66 branded fuel supply agreement. Includes volume commitments and incentive package calculations.</p>
-                    <a href="p66_loi_form.html" class="btn btn-red">Submit LOI</a>
-                </div>
+            <div class="form-card">
+                <h3>🏢 Customer Setup Document</h3>
+                <p>Complete business information and credit application.</p>
+                <a href="customer_setup_form.html" class="btn">Start Application</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>⛽ Phillips 66 LOI</h3>
+                <p>Letter of Intent for Phillips 66 branded fuel supply.</p>
+                <a href="p66_loi_form.html" class="btn btn-red">Submit LOI</a>
             </div>
         </div>
         
-        <div class="section">
-            <h2>🎯 Key Features</h2>
-            <div class="features">
-                <div class="feature">
-                    <h4>✍️ Electronic Signatures</h4>
-                    <p>Legally binding e-signatures with full audit trail and IP tracking</p>
-                </div>
-                <div class="feature">
-                    <h4>💾 Auto-Save</h4>
-                    <p>Forms automatically save your progress as you complete them</p>
-                </div>
-                <div class="feature">
-                    <h4>📱 Mobile Friendly</h4>
-                    <p>Complete forms on any device with responsive design</p>
-                </div>
-                <div class="feature">
-                    <h4>🔐 Secure Processing</h4>
-                    <p>Bank-level encryption for sensitive financial information</p>
-                </div>
-                <div class="feature">
-                    <h4>⚡ Real-time Validation</h4>
-                    <p>Instant feedback and validation to prevent errors</p>
-                </div>
-                <div class="feature">
-                    <h4>📊 Progress Tracking</h4>
-                    <p>Multi-step forms with clear progress indicators</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>📞 Need Help?</h2>
-            <p style="text-align: center; margin-bottom: 20px;">
-                Contact our customer onboarding team for assistance with your application.
-            </p>
-            <div style="text-align: center;">
-                <strong>Phone:</strong> (555) 123-4567 | <strong>Email:</strong> onboarding@betterdayenergy.com
-            </div>
-        </div>
-        
-        <div class="links">
-            <a href="#top">🔝 Back to Top</a>
-            <a href="javascript:history.back()">🔙 Go Back</a>
-            <a href="javascript:location.reload()">🔄 Refresh</a>
+        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-top: 30px;">
+            <h3>🔧 Deployment Information</h3>
+            <p><strong>Repository:</strong> GitHub Auto-Deploy Active</p>
+            <p><strong>Server:</strong> Render.com Production</p>
+            <p><strong>Database:</strong> PostgreSQL Connected</p>
+            <p><strong>Forms API:</strong> Available at /api/v1/forms/*</p>
         </div>
     </div>
     
     <script>
-        // Add some interactivity
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add click handlers for form cards
-            const formCards = document.querySelectorAll('.form-card');
-            formCards.forEach(card => {
-                card.addEventListener('click', function(e) {
-                    if (e.target.tagName !== 'A') {
-                        const link = this.querySelector('.btn');
-                        if (link) {
-                            window.location.href = link.href;
-                        }
-                    }
-                });
-            });
-            
-            // Add hover effects
-            formCards.forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.cursor = 'pointer';
-                });
-            });
-            
-            console.log('✅ Better Day Energy Customer Onboarding Dashboard Loaded');
-            console.log('📋 Forms Available: EFT, Customer Setup, Phillips 66 LOI');
-        });
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        console.log('🚀 NEW PRODUCTION DASHBOARD LOADED - ' + new Date().toISOString());
     </script>
 </body>
 </html>
