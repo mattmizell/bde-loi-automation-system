@@ -85,39 +85,48 @@ class EFTFormRequest(BaseModel):
         return v
 
 class CustomerSetupFormRequest(BaseModel):
-    legal_business_name: str
+    # Support both simplified and full form field names
+    legal_business_name: Optional[str] = None
+    business_name: Optional[str] = None  # Simplified form
     dba_name: Optional[str] = None
-    federal_tax_id: str
+    federal_tax_id: Optional[str] = None
     state_tax_id: Optional[str] = None
     business_type: str
-    years_in_business: int
-    physical_address: str
-    physical_city: str
-    physical_state: str
-    physical_zip: str
+    years_in_business: Optional[int] = None
+    years_business: Optional[int] = None  # Simplified form
+    physical_address: Optional[str] = None
+    physical_city: Optional[str] = None
+    physical_state: Optional[str] = None
+    physical_zip: Optional[str] = None
     mailing_address: Optional[str] = None
     mailing_city: Optional[str] = None
     mailing_state: Optional[str] = None
     mailing_zip: Optional[str] = None
-    primary_contact_name: str
-    primary_contact_title: str
-    primary_contact_phone: str
-    primary_contact_email: EmailStr
-    accounts_payable_contact: str
-    accounts_payable_email: EmailStr
-    accounts_payable_phone: str
-    annual_fuel_volume: float
-    number_of_locations: int = 1
+    primary_contact_name: Optional[str] = None
+    contact_name: Optional[str] = None  # Simplified form
+    primary_contact_title: Optional[str] = None
+    primary_contact_phone: Optional[str] = None
+    contact_phone: Optional[str] = None  # Simplified form
+    primary_contact_email: Optional[EmailStr] = None
+    contact_email: Optional[EmailStr] = None  # Simplified form
+    accounts_payable_contact: Optional[str] = None
+    accounts_payable_email: Optional[EmailStr] = None
+    accounts_payable_phone: Optional[str] = None
+    annual_fuel_volume: Optional[float] = None
+    fuel_volume: Optional[float] = None  # Simplified form
+    number_of_locations: Optional[int] = 1
+    locations: Optional[int] = None  # Simplified form
     current_fuel_brands: Optional[List[str]] = []
     tank_sizes: Optional[List[Dict[str, Any]]] = []
-    dispenser_count: int
-    pos_system: str
+    dispenser_count: Optional[int] = None
+    pos_system: Optional[str] = None
     bank_references: Optional[List[Dict[str, str]]] = []
     trade_references: Optional[List[Dict[str, str]]] = []
-    authorized_signer_name: str
-    authorized_signer_title: str
-    signature_data: str
-    signature_date: str
+    authorized_signer_name: Optional[str] = None
+    authorized_signer_title: Optional[str] = None
+    signature_data: Optional[str] = None
+    signature_date: Optional[str] = None
+    notes: Optional[str] = None  # Additional notes field
 
     @validator('business_type')
     def validate_business_type(cls, v):
@@ -289,18 +298,27 @@ async def submit_customer_setup_form(
 ):
     """Submit customer setup document form"""
     try:
+        # Map simplified form fields to full field names
+        business_name = form_data.legal_business_name or form_data.business_name
+        contact_name = form_data.primary_contact_name or form_data.contact_name
+        contact_email = form_data.primary_contact_email or form_data.contact_email
+        contact_phone = form_data.primary_contact_phone or form_data.contact_phone
+        years_in_business = form_data.years_in_business or form_data.years_business
+        annual_fuel_volume = form_data.annual_fuel_volume or form_data.fuel_volume
+        number_of_locations = form_data.number_of_locations or form_data.locations or 1
+        
         # Create or get customer
         customer = create_or_get_customer(
             db,
-            form_data.legal_business_name,
-            email=form_data.primary_contact_email,
-            phone=form_data.primary_contact_phone
+            business_name,
+            email=contact_email,
+            phone=contact_phone
         )
         
         # Update customer record with complete information
-        customer.contact_name = form_data.primary_contact_name
-        customer.email = form_data.primary_contact_email
-        customer.phone = form_data.primary_contact_phone
+        customer.contact_name = contact_name
+        customer.email = contact_email
+        customer.phone = contact_phone
         customer.street_address = form_data.physical_address
         customer.city = form_data.physical_city
         customer.state = form_data.physical_state
@@ -310,7 +328,7 @@ async def submit_customer_setup_form(
         setup_form = CustomerSetupFormData(
             id=uuid.uuid4(),
             customer_id=customer.id,
-            legal_business_name=form_data.legal_business_name,
+            legal_business_name=business_name,
             dba_name=form_data.dba_name,
             federal_tax_id=form_data.federal_tax_id,  # Should be encrypted in production
             state_tax_id=form_data.state_tax_id,  # Should be encrypted in production
@@ -323,16 +341,16 @@ async def submit_customer_setup_form(
             mailing_city=form_data.mailing_city,
             mailing_state=form_data.mailing_state,
             mailing_zip=form_data.mailing_zip,
-            primary_contact_name=form_data.primary_contact_name,
+            primary_contact_name=contact_name,
             primary_contact_title=form_data.primary_contact_title,
-            primary_contact_phone=form_data.primary_contact_phone,
-            primary_contact_email=form_data.primary_contact_email,
+            primary_contact_phone=contact_phone,
+            primary_contact_email=contact_email,
             accounts_payable_contact=form_data.accounts_payable_contact,
             accounts_payable_email=form_data.accounts_payable_email,
             accounts_payable_phone=form_data.accounts_payable_phone,
-            years_in_business=form_data.years_in_business,
-            annual_fuel_volume=form_data.annual_fuel_volume,
-            number_of_locations=form_data.number_of_locations,
+            years_in_business=years_in_business,
+            annual_fuel_volume=annual_fuel_volume,
+            number_of_locations=number_of_locations,
             current_fuel_brands=form_data.current_fuel_brands,
             tank_sizes=form_data.tank_sizes,
             dispenser_count=form_data.dispenser_count,
@@ -342,7 +360,7 @@ async def submit_customer_setup_form(
             authorized_signer_name=form_data.authorized_signer_name,
             authorized_signer_title=form_data.authorized_signer_title,
             signature_data=form_data.signature_data,
-            signature_date=datetime.fromisoformat(form_data.signature_date.replace('Z', '+00:00')),
+            signature_date=datetime.fromisoformat(form_data.signature_date.replace('Z', '+00:00')) if form_data.signature_date else None,
             signature_ip=get_client_ip(request),
             form_status='completed',
             created_at=datetime.utcnow()
