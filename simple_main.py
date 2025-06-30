@@ -60,10 +60,10 @@ if forms_router:
     app.include_router(forms_router)
     logger.info("✅ Forms API endpoints included")
 
-# Dashboard endpoint  
+# Main dashboard endpoint  
 @app.get("/", response_class=HTMLResponse)
-async def dashboard():
-    """Serve the main dashboard"""
+async def main_dashboard():
+    """Serve the main customer onboarding dashboard"""
     try:
         with open("index.html", "r") as f:
             return HTMLResponse(content=f.read())
@@ -140,99 +140,9 @@ async def verify_crm_token(credentials: HTTPAuthorizationCredentials = Depends(s
         detail="Invalid CRM bridge API token. Contact Better Day Energy IT for access."
     )
 
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    """Root endpoint with system information"""
-    return """
-    <html>
-        <head>
-            <title>Better Day Energy LOI Automation</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
-                .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                .header { color: #1f4e79; text-align: center; margin-bottom: 30px; }
-                .status { background: #d4edda; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #c3e6cb; }
-                .feature { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #1f4e79; }
-                .endpoint { background: #e9ecef; padding: 10px; margin: 10px 0; border-radius: 3px; font-family: monospace; }
-                .btn { background: #1f4e79; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 10px 10px 0; }
-                .btn:hover { background: #2563eb; }
-                .stats { display: flex; gap: 20px; margin: 20px 0; }
-                .stat { background: #f8f9fa; padding: 20px; border-radius: 5px; flex: 1; text-align: center; }
-                .stat-number { font-size: 2em; font-weight: bold; color: #1f4e79; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🏢 Better Day Energy</h1>
-                    <h2>LOI Automation System</h2>
-                    <p>VP Racing Fuel Supply Agreement Processing</p>
-                </div>
-                
-                <div class="status">
-                    <h3>✅ System Status: Online & Ready</h3>
-                    <p>Database connected • AI integration active • Ready to process LOI requests</p>
-                </div>
 
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-number">1</div>
-                        <div>Demo Customer</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">100%</div>
-                        <div>System Health</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-number">24/7</div>
-                        <div>Available</div>
-                    </div>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="/dashboard" class="btn">📊 Open Dashboard</a>
-                    <a href="/docs" class="btn">📖 API Documentation</a>
-                    <a href="/api/v1/status" class="btn">🔧 System Status</a>
-                </div>
-
-                <h3>🎯 System Features</h3>
-                <div class="feature">
-                    <strong>📋 CRM Integration</strong> - Automatic data retrieval from Less Annoying CRM
-                </div>
-                <div class="feature">
-                    <strong>🧠 AI-Powered Processing</strong> - Grok AI for intelligent decision making
-                </div>
-                <div class="feature">
-                    <strong>📄 Document Generation</strong> - Professional VP Racing LOI templates
-                </div>
-                <div class="feature">
-                    <strong>📁 CRM Document Storage</strong> - Simple attachment storage (no OAuth required!)
-                </div>
-                <div class="feature">
-                    <strong>✍️ E-Signature Workflow</strong> - PostgreSQL-based (no external service fees!)
-                </div>
-                <div class="feature">
-                    <strong>📊 Real-time Dashboard</strong> - Live processing monitoring
-                </div>
-
-                <h3>🔗 API Endpoints</h3>
-                <div class="endpoint">GET /dashboard - Processing dashboard</div>
-                <div class="endpoint">POST /api/v1/loi/submit - Submit LOI request</div>
-                <div class="endpoint">GET /api/v1/loi/list - List all LOIs</div>
-                <div class="endpoint">GET /api/v1/status - System status</div>
-                <div class="endpoint">GET /api/v1/database/status - Database status</div>
-                
-                <p style="margin-top: 40px; text-align: center; color: #666; border-top: 1px solid #dee2e6; padding-top: 20px;">
-                    Version: 1.0.0 | Better Day Energy | VP Racing Supply Agreements<br>
-                    Database: PostgreSQL | AI: Grok API | Queue: Transaction Coordinator
-                </p>
-            </div>
-        </body>
-    </html>
-    """
-
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
+@app.get("/loi-dashboard", response_class=HTMLResponse)
+async def loi_dashboard():
     """LOI processing dashboard"""
     
     return """
