@@ -23,6 +23,7 @@ from typing import Optional, List
 import uvicorn
 import hashlib
 import secrets
+import json
 
 # Configure logging first
 logging.basicConfig(
@@ -502,27 +503,149 @@ async def get_database_status():
 
 @app.post("/api/v1/loi/submit")
 async def submit_loi_request(request: dict):
-    """Submit a new LOI request (simplified version)"""
+    """Submit a new LOI request with full processing workflow"""
     
     try:
-        # For demo - just return success with mock transaction ID
-        transaction_id = f"LOI_{int(datetime.now().timestamp())}"
+        # Generate unique transaction ID
+        transaction_id = f"LOI_{int(datetime.now().timestamp())}_{secrets.token_hex(4)}"
         
-        logger.info(f"📥 Demo LOI request submitted: {transaction_id}")
+        logger.info(f"📥 LOI request submitted: {transaction_id}")
         logger.info(f"🏢 Customer: {request.get('company_name', 'Unknown')}")
+        
+        # Store LOI data in database
+        import psycopg2
+        try:
+            # Try production database first
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            # Fallback to local database
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        
+        # Create LOI record
+        cur.execute("""
+            INSERT INTO loi_transactions 
+            (transaction_id, company_name, contact_name, email, phone, loi_data, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            transaction_id,
+            request.get('company_name', ''),
+            request.get('contact_name', ''),
+            request.get('email', ''),
+            request.get('phone', ''),
+            json.dumps(request),
+            'pending_signature',
+            datetime.now()
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        # Generate signature URL
+        signature_url = f"/api/v1/loi/sign/{transaction_id}"
         
         return {
             'success': True,
             'transaction_id': transaction_id,
-            'message': 'LOI request submitted successfully (Demo Mode)',
+            'message': 'LOI request submitted successfully',
+            'signature_url': signature_url,
             'estimated_completion_time': '24-48 hours',
             'submitted_at': datetime.now().isoformat(),
-            'demo_mode': True
+            'next_step': 'signature_required'
         }
         
     except Exception as e:
         logger.error(f"❌ Error submitting LOI request: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to submit LOI request: {str(e)}")
+
+@app.get("/api/v1/loi/sign/{transaction_id}", response_class=HTMLResponse)
+async def get_signature_page(transaction_id: str):
+    """Serve signature page for LOI transaction"""
+    
+    try:
+        # Get LOI data from database
+        import psycopg2
+        try:
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        cur.execute("SELECT company_name, contact_name, loi_data FROM loi_transactions WHERE transaction_id = %s", (transaction_id,))
+        result = cur.fetchone()
+        conn.close()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="LOI transaction not found")
+        
+        company_name, contact_name, loi_data = result
+        
+        # Serve signature page
+        try:
+            with open(os.path.join(current_dir, "templates", "signature_page.html"), "r") as f:
+                content = f.read()
+                # Replace placeholders with actual data
+                content = content.replace("{{TRANSACTION_ID}}", transaction_id)
+                content = content.replace("{{COMPANY_NAME}}", company_name or "")
+                content = content.replace("{{CONTACT_NAME}}", contact_name or "")
+                return HTMLResponse(content=content)
+        except FileNotFoundError:
+            return HTMLResponse(content="<h1>Signature page not found</h1>", status_code=404)
+        
+    except Exception as e:
+        logger.error(f"❌ Error loading signature page: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load signature page: {str(e)}")
+
+@app.post("/api/v1/loi/sign/{transaction_id}")
+async def submit_signature(transaction_id: str, signature_data: dict):
+    """Submit signature for LOI transaction"""
+    
+    try:
+        # Store signature in database
+        import psycopg2
+        try:
+            conn = psycopg2.connect("postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation")
+        except:
+            conn = psycopg2.connect("postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        
+        cur = conn.cursor()
+        
+        # Update LOI with signature
+        cur.execute("""
+            UPDATE loi_transactions 
+            SET signature_data = %s, signed_at = %s, status = %s
+            WHERE transaction_id = %s
+        """, (
+            signature_data.get('signature_image', ''),
+            datetime.now(),
+            'signed',
+            transaction_id
+        ))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="LOI transaction not found")
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"✅ LOI signature captured: {transaction_id}")
+        
+        # TODO: Trigger PDF generation and CRM storage
+        
+        return {
+            'success': True,
+            'transaction_id': transaction_id,
+            'message': 'Signature captured successfully',
+            'status': 'signed',
+            'signed_at': datetime.now().isoformat(),
+            'next_step': 'pdf_generation'
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error submitting signature: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit signature: {str(e)}")
 
 @app.get("/api/v1/loi/list")
 async def list_loi_transactions():
