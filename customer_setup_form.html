@@ -708,11 +708,11 @@
             resultsDiv.style.display = 'block';
             
             try {
-                const response = await fetch('https://loi-automation-api.onrender.com/api/v1/crm-bridge/contacts/search', {
+                const response = await fetch('/api/v1/crm-bridge/contacts/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer bde_loi_auth_' + 'a8f5f167f44f4964e6c998dee827110c'  // LOI automation token
+                        'Authorization': 'Bearer bde_loi_auth_a8f5f167f44f4964e6c998dee827110c'
                     },
                     body: JSON.stringify({
                         query: query,
@@ -1130,7 +1130,7 @@
             console.log('Submitting form data:', data);
             
             try {
-                const response = await fetch('https://loi-automation-api.onrender.com/api/v1/forms/customer-setup/submit', {
+                const response = await fetch('/api/v1/forms/customer-setup/submit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1154,7 +1154,7 @@
                     
                     // Redirect to completion page if available
                     if (result.id) {
-                        window.location.href = `https://loi-automation-api.onrender.com/api/v1/forms/customer-setup/complete/${result.id}`;
+                        window.location.href = `/api/v1/forms/customer-setup/complete/${result.id}`;
                     }
                     
                 } else {
