@@ -343,6 +343,107 @@
             margin-bottom: 10px;
         }
         
+        .crm-search-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #28a745;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-top: none;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-result {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result:hover {
+            background: #f8f9fa;
+        }
+        
+        .search-result:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-name {
+            font-weight: 600;
+            color: #1f4e79;
+        }
+        
+        .search-result-company {
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .search-result-email {
+            color: #6c757d;
+            font-size: 13px;
+        }
+        
+        .crm-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .crm-status.found {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            display: block;
+        }
+        
+        .crm-status.loading {
+            background: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+            display: block;
+        }
+        
+        .crm-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .clear-crm-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .clear-crm-btn:hover {
+            background: #5a6268;
+        }
+
         @media (max-width: 768px) {
             .form-content {
                 padding: 20px;
@@ -372,6 +473,20 @@
             </div>
             
             <form id="p66-loi-form">
+                <!-- CRM Search Section -->
+                <div class="crm-search-section">
+                    <h3>🔍 Search CRM Database</h3>
+                    <p style="margin-bottom: 15px; color: #495057;">Search our 2,500+ customer database to auto-populate form fields</p>
+                    
+                    <div class="search-box">
+                        <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
+                        <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off">
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                    
+                    <div class="crm-status" id="crm-status"></div>
+                </div>
+
                 <!-- Station Information -->
                 <div class="form-section">
                     <h3>⛽ Station Information</h3>
@@ -609,7 +724,59 @@
         </div>
     </div>
     
+    <!-- Include CRM Search Component -->
+    <script src="crm_search_component.js"></script>
+    
     <script>
+        // Initialize CRM Search Component
+        let crmSearch;
+        
+        function initializeCRMSearch() {
+            // Field mappings for P66 LOI form
+            const fieldMappings = {
+                company_name: 'owner-company',
+                email: 'owner-email',
+                phone: 'owner-phone',
+                // Address fields for station location (can use same for business)
+                bank_address: 'station-address',
+                bank_city: 'business-city',
+                bank_state: 'business-state',
+                bank_zip: 'business-zip',
+                // Owner contact info
+                account_holder_name: 'owner-name'
+            };
+            
+            if (typeof CRMSearchComponent !== 'undefined') {
+                crmSearch = new CRMSearchComponent({
+                    searchInputId: 'crm-search',
+                    searchResultsId: 'search-results',
+                    statusId: 'crm-status',
+                    fieldMappings: fieldMappings
+                });
+                
+                crmSearch.onContactSelected = function(contact) {
+                    // For P66 LOI, we might want to populate station name with company name
+                    if (contact.company_name) {
+                        const stationNameField = document.getElementById('station-name');
+                        if (stationNameField && !stationNameField.value) {
+                            stationNameField.value = contact.company_name;
+                        }
+                    }
+                    
+                    console.log('✅ CRM Contact selected for P66 LOI:', contact.company_name);
+                };
+                
+                console.log('✅ CRM Search Component initialized for P66 LOI form');
+            } else {
+                console.warn('CRMSearchComponent not available, CRM search disabled');
+            }
+        }
+        
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeCRMSearch, 100);
+        });
+        
         // Calculate total fuel volume
         function calculateTotal() {
             const gasoline = parseFloat(document.getElementById('gasoline-volume').value) || 0;

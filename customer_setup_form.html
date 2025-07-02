@@ -30,24 +30,97 @@
             text-align: center;
         }
         
-        .crm-search {
-            background: #e3f2fd;
-            padding: 20px;
+        .crm-search-section {
+            background: #f8f9fa;
+            padding: 25px;
             border-bottom: 1px solid #e9ecef;
+            border: 2px solid #28a745;
         }
         
         .search-box {
-            display: flex;
-            gap: 10px;
+            position: relative;
             margin-bottom: 15px;
         }
         
-        .search-input {
-            flex: 1;
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-top: none;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-result {
             padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 6px;
-            font-size: 16px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result:hover {
+            background: #f8f9fa;
+        }
+        
+        .search-result:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-name {
+            font-weight: 600;
+            color: #1f4e79;
+        }
+        
+        .search-result-company {
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .search-result-email {
+            color: #6c757d;
+            font-size: 13px;
+        }
+        
+        .crm-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .crm-status.found {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            display: block;
+        }
+        
+        .crm-status.loading {
+            background: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+            display: block;
+        }
+        
+        .clear-crm-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .clear-crm-btn:hover {
+            background: #5a6268;
         }
         
         .search-btn {
@@ -322,16 +395,17 @@
         </div>
         
         <!-- CRM Search Section -->
-        <div class="crm-search">
-            <h4>🔍 Search Existing Customers</h4>
-            <p style="margin-bottom: 15px; color: #666;">Search our CRM to see if this customer already exists or to pre-fill information.</p>
+        <div class="crm-search-section">
+            <h4>🔍 Search CRM Database</h4>
+            <p style="margin-bottom: 15px; color: #495057;">Search our 2,500+ customer database to auto-populate form fields</p>
             
             <div class="search-box">
-                <input type="text" id="crm-search-input" class="search-input" placeholder="Search by company name, contact name, or email...">
-                <button class="search-btn" onclick="searchCRM()">🔍 Search CRM</button>
+                <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
+                <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off">
+                <div class="search-results" id="search-results"></div>
             </div>
             
-            <div id="search-results" class="search-results" style="display: none;"></div>
+            <div class="crm-status" id="crm-status"></div>
         </div>
         
         <!-- Progress Indicator -->
@@ -683,6 +757,9 @@
         </div>
     </div>
     
+    <!-- Include CRM Search Component -->
+    <script src="crm_search_component.js"></script>
+    
     <script>
         // Application state
         let currentStep = 1;
@@ -696,82 +773,56 @@
             initializeSignaturePad();
             checkForSavedProgress();
             updateProgressIndicator();
+            
+            // Initialize CRM search after DOM is ready
+            setTimeout(initializeCRMSearch, 100);
         });
         
         // CRM Search functionality
-        async function searchCRM() {
-            const query = document.getElementById('crm-search-input').value.trim();
-            if (!query) return;
+        // Initialize CRM Search Component
+        let crmSearch;
+        
+        function initializeCRMSearch() {
+            // Custom field mappings for customer setup form
+            const fieldMappings = {
+                company_name: 'legal-business-name',
+                email: 'primary-contact-email', 
+                phone: 'primary-contact-phone',
+                // Map address to physical address fields with zip code extraction
+                bank_address: 'physical-address',
+                bank_city: 'physical-city',
+                bank_state: 'physical-state', 
+                bank_zip: 'physical-zip',
+                // Set contact name
+                account_holder_name: 'primary-contact-name'
+            };
             
-            const resultsDiv = document.getElementById('search-results');
-            resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">🔍 Searching CRM...</div>';
-            resultsDiv.style.display = 'block';
-            
-            try {
-                const response = await fetch('/api/v1/crm-bridge/contacts/search', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer bde_loi_auth_e6db5173a4393421ffadae85f9a3513e'
-                    },
-                    body: JSON.stringify({
-                        query: query,
-                        limit: 10
-                    })
+            // Create CRM search instance with custom field mappings
+            if (typeof CRMSearchComponent !== 'undefined') {
+                crmSearch = new CRMSearchComponent({
+                    searchInputId: 'crm-search',
+                    searchResultsId: 'search-results',
+                    statusId: 'crm-status',
+                    fieldMappings: fieldMappings
                 });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    displayCRMResults(data.contacts);
-                } else {
-                    resultsDiv.innerHTML = '<div style="color: #dc3545; padding: 15px;">❌ CRM search unavailable</div>';
-                }
-            } catch (error) {
-                console.error('CRM search error:', error);
-                resultsDiv.innerHTML = '<div style="color: #dc3545; padding: 15px;">❌ Could not connect to CRM</div>';
-            }
-        }
-        
-        function displayCRMResults(contacts) {
-            const resultsDiv = document.getElementById('search-results');
-            
-            if (!contacts || contacts.length === 0) {
-                resultsDiv.innerHTML = '<div style="color: #666; padding: 15px;">No existing customers found. Continue with new customer setup.</div>';
-                return;
-            }
-            
-            let html = '<h5>Found Existing Customers:</h5>';
-            contacts.forEach((contact, index) => {
-                const safeContactId = (contact.contact_id || '').replace(/'/g, "\\'");
-                const safeName = (contact.name || '').replace(/'/g, "\\'");
-                const safeCompany = (contact.company_name || '').replace(/'/g, "\\'");
-                const safeEmail = (contact.email || '').replace(/'/g, "\\'");
-                const safePhone = (contact.phone || '').replace(/'/g, "\\'");
+                // Custom hook for additional field population
+                crmSearch.onContactSelected = function(contact) {
+                    // Also populate mailing address if "same as physical" is checked
+                    const sameAsPhysical = document.getElementById('same-as-physical');
+                    if (sameAsPhysical && sameAsPhysical.checked) {
+                        copyPhysicalAddress();
+                    }
+                    
+                    console.log('✅ CRM Contact selected:', contact.company_name, 'with address parsing including zip code');
+                };
                 
-                html += `
-                    <div class="customer-result" onclick="fillFromCRM('${safeContactId}', '${safeName}', '${safeCompany}', '${safeEmail}', '${safePhone}')">
-                        <strong>${contact.company_name || contact.name}</strong><br>
-                        <span style="color: #666;">${contact.name} • ${contact.email} • ${contact.phone}</span>
-                    </div>
-                `;
-            });
-            
-            resultsDiv.innerHTML = html;
+                console.log('✅ CRM Search Component initialized for customer setup form');
+            } else {
+                console.warn('CRMSearchComponent not available, CRM search disabled');
+            }
         }
         
-        function fillFromCRM(contactId, name, companyName, email, phone) {
-            // Fill form fields with CRM data
-            if (companyName) document.getElementById('legal-business-name').value = companyName;
-            if (name) document.getElementById('primary-contact-name').value = name;
-            if (email) document.getElementById('primary-contact-email').value = email;
-            if (phone) document.getElementById('primary-contact-phone').value = phone;
-            
-            // Hide search results
-            document.getElementById('search-results').style.display = 'none';
-            document.getElementById('crm-search-input').value = '';
-            
-            alert(`✅ Pre-filled information from CRM for: ${companyName || name}`);
-        }
         
         // Step navigation
         function nextStep() {
@@ -1181,12 +1232,6 @@
             }
         });
         
-        // Allow Enter key on search
-        document.getElementById('crm-search-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                searchCRM();
-            }
-        });
     </script>
 </body>
 </html>
