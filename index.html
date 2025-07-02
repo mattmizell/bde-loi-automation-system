@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Better Day Energy - Customer Onboarding</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1f4e79, #2563eb);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .header {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        .forms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .form-card {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+        .form-card:hover {
+            transform: translateY(-5px);
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #1f4e79;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+        .btn-green { background: #4caf50; }
+        .btn-red { background: #ee0000; }
+        .signature-note {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Better Day Energy</h1>
+            <p>Customer Onboarding Portal with Electronic Signature Capture</p>
+        </div>
+        
+        <div class="signature-note">
+            ✅ <strong>NEW:</strong> Advanced electronic signature system with ESIGN Act compliance, audit trails, and tamper-evident storage
+        </div>
+        
+        <div class="forms-grid">
+            <div class="form-card">
+                <h3>🏦 EFT Authorization</h3>
+                <p>Electronic Funds Transfer authorization with secure signature capture.</p>
+                <a href="eft_form.html" class="btn btn-green">Complete EFT Form</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>🏢 Customer Setup Document</h3>
+                <p>Complete business information and credit application with electronic signature.</p>
+                <a href="customer_setup_form.html" class="btn">Start Application</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>🏁 VP Racing Fuels LOI</h3>
+                <p>Letter of Intent for VP Racing unbranded fuel supply with signature workflow.</p>
+                <a href="/forms/vp-racing-loi" class="btn" style="background: #4caf50;">Submit LOI</a>
+            </div>
+            
+            <div class="form-card">
+                <h3>⛽ Phillips 66 LOI</h3>
+                <p>Letter of Intent for Phillips 66 branded fuel supply with electronic signatures.</p>
+                <a href="/forms/p66-loi" class="btn btn-red">Submit LOI</a>
+            </div>
+        </div>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-top: 30px;">
+            <h3>🔧 System Features</h3>
+            <p><strong>✅ Electronic Signatures:</strong> ESIGN Act compliant with audit trails</p>
+            <p><strong>✅ CRM Integration:</strong> 2,500+ cached contacts for fast lookup</p>
+            <p><strong>✅ Database Storage:</strong> PostgreSQL with tamper-evident records</p>
+            <p><strong>✅ API Endpoints:</strong> Complete REST API at /api/v1/*</p>
+        </div>
+    </div>
+</body>
+</html>
