@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 DEPLOYMENT TEST - LOI System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #ff4444;
+            color: white;
+            text-align: center;
+            padding: 50px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0,0,0,0.7);
+            padding: 40px;
+            border-radius: 10px;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        .timestamp {
+            background: yellow;
+            color: black;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            margin: 20px 0;
+        }
+        .error-info {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 DEPLOYMENT DIAGNOSTIC</h1>
+        <p><strong>THIS IS A TEST TO IDENTIFY DEPLOYMENT ISSUES</strong></p>
+        
+        <div class="timestamp">
+            🕐 Generated: <span id="timestamp"></span><br>
+            📍 Git Commit: 392d689 (index.html deleted and recreated)
+        </div>
+        
+        <div class="error-info">
+            <h3>🔍 Deployment Status Check</h3>
+            <p>If you see this red page, the NEW deployment is working!</p>
+            <p>If you see the old blue dashboard, Render hasn't deployed latest code.</p>
+            <br>
+            <p><strong>Expected Behavior:</strong></p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>This page should appear immediately after git push</li>
+                <li>Old blue dashboard = deployment lag</li>
+                <li>This red page = deployment working</li>
+                <li>404 error = server issues</li>
+            </ul>
+        </div>
+        
+        <div class="error-info">
+            <h3>🛠️ Next Steps</h3>
+            <p>1. Verify this page loads (red background)</p>
+            <p>2. Check Render deployment logs</p>
+            <p>3. Test signature capture endpoints</p>
+            <p>4. Restore proper dashboard</p>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <a href="/test" style="color: yellow; font-size: 1.2rem;">Test Server Response</a> |
+            <a href="/api/v1/system/status" style="color: yellow; font-size: 1.2rem;">System Status</a>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        console.log('🚨 DEPLOYMENT TEST PAGE LOADED - ' + new Date().toISOString());
+        console.log('🔍 If you see this in console, new deployment is active!');
+    </script>
+</body>
+</html>
