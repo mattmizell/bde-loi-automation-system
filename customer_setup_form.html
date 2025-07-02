@@ -741,9 +741,15 @@
             }
             
             let html = '<h5>Found Existing Customers:</h5>';
-            contacts.forEach(contact => {
+            contacts.forEach((contact, index) => {
+                const safeContactId = (contact.contact_id || '').replace(/'/g, "\\'");
+                const safeName = (contact.name || '').replace(/'/g, "\\'");
+                const safeCompany = (contact.company_name || '').replace(/'/g, "\\'");
+                const safeEmail = (contact.email || '').replace(/'/g, "\\'");
+                const safePhone = (contact.phone || '').replace(/'/g, "\\'");
+                
                 html += `
-                    <div class="customer-result" onclick="fillFromCRM('${contact.contact_id}', '${contact.name}', '${contact.company_name}', '${contact.email}', '${contact.phone}')">
+                    <div class="customer-result" onclick="fillFromCRM('${safeContactId}', '${safeName}', '${safeCompany}', '${safeEmail}', '${safePhone}')">
                         <strong>${contact.company_name || contact.name}</strong><br>
                         <span style="color: #666;">${contact.name} • ${contact.email} • ${contact.phone}</span>
                     </div>
