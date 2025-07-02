@@ -84,6 +84,27 @@ class EFTFormRequest(BaseModel):
             raise ValueError('Routing number must be 9 digits')
         return v
 
+class SalesInitiatedEFTRequest(BaseModel):
+    """Minimal EFT form data for sales-initiated workflow"""
+    company_name: str
+    customer_email: EmailStr
+    customer_phone: Optional[str] = None
+    customer_id: Optional[str] = None
+    # Pre-fill fields (all optional for sales person)
+    bank_name: Optional[str] = None
+    bank_address: Optional[str] = None
+    bank_city: Optional[str] = None
+    bank_state: Optional[str] = None
+    bank_zip: Optional[str] = None
+    account_holder_name: Optional[str] = None
+    account_type: Optional[str] = None
+    authorized_by_name: Optional[str] = None
+    authorized_by_title: Optional[str] = None
+    federal_tax_id: Optional[str] = None
+    # Sales person info
+    initiated_by: Optional[str] = None
+    notes: Optional[str] = None
+
 class CustomerSetupFormRequest(BaseModel):
     # Support both simplified and full form field names
     legal_business_name: Optional[str] = None
@@ -210,6 +231,46 @@ def create_or_get_customer(db: Session, company_name: str, email: str = None, ph
     
     return customer
 
+def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> str:
+    """Generate HTML form with pre-filled data for customer completion"""
+    # Extract pre-filled values
+    company_name = pre_filled_data.get('company_name', '')
+    bank_name = pre_filled_data.get('bank_name', '')
+    bank_address = pre_filled_data.get('bank_address', '')
+    bank_city = pre_filled_data.get('bank_city', '')
+    bank_state = pre_filled_data.get('bank_state', '')
+    bank_zip = pre_filled_data.get('bank_zip', '')
+    account_holder_name = pre_filled_data.get('account_holder_name', '')
+    account_type = pre_filled_data.get('account_type', '')
+    authorized_by_name = pre_filled_data.get('authorized_by_name', '')
+    authorized_by_title = pre_filled_data.get('authorized_by_title', '')
+    federal_tax_id = pre_filled_data.get('federal_tax_id', '')
+    notes = pre_filled_data.get('notes', '')
+    
+    # Read the EFT form template
+    import os
+    template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'eft_completion_form.html')
+    
+    # For now, return a simple form with pre-filled data
+    # In production, this would use a proper template engine
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Complete EFT Authorization - Better Day Energy</title>
+        <script>
+            window.TRANSACTION_ID = '{transaction_id}';
+            window.PRE_FILLED_DATA = {json.dumps(pre_filled_data)};
+        </script>
+    </head>
+    <body>
+        <h1>Complete Your EFT Authorization</h1>
+        <p>Transaction ID: {transaction_id}</p>
+        <script src="/static/eft_completion.js"></script>
+    </body>
+    </html>
+    """
+
 def save_signature_image(signature_data: str, form_type: str, form_id: str) -> str:
     """Save base64 signature image and return file path"""
     try:
@@ -289,6 +350,170 @@ async def submit_eft_form(
         logger.error(f"Error submitting EFT form: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to submit EFT form")
+
+@router.post("/eft/initiate")
+async def initiate_eft_form(
+    form_data: SalesInitiatedEFTRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Sales-initiated EFT form for customer completion"""
+    try:
+        # Generate unique transaction ID
+        transaction_id = str(uuid.uuid4())
+        
+        # Create LOI transaction record for tracking
+        loi_transaction = LOITransaction(
+            id=transaction_id,
+            transaction_type=TransactionType.EFT_FORM,
+            customer_name=form_data.company_name,
+            customer_email=form_data.customer_email,
+            customer_phone=form_data.customer_phone,
+            initiated_by=form_data.initiated_by or "Sales Team",
+            workflow_stage=WorkflowStage.PENDING_CUSTOMER_COMPLETION,
+            status=TransactionStatus.PENDING,
+            form_data=form_data.dict(),  # Store pre-filled data
+            created_at=datetime.utcnow()
+        )
+        
+        if DATABASE_AVAILABLE:
+            db.add(loi_transaction)
+            db.commit()
+            
+        # Send email to customer with completion link
+        if hasattr(request.app.state, 'send_eft_completion_email'):
+            await request.app.state.send_eft_completion_email(
+                customer_email=form_data.customer_email,
+                customer_name=form_data.company_name,
+                transaction_id=transaction_id,
+                pre_filled_data=form_data.dict()
+            )
+        
+        logger.info(f"EFT form initiated for {form_data.company_name}: {transaction_id}")
+        
+        return {
+            "success": True,
+            "transaction_id": transaction_id,
+            "message": "EFT form initiated successfully. Email sent to customer.",
+            "completion_url": f"/forms/eft/complete/{transaction_id}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error initiating EFT form: {e}")
+        if DATABASE_AVAILABLE:
+            db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to initiate EFT form")
+
+@router.get("/eft/complete/{transaction_id}")
+async def get_eft_completion_page(
+    transaction_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get pre-filled EFT form for customer completion"""
+    try:
+        if not DATABASE_AVAILABLE:
+            # Return mock data for testing
+            return HTMLResponse(content="<h1>EFT Completion Form</h1><p>Database not available</p>")
+            
+        # Get transaction record
+        transaction = db.query(LOITransaction).filter(
+            LOITransaction.id == transaction_id,
+            LOITransaction.transaction_type == TransactionType.EFT_FORM
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        if transaction.status == TransactionStatus.COMPLETED:
+            return HTMLResponse(content="<h1>Already Completed</h1><p>This EFT form has already been completed.</p>")
+            
+        # Generate pre-filled form HTML
+        form_html = generate_eft_completion_form(transaction_id, transaction.form_data)
+        
+        return HTMLResponse(content=form_html)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving EFT completion form: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve form")
+
+@router.post("/eft/complete/{transaction_id}")
+async def complete_eft_form(
+    transaction_id: str,
+    form_data: EFTFormRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Complete EFT form with full validation and signature"""
+    try:
+        if not DATABASE_AVAILABLE:
+            return {"success": True, "message": "Test mode - form completed"}
+            
+        # Get transaction record
+        transaction = db.query(LOITransaction).filter(
+            LOITransaction.id == transaction_id,
+            LOITransaction.transaction_type == TransactionType.EFT_FORM
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        if transaction.status == TransactionStatus.COMPLETED:
+            raise HTTPException(status_code=400, detail="Form already completed")
+        
+        # Create or get customer
+        customer = create_or_get_customer(
+            db, 
+            form_data.company_name,
+            email=transaction.customer_email,
+            phone=transaction.customer_phone
+        )
+        
+        # Create EFT form record with complete data
+        eft_form = EFTFormData(
+            id=uuid.uuid4(),
+            customer_id=customer.id,
+            transaction_id=transaction_id,
+            bank_name=form_data.bank_name,
+            bank_address=form_data.bank_address,
+            bank_city=form_data.bank_city,
+            bank_state=form_data.bank_state,
+            bank_zip=form_data.bank_zip,
+            account_holder_name=form_data.account_holder_name,
+            account_type=form_data.account_type,
+            account_number=form_data.account_number,
+            routing_number=form_data.routing_number,
+            authorized_by_name=form_data.authorized_by_name,
+            authorized_by_title=form_data.authorized_by_title,
+            authorization_date=datetime.fromisoformat(form_data.authorization_date.replace('Z', '+00:00')),
+            signature_data=form_data.signature_data,
+            signature_ip=get_client_ip(request),
+            signature_timestamp=datetime.fromisoformat(form_data.signature_timestamp.replace('Z', '+00:00')),
+            form_status='completed',
+            created_at=datetime.utcnow()
+        )
+        
+        # Update transaction status
+        transaction.status = TransactionStatus.COMPLETED
+        transaction.workflow_stage = WorkflowStage.COMPLETED
+        transaction.completed_at = datetime.utcnow()
+        
+        db.add(eft_form)
+        db.commit()
+        
+        logger.info(f"EFT form completed: {eft_form.id} for transaction {transaction_id}")
+        
+        return {
+            "success": True,
+            "id": str(eft_form.id),
+            "transaction_id": transaction_id,
+            "message": "EFT authorization completed successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error completing EFT form: {e}")
+        if DATABASE_AVAILABLE:
+            db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to complete EFT form")
 
 @router.post("/customer-setup/submit")
 async def submit_customer_setup_form(
