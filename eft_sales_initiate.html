@@ -673,23 +673,17 @@
         
         // Manual search function for button click
         async function performManualCRMSearch() {
-            const searchInput = document.getElementById('crm-search');
-            const query = searchInput ? searchInput.value.trim() : '';
+            const query = searchInput.value.trim();
             
             if (!query) {
                 alert('Please enter a search term');
                 return;
             }
             
-            const resultsDiv = document.getElementById('search-results');
-            const statusDiv = document.getElementById('crm-status');
-            
             try {
-                if (statusDiv) {
-                    statusDiv.className = 'crm-status loading';
-                    statusDiv.textContent = 'Searching CRM...';
-                    statusDiv.style.display = 'block';
-                }
+                crmStatus.className = 'crm-status loading';
+                crmStatus.textContent = 'Searching CRM...';
+                crmStatus.style.display = 'block';
                 
                 const response = await fetch('/api/v1/crm-bridge/contacts/search', {
                     method: 'POST',
@@ -697,28 +691,27 @@
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer LOI_AUTOMATION_SYSTEM'
                     },
-                    body: JSON.stringify({ query: query, limit: 10 })
+                    body: JSON.stringify({
+                        query: query,
+                        limit: 10
+                    })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok && data.contacts) {
                     displaySearchResults(data.contacts);
-                    if (statusDiv) statusDiv.style.display = 'none';
+                    crmStatus.style.display = 'none';
                 } else {
-                    if (resultsDiv) resultsDiv.style.display = 'none';
-                    if (statusDiv) {
-                        statusDiv.className = 'crm-status error';
-                        statusDiv.textContent = 'Search failed. Please try again.';
-                    }
+                    searchResults.style.display = 'none';
+                    crmStatus.className = 'crm-status';
+                    crmStatus.textContent = 'Search failed. Please try again.';
                 }
             } catch (error) {
                 console.error('CRM search error:', error);
-                if (resultsDiv) resultsDiv.style.display = 'none';
-                if (statusDiv) {
-                    statusDiv.className = 'crm-status error';
-                    statusDiv.textContent = 'Search error. Please try again.';
-                }
+                searchResults.style.display = 'none';
+                crmStatus.className = 'crm-status';
+                crmStatus.textContent = 'Search error. Please try again.';
             }
         }
 
