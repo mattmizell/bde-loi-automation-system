@@ -36,6 +36,7 @@ class TransactionType(enum.Enum):
     SIGNATURE_REQUEST = "signature_request"
     STATUS_UPDATE = "status_update"
     COMPLETION_NOTIFICATION = "completion_notification"
+    EFT_FORM = "eft_form"  # EFT authorization form workflow
 
 class TransactionPriority(enum.Enum):
     """Transaction priority enumeration"""
@@ -56,6 +57,7 @@ class WorkflowStage(enum.Enum):
     NOTIFICATION_SENT = "notification_sent"
     COMPLETED = "completed"
     FAILED = "failed"
+    PENDING_CUSTOMER_COMPLETION = "pending_customer_completion"  # For EFT forms awaiting customer input
 
 class Customer(Base):
     """Customer information table"""
@@ -537,6 +539,7 @@ class EFTFormData(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False)
+    transaction_id = Column(String(255))  # Link to LOI transaction for tracking
     
     # Bank Account Information
     bank_name = Column(String(255), nullable=False)
