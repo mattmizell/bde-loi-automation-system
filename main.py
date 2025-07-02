@@ -345,6 +345,11 @@ async def loi_dashboard():
                         <p style="margin-bottom: 15px; font-size: 14px;">Complete business information and credit application</p>
                         <a href="/forms/customer-setup" class="btn" style="background: #2196f3;">Start Application</a>
                     </div>
+                    <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; border: 1px solid #4caf50;">
+                        <h4 style="color: #2e7d32; margin-bottom: 10px;">🏁 VP Racing Fuels LOI</h4>
+                        <p style="margin-bottom: 15px; font-size: 14px;">Letter of Intent for VP Racing unbranded fuel supply</p>
+                        <a href="/forms/vp-racing-loi" class="btn" style="background: #4caf50;">Submit LOI</a>
+                    </div>
                     <div style="background: #fee; padding: 20px; border-radius: 8px; border: 1px solid #f44336;">
                         <h4 style="color: #d32f2f; margin-bottom: 10px;">⛽ Phillips 66 LOI</h4>
                         <p style="margin-bottom: 15px; font-size: 14px;">Letter of Intent for Phillips 66 branded fuel supply</p>
@@ -383,6 +388,15 @@ async def serve_customer_setup_form():
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Customer setup form not found")
+
+@app.get("/forms/vp-racing-loi", response_class=HTMLResponse)
+async def serve_vp_racing_loi_form():
+    """Serve VP Racing Fuels Letter of Intent form"""
+    try:
+        with open(os.path.join(current_dir, "templates", "vp_racing_loi_form.html"), "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="VP Racing LOI form not found")
 
 @app.get("/forms/p66-loi", response_class=HTMLResponse)
 async def serve_p66_loi_form():

@@ -11,6 +11,7 @@ if %errorlevel% equ 0 (
     echo "✅ No changes to commit. Your working directory is clean."
     goto :eof
 )
+
 set "DEFAULT_MESSAGE=Fix: Use relative URLs for API calls in customer setup form"
 
 set /p COMMIT_MESSAGE="Enter commit message (or press Enter to use default): "

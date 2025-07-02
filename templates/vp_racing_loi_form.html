@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phillips 66 Letter of Intent - Better Day Energy</title>
+    <title>VP Racing Fuels Letter of Intent - Better Day Energy</title>
     <style>
         * {
             margin: 0;
@@ -28,7 +28,7 @@
         }
         
         .header {
-            background: linear-gradient(135deg, #ee0000, #cc0000);
+            background: linear-gradient(135deg, #4caf50, #388e3c);
             color: white;
             padding: 30px;
             text-align: center;
@@ -361,14 +361,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📄 Phillips 66 Letter of Intent</h1>
+            <h1>🏁 VP Racing Fuels Letter of Intent</h1>
             <p>Fuel Supply Agreement Application</p>
         </div>
         
         <div class="form-content">
             <div class="alert alert-info">
                 <span>ℹ️</span>
-                <span>This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.</span>
+                <span>This Letter of Intent begins the process for establishing a VP Racing unbranded fuel supply agreement with Better Day Energy.</span>
             </div>
             
             <form id="p66-loi-form">
@@ -562,8 +562,8 @@
                             <li>I have the authority to enter into this Letter of Intent on behalf of the station</li>
                             <li>All information provided is accurate and complete</li>
                             <li>I understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
-                            <li>I agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
-                            <li>I understand that final terms and incentives are subject to Phillips 66 approval</li>
+                            <li>I agree to work in good faith with Better Day Energy toward a VP Racing unbranded fuel supply agreement</li>
+                            <li>I understand that final terms and incentives are subject to VP Racing approval</li>
                         </ul>
                     </div>
                     
@@ -798,8 +798,8 @@
             
             try {
                 // Add LOI type to data
-                data.loi_type = 'phillips_66';
-                data.fuel_brand = 'Phillips 66';
+                data.loi_type = 'vp_racing';
+                data.fuel_brand = 'VP Racing Fuels';
                 
                 // Submit to sophisticated LOI workflow
                 const response = await fetch('/api/v1/loi/submit', {
@@ -815,7 +815,7 @@
                     
                     // Show success message with next steps
                     loading.style.display = 'none';
-                    alert(`✅ Phillips 66 LOI Submitted Successfully!\n\nTransaction ID: ${result.transaction_id}\n\nNext: You will receive an email with a signature link to complete your LOI.`);
+                    alert(`✅ VP Racing Fuels LOI Submitted Successfully!\n\nTransaction ID: ${result.transaction_id}\n\nNext: You will receive an email with a signature link to complete your LOI.`);
                     
                     // Redirect to signature page
                     window.location.href = result.signature_url;
