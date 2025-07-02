@@ -364,7 +364,10 @@
                     
                     <div class="search-box">
                         <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
-                        <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off">
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off" style="flex: 1;">
+                            <button type="button" class="btn btn-primary" onclick="performManualCRMSearch()" style="padding: 12px 20px;">🔍 Search</button>
+                        </div>
                         <div class="search-results" id="search-results"></div>
                     </div>
                     
@@ -668,9 +671,61 @@
             }
         });
         
+        // Manual search function for button click
+        async function performManualCRMSearch() {
+            const searchInput = document.getElementById('crm-search');
+            const query = searchInput ? searchInput.value.trim() : '';
+            
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('search-results');
+            const statusDiv = document.getElementById('crm-status');
+            
+            try {
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status loading';
+                    statusDiv.textContent = 'Searching CRM...';
+                    statusDiv.style.display = 'block';
+                }
+                
+                const response = await fetch('/api/v1/crm-bridge/contacts/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer LOI_AUTOMATION_SYSTEM'
+                    },
+                    body: JSON.stringify({ query: query, limit: 10 })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.contacts) {
+                    displaySearchResults(data.contacts);
+                    if (statusDiv) statusDiv.style.display = 'none';
+                } else {
+                    if (resultsDiv) resultsDiv.style.display = 'none';
+                    if (statusDiv) {
+                        statusDiv.className = 'crm-status error';
+                        statusDiv.textContent = 'Search failed. Please try again.';
+                    }
+                }
+            } catch (error) {
+                console.error('CRM search error:', error);
+                if (resultsDiv) resultsDiv.style.display = 'none';
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status error';
+                    statusDiv.textContent = 'Search error. Please try again.';
+                }
+            }
+        }
+
         // Make functions global for onclick handlers
         window.selectContact = selectContact;
         window.clearCrmData = clearCrmData;
+        window.performManualCRMSearch = performManualCRMSearch;
         
         // Form submission handler
         document.getElementById('eft-initiate-form').addEventListener('submit', async (e) => {
