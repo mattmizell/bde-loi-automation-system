@@ -480,7 +480,10 @@
                     
                     <div class="search-box">
                         <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
-                        <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off">
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off" style="flex: 1;">
+                            <button type="button" class="btn btn-primary" onclick="performManualCRMSearch()" style="padding: 12px 20px;">🔍 Search</button>
+                        </div>
                         <div class="search-results" id="search-results"></div>
                     </div>
                     
@@ -771,6 +774,179 @@
                 console.warn('CRMSearchComponent not available, CRM search disabled');
             }
         }
+        
+        // Manual search function for button click
+        async function performManualCRMSearch() {
+            const searchInput = document.getElementById('crm-search');
+            const query = searchInput ? searchInput.value.trim() : '';
+            
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('search-results');
+            const statusDiv = document.getElementById('crm-status');
+            
+            try {
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status loading';
+                    statusDiv.textContent = 'Searching CRM...';
+                    statusDiv.style.display = 'block';
+                }
+                
+                const response = await fetch('/api/v1/crm-bridge/contacts/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer LOI_AUTOMATION_SYSTEM'
+                    },
+                    body: JSON.stringify({ query: query, limit: 10 })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.contacts) {
+                    displayCRMResults(data.contacts);
+                    if (statusDiv) statusDiv.style.display = 'none';
+                } else {
+                    if (resultsDiv) resultsDiv.style.display = 'none';
+                    if (statusDiv) {
+                        statusDiv.className = 'crm-status error';
+                        statusDiv.textContent = 'Search failed. Please try again.';
+                    }
+                }
+            } catch (error) {
+                console.error('CRM search error:', error);
+                if (resultsDiv) resultsDiv.style.display = 'none';
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status error';
+                    statusDiv.textContent = 'Search error. Please try again.';
+                }
+            }
+        }
+        
+        // Display search results
+        function displayCRMResults(contacts) {
+            const resultsDiv = document.getElementById('search-results');
+            if (!resultsDiv) return;
+            
+            if (contacts.length === 0) {
+                resultsDiv.innerHTML = '<div class="search-result">No results found</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            
+            const resultsHtml = contacts.map(contact => `
+                <div class="search-result" onclick="selectCRMContact(${JSON.stringify(contact).replace(/"/g, '&quot;')})">
+                    <div class="search-result-name">${contact.name || 'No name'}</div>
+                    <div class="search-result-company">${contact.company_name || 'No company'}</div>
+                    <div class="search-result-email">${contact.email || 'No email'}</div>
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = resultsHtml;
+            resultsDiv.style.display = 'block';
+        }
+        
+        // Select contact
+        function selectCRMContact(contact) {
+            // Populate fields for P66 LOI form
+            setFieldValue('owner-company', contact.company_name);
+            setFieldValue('owner-email', contact.email);
+            setFieldValue('owner-phone', contact.phone);
+            setFieldValue('owner-name', contact.name);
+            
+            // For P66 LOI, we might want to populate station name with company name
+            if (contact.company_name) {
+                const stationNameField = document.getElementById('station-name');
+                if (stationNameField && !stationNameField.value) {
+                    stationNameField.value = contact.company_name;
+                }
+            }
+            
+            // Parse and populate address with zip code extraction
+            if (contact.address) {
+                const addressParts = parseAddressWithZip(contact.address);
+                setFieldValue('station-address', addressParts.street);
+                setFieldValue('business-city', addressParts.city);
+                setFieldValue('business-state', addressParts.state);
+                setFieldValue('business-zip', addressParts.zip);
+            }
+            
+            hideSearchResults();
+            
+            const searchInput = document.getElementById('crm-search');
+            if (searchInput) {
+                searchInput.value = `${contact.company_name || 'Unknown'} - ${contact.name || 'No name'}`;
+            }
+            
+            const statusDiv = document.getElementById('crm-status');
+            if (statusDiv) {
+                statusDiv.className = 'crm-status found';
+                statusDiv.innerHTML = `✅ Found: ${contact.company_name} - ${contact.name} <button type="button" class="clear-crm-btn" onclick="clearCRMData()">Clear</button>`;
+                statusDiv.style.display = 'block';
+            }
+        }
+        
+        // Helper functions
+        function parseAddressWithZip(addressString) {
+            if (!addressString) return {};
+            
+            const cleanAddress = addressString.replace(/\n/g, ', ').replace(/\s+/g, ' ');
+            const parts = cleanAddress.split(',').map(part => part.trim());
+            
+            if (parts.length >= 3) {
+                const street = parts[0];
+                const city = parts[1];
+                const lastPart = parts[parts.length - 1];
+                const stateZipMatch = lastPart.match(/^([A-Z]{2})\s*,?\s*(\d{5}(-\d{4})?)$/i);
+                
+                if (stateZipMatch) {
+                    return { street, city, state: stateZipMatch[1], zip: stateZipMatch[2] };
+                } else {
+                    const zipMatch = lastPart.match(/(\d{5}(-\d{4})?)$/);
+                    if (zipMatch) {
+                        const zip = zipMatch[1];
+                        const state = lastPart.replace(zipMatch[0], '').trim().replace(/,$/, '');
+                        return { street, city, state, zip };
+                    }
+                }
+            }
+            
+            return { street: addressString };
+        }
+        
+        function setFieldValue(fieldId, value) {
+            if (!fieldId || !value) return;
+            const element = document.getElementById(fieldId);
+            if (element) element.value = value;
+        }
+        
+        function hideSearchResults() {
+            const resultsDiv = document.getElementById('search-results');
+            if (resultsDiv) resultsDiv.style.display = 'none';
+        }
+        
+        function clearCRMData() {
+            const searchInput = document.getElementById('crm-search');
+            const statusDiv = document.getElementById('crm-status');
+            
+            if (searchInput) searchInput.value = '';
+            if (statusDiv) statusDiv.style.display = 'none';
+            
+            // Clear CRM-populated fields for P66 LOI
+            const fieldsToClear = ['owner-company', 'owner-email', 'owner-phone', 'owner-name', 'station-name', 'station-address', 'business-city', 'business-state', 'business-zip'];
+            fieldsToClear.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) element.value = '';
+            });
+        }
+        
+        // Make functions global
+        window.performManualCRMSearch = performManualCRMSearch;
+        window.selectCRMContact = selectCRMContact;
+        window.clearCRMData = clearCRMData;
         
         // Initialize on DOM ready
         document.addEventListener('DOMContentLoaded', function() {
