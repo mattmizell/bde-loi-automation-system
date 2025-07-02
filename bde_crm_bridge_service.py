@@ -61,7 +61,7 @@ security = HTTPBearer()
 # Configuration
 LACRM_API_KEY = "1073223-4036284360051868673733029852600-hzOnMMgwOvTV86XHs9c4H3gF5I7aTwO33PJSRXk9yQT957IY1W"
 LACRM_BASE_URL = "https://api.lessannoyingcrm.com/v2/"
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://mattmizell:training1@localhost:5432/loi_automation')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
 
 # API Token Management
 API_TOKENS = {
@@ -177,12 +177,12 @@ class CRMBridge:
             params.append(limit)
             
             query = f"""
-                SELECT contact_id, name, company_name, email, phone, created_at, last_sync
+                SELECT contact_id, COALESCE(name, CONCAT(first_name, ' ', last_name)), first_name, last_name, company_name, email, phone, address, created_at, last_sync
                 FROM crm_contacts_cache 
                 {where_clause}
                 ORDER BY 
                     CASE WHEN last_sync > NOW() - INTERVAL '24 hours' THEN 1 ELSE 2 END,
-                    name
+                    COALESCE(name, CONCAT(first_name, ' ', last_name))
                 LIMIT %s
             """
             
@@ -194,11 +194,14 @@ class CRMBridge:
                 {
                     "contact_id": row[0],
                     "name": row[1],
-                    "company_name": row[2] or "",
-                    "email": row[3] or "",
-                    "phone": row[4] or "",
-                    "created_at": row[5].isoformat() if row[5] else None,
-                    "cache_freshness": "fresh" if row[6] and row[6] > datetime.now() - timedelta(hours=24) else "stale"
+                    "first_name": row[2] or "",
+                    "last_name": row[3] or "",
+                    "company_name": row[4] or "",
+                    "email": row[5] or "",
+                    "phone": row[6] or "",
+                    "address": row[7],  # JSONB address data
+                    "created_at": row[8].isoformat() if row[8] else None,
+                    "cache_freshness": "fresh" if row[9] else "stale"
                 }
                 for row in contacts
             ]
@@ -438,30 +441,57 @@ class CRMBridge:
                     # Extract email and phone
                     email = ""
                     if contact.get('Email') and isinstance(contact['Email'], list) and len(contact['Email']) > 0:
-                        email = contact['Email'][0].get('Text', '')
+                        email = contact['Email'][0].get('Text', '').split(' (')[0]  # Remove (Work) suffix
                     
                     phone = ""
                     if contact.get('Phone') and isinstance(contact['Phone'], list) and len(contact['Phone']) > 0:
-                        phone = contact['Phone'][0].get('Text', '')
+                        phone = contact['Phone'][0].get('Text', '').split(' (')[0]  # Remove (Work) suffix
                     
-                    # Upsert into cache
+                    # Extract address data (LACRM returns array of address objects)
+                    address_data = None
+                    if contact.get('Address') and isinstance(contact['Address'], list) and len(contact['Address']) > 0:
+                        addr = contact['Address'][0]  # Use first address
+                        address_data = {
+                            "street_address": addr.get('Street', ''),
+                            "city": addr.get('City', ''),
+                            "state": addr.get('State', ''),
+                            "zip_code": addr.get('Zip', ''),
+                            "country": addr.get('Country', ''),
+                            "type": addr.get('Type', 'Work')
+                        }
+                    
+                    # Extract separate first_name and last_name
+                    first_name = ""
+                    last_name = ""
+                    if isinstance(contact.get('Name'), dict):
+                        name_obj = contact['Name']
+                        first_name = name_obj.get('FirstName', '')
+                        last_name = name_obj.get('LastName', '')
+                    
+                    # Upsert into cache with full data including address
                     cur.execute("""
                         INSERT INTO crm_contacts_cache 
-                        (contact_id, name, company_name, email, phone, created_at, last_sync, sync_status)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'synced')
+                        (contact_id, name, first_name, last_name, company_name, email, phone, address, created_at, last_sync, sync_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'synced')
                         ON CONFLICT (contact_id) DO UPDATE SET
                             name = EXCLUDED.name,
+                            first_name = EXCLUDED.first_name,
+                            last_name = EXCLUDED.last_name,
                             company_name = EXCLUDED.company_name,
                             email = EXCLUDED.email,
                             phone = EXCLUDED.phone,
+                            address = EXCLUDED.address,
                             last_sync = EXCLUDED.last_sync,
                             sync_status = 'synced'
                     """, (
                         contact.get('ContactId'),
                         name,
+                        first_name,
+                        last_name,
                         company_name,
                         email,
                         phone,
+                        json.dumps(address_data) if address_data else None,
                         datetime.now(),
                         datetime.now()
                     ))
@@ -766,4 +796,5 @@ if __name__ == "__main__":
     print("   🔄 SYNC: Background queue processing")
     print("📊 API available at: http://localhost:8005")
     print("📖 Docs available at: http://localhost:8005/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8005)
+    port = int(os.getenv('PORT', 8005))
+    uvicorn.run(app, host="0.0.0.0", port=port)

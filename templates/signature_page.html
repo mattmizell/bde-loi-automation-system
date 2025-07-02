@@ -254,10 +254,10 @@
     </style>
 </head>
 <body>
-    <div class="header">
+    <div class="header" style="background: linear-gradient(135deg, {{BRAND_COLOR}}, #1f4e79);">
         <h1>🏢 Better Day Energy</h1>
         <h2>Electronic Signature Portal</h2>
-        <p>VP Racing Fuel Supply Agreement</p>
+        <p>{{LOI_TITLE}}</p>
     </div>
     
     <div class="container">
@@ -271,39 +271,137 @@
             <h3>📄 Document Review</h3>
             
             <div class="document-info">
-                <h4>Letter of Intent - VP Racing Fuel Supply Agreement</h4>
-                <p>Please review the document details below before signing:</p>
+                <h4>{{LOI_TITLE}}</h4>
+                <p>Please carefully review all contract details below before signing:</p>
             </div>
             
-            <div class="document-summary">
-                <div class="summary-item">
-                    <div class="summary-label">Customer</div>
-                    <div class="summary-value" id="customer-name">Loading...</div>
+            <!-- Station Information -->
+            <div class="document-summary" style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h5 style="margin-top: 0; color: #1f4e79;">📍 Station Information</h5>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div class="summary-item">
+                        <div class="summary-label">Station Name</div>
+                        <div class="summary-value"><strong>{{STATION_NAME}}</strong></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Current Brand</div>
+                        <div class="summary-value">{{CURRENT_BRAND}}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Address</div>
+                        <div class="summary-value">{{STATION_ADDRESS}}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">City, State ZIP</div>
+                        <div class="summary-value">{{STATION_CITY}}, {{STATION_STATE}} {{STATION_ZIP}}</div>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-label">Company</div>
-                    <div class="summary-value" id="company-name">Loading...</div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="document-summary" style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h5 style="margin-top: 0; color: #1f4e79;">👤 Authorized Representative</h5>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div class="summary-item">
+                        <div class="summary-label">Name</div>
+                        <div class="summary-value"><strong>{{AUTHORIZED_REP}}</strong></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Title</div>
+                        <div class="summary-value">{{REP_TITLE}}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Email</div>
+                        <div class="summary-value">{{CONTACT_EMAIL}}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Phone</div>
+                        <div class="summary-value">{{CONTACT_PHONE}}</div>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-label">Document Date</div>
-                    <div class="summary-value" id="document-date">Loading...</div>
+            </div>
+            
+            <!-- Fuel Volume Commitments -->
+            <div class="document-summary" style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h5 style="margin-top: 0; color: #2e7d32;">⛽ Monthly Fuel Volume Commitments</h5>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                    <div class="summary-item">
+                        <div class="summary-label">Gasoline (Gallons)</div>
+                        <div class="summary-value" style="font-size: 1.2em; color: #2e7d32;"><strong>{{MONTHLY_GASOLINE}}</strong></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Diesel (Gallons)</div>
+                        <div class="summary-value" style="font-size: 1.2em; color: #2e7d32;"><strong>{{MONTHLY_DIESEL}}</strong></div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Total Monthly (Gallons)</div>
+                        <div class="summary-value" style="font-size: 1.2em; color: #2e7d32;"><strong>{{TOTAL_GALLONS}}</strong></div>
+                    </div>
                 </div>
-                <div class="summary-item">
-                    <div class="summary-label">Expires</div>
-                    <div class="summary-value" id="expires-date">Loading...</div>
+            </div>
+            
+            <!-- Phillips 66 Specific Section -->
+            <div id="p66-section" style="display: {{LOI_TYPE}} === 'phillips_66' ? 'block' : 'none';">
+                <!-- Contract Terms -->
+                <div class="document-summary" style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h5 style="margin-top: 0; color: #856404;">📅 Contract Terms</h5>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                        <div class="summary-item">
+                            <div class="summary-label">Contract Start Date</div>
+                            <div class="summary-value"><strong>{{CONTRACT_START}}</strong></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Contract Term</div>
+                            <div class="summary-value"><strong>{{CONTRACT_TERM}} Years</strong></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Current Brand Expires</div>
+                            <div class="summary-value">{{BRAND_EXPIRATION}}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Incentive Package -->
+                <div class="document-summary" style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h5 style="margin-top: 0; color: #1565c0;">💰 Requested Incentive Package</h5>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                        <div class="summary-item">
+                            <div class="summary-label">Volume Incentive</div>
+                            <div class="summary-value" style="font-size: 1.1em; color: #1565c0;"><strong>{{VOLUME_INCENTIVE}}</strong></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Image Funding</div>
+                            <div class="summary-value" style="font-size: 1.1em; color: #1565c0;"><strong>{{IMAGE_FUNDING}}</strong></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Equipment Funding</div>
+                            <div class="summary-value" style="font-size: 1.1em; color: #1565c0;"><strong>{{EQUIPMENT_FUNDING}}</strong></div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">Total Incentive Package</div>
+                            <div class="summary-value" style="font-size: 1.3em; color: #1565c0;"><strong>{{TOTAL_INCENTIVES}}</strong></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <div class="summary-label">Special Requirements</div>
+                        <div class="summary-value" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;">{{SPECIAL_REQUIREMENTS}}</div>
+                    </div>
                 </div>
             </div>
             
             <div class="legal-notice">
-                <h5>📋 Document Contents</h5>
-                <p>This Letter of Intent outlines the terms for VP Racing fuel supply services including:</p>
+                <h5>⚖️ Legal Agreement Terms</h5>
+                <p><strong>This Letter of Intent constitutes a preliminary agreement between the parties for the supply of fuel products.</strong></p>
                 <ul>
-                    <li>Monthly fuel volume commitments</li>
-                    <li>Pricing structure and incentive programs</li>
-                    <li>Image funding and canopy installation details</li>
-                    <li>Service terms and conditions</li>
+                    <li>The monthly fuel volume commitments specified above are binding</li>
+                    <li>Pricing will be based on rack pricing plus agreed-upon margins</li>
+                    <li>Additional terms and conditions will be specified in the final fuel supply agreement</li>
+                    <li>This LOI is subject to credit approval and final contract negotiation</li>
+                    <li>By signing, you represent that you have authority to bind your organization</li>
                 </ul>
-                <p><strong>By signing below, you acknowledge that you have read, understood, and agree to the terms outlined in this Letter of Intent.</strong></p>
+                <p style="margin-top: 20px; padding: 15px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
+                    <strong>⚠️ IMPORTANT:</strong> By providing your electronic signature below, you acknowledge that you have carefully reviewed all terms and conditions stated above and agree to be bound by this Letter of Intent.
+                </p>
             </div>
         </div>
         
@@ -364,6 +462,15 @@
     </div>
     
     <script>
+        // Show/hide P66 section based on LOI type
+        document.addEventListener('DOMContentLoaded', function() {
+            const loiType = '{{LOI_TYPE}}';
+            const p66Section = document.getElementById('p66-section');
+            if (p66Section) {
+                p66Section.style.display = loiType === 'phillips_66' ? 'block' : 'none';
+            }
+        });
+        
         // Signature pad functionality
         const canvas = document.getElementById('signature-pad');
         const ctx = canvas.getContext('2d');

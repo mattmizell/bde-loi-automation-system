@@ -10,3 +10,7 @@ pydantic==2.5.0
 requests==2.31.0
 psycopg2-binary==2.9.9
 python-dateutil==2.8.2
+aiohttp==3.9.1
+
+# CORS middleware (included in fastapi)
+# Email functionality (using built-in smtplib)

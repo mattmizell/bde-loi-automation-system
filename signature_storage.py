@@ -20,7 +20,7 @@ class TamperEvidentSignatureStorage:
         # Use environment variable for database connection in production, fallback to localhost for development
         import os
         
-        db_url = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost/loi_automation")
+        db_url = os.getenv('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
         # For Render's DATABASE_URL, we need to handle it carefully
         # The URL format: postgresql://user:password@host:port/database

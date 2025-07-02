@@ -39,7 +39,7 @@ class DatabaseManager:
         
         # Database configuration from environment variables or defaults
         import os
-        self.database_url = os.getenv('DATABASE_URL', "postgresql://mattmizell:training1@localhost:5432/loi_automation")
+        self.database_url = os.getenv('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
         # Parse database URL for individual components (if needed)
         if self.database_url.startswith('postgresql://'):
@@ -53,12 +53,13 @@ class DatabaseManager:
                 'password': '***'  # Don't expose password in logs
             }
         else:
+            # Use environment variables for database configuration
             self.db_config = {
-                'host': 'localhost',
-                'port': 5432,
-                'database': 'loi_automation',
-                'username': 'mattmizell',
-                'password': 'training1'
+                'host': os.getenv('DB_HOST', 'localhost'),
+                'port': int(os.getenv('DB_PORT', 5432)),
+                'database': os.getenv('DB_NAME', 'loi_automation'),
+                'username': os.getenv('DB_USER', 'loi_user'),
+                'password': os.getenv('DB_PASSWORD', '')
             }
         
         logger.info("🗄️ Database manager initialized")
