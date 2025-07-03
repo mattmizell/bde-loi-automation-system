@@ -212,14 +212,33 @@ class CustomerSetupFormRequest(BaseModel):
 
     @validator('business_type')
     def validate_business_type(cls, v):
-        valid_types = ['corporation', 'llc', 'partnership', 'sole_proprietor']
-        if v not in valid_types:
-            raise ValueError(f'Business type must be one of: {valid_types}')
-        return v
+        if not v:
+            raise ValueError('Business type is required')
+        
+        # Convert to lowercase and handle different formats
+        v_lower = v.lower().replace(' ', '_')
+        
+        # Map common business type variations
+        business_type_mapping = {
+            'llc': 'llc',
+            'corporation': 'corporation', 
+            'corp': 'corporation',
+            'partnership': 'partnership',
+            'sole_proprietorship': 'sole_proprietor',
+            'sole_proprietor': 'sole_proprietor'
+        }
+        
+        # Try to find a match
+        normalized_type = business_type_mapping.get(v_lower)
+        if not normalized_type:
+            valid_display_types = ['LLC', 'Corporation', 'Partnership', 'Sole Proprietorship']
+            raise ValueError(f'Business type must be one of: {valid_display_types}')
+        
+        return normalized_type
 
     @validator('years_in_business')
     def validate_years_in_business(cls, v):
-        if v < 0 or v > 200:
+        if v is not None and (v < 0 or v > 200):
             raise ValueError('Years in business must be between 0 and 200')
         return v
 
@@ -1136,6 +1155,12 @@ async def complete_eft_form(
         # ========================================================================
         
         # Import sophisticated signature storage system
+        import sys
+        import os
+        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        
         from signature_storage import TamperEvidentSignatureStorage
         import hashlib
         
