@@ -584,9 +584,35 @@
             setFieldValue('primary-contact-name', contact.name);
             setFieldValue('dba-name', contact.dba_name);
             
-            // Parse and populate address with zip code extraction
+            // Parse and populate address (handle both structured JSON and string addresses)
             if (contact.address) {
-                const addressParts = parseAddressWithZip(contact.address);
+                let addressParts = {};
+                let addressData = contact.address;
+                
+                // First, check if address is a JSON string that needs parsing
+                if (typeof addressData === 'string' && addressData.startsWith('{')) {
+                    try {
+                        addressData = JSON.parse(addressData);
+                    } catch (e) {
+                        console.error('Failed to parse address JSON:', e);
+                        // If JSON parsing fails, treat as regular string address
+                        addressParts = parseAddressWithZip(addressData);
+                    }
+                }
+                
+                // Now handle the parsed data
+                if (typeof addressData === 'object' && addressData !== null) {
+                    addressParts = {
+                        street: addressData.street_address || addressData.physical_address || '',
+                        city: addressData.city || '',
+                        state: addressData.state || '',
+                        zip: addressData.zip_code || addressData.zip || ''
+                    };
+                } else if (typeof addressData === 'string') {
+                    // Parse string address for legacy support
+                    addressParts = parseAddressWithZip(addressData);
+                }
+                
                 setFieldValue('physical-address', addressParts.street);
                 setFieldValue('physical-city', addressParts.city);
                 setFieldValue('physical-state', addressParts.state);

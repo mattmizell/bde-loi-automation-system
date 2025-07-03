@@ -1192,10 +1192,11 @@ async def get_eft_completion_page(
                         'contact_name': contact_name or form_data.get('contact_name', ''),
                         'contact_email': crm_email or customer_email,
                         'contact_phone': crm_phone or form_data.get('contact_phone', ''),
-                        'company_address': crm_address_data.get('physical_address') or crm_address_data.get('full_address', ''),
-                        'company_city': crm_address_data.get('city', ''),
-                        'company_state': crm_address_data.get('state', ''),
-                        'company_zip': crm_address_data.get('zip', '')
+                        # Fixed address field mapping to match CRM cache structure
+                        'company_address': crm_address_data.get('street_address', '') or form_data.get('company_address', ''),
+                        'company_city': crm_address_data.get('city', '') or form_data.get('company_city', ''),
+                        'company_state': crm_address_data.get('state', '') or form_data.get('company_state', ''),
+                        'company_zip': crm_address_data.get('zip_code', '') or form_data.get('company_zip', '')
                     })
                     
                     form_data = updated_form_data
@@ -1482,6 +1483,99 @@ async def get_customer_setup_completion_page(
             
         # Extract form data from processing context
         form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
+        
+        # ========================================================================
+        # MERGE WITH UPDATED CUSTOMER DATA FROM CRM CACHE
+        # ========================================================================
+        
+        try:
+            # Get customer email/company from transaction context
+            customer_email = transaction.processing_context.get('customer_email', '') if transaction.processing_context else ''
+            company_name = form_data.get('legal_business_name', '') or form_data.get('business_name', '')
+            
+            if customer_email or company_name:
+                # Query CRM cache for updated customer information
+                import psycopg2
+                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+                crm_cur = crm_conn.cursor()
+                
+                # Search for customer in CRM cache
+                crm_cur.execute("""
+                    SELECT name, first_name, last_name, company_name, email, phone, address, notes
+                    FROM crm_contacts_cache 
+                    WHERE email = %s OR company_name = %s
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (customer_email, company_name))
+                
+                crm_contact = crm_cur.fetchone()
+                crm_cur.close()
+                crm_conn.close()
+                
+                if crm_contact:
+                    contact_name, first_name, last_name, crm_company_name, crm_email, crm_phone, crm_address, crm_notes = crm_contact
+                    
+                    # Parse structured address data from JSONB
+                    crm_address_data = {}
+                    if crm_address:
+                        try:
+                            crm_address_data = json.loads(crm_address) if isinstance(crm_address, str) else crm_address
+                        except:
+                            pass
+                    
+                    # Extract additional data from CRM notes (Customer Setup completion data)
+                    federal_tax_id = ''
+                    state_tax_id = ''
+                    business_type = ''
+                    years_in_business = ''
+                    if crm_notes:
+                        # Parse various fields from Customer Setup notes
+                        import re
+                        fein_match = re.search(r'Federal Tax ID:\s*([^\n]+)', crm_notes)
+                        if fein_match:
+                            federal_tax_id = fein_match.group(1).strip()
+                        
+                        state_tax_match = re.search(r'State Tax ID:\s*([^\n]+)', crm_notes)
+                        if state_tax_match:
+                            state_tax_id = state_tax_match.group(1).strip()
+                        
+                        business_type_match = re.search(r'Business Type:\s*([^\n]+)', crm_notes)
+                        if business_type_match:
+                            business_type = business_type_match.group(1).strip()
+                        
+                        years_match = re.search(r'Years in Business:\s*([^\n]+)', crm_notes)
+                        if years_match:
+                            years_in_business = years_match.group(1).strip()
+                    
+                    # Merge CRM data with original form data (CRM data takes precedence for customer info)
+                    updated_form_data = form_data.copy()
+                    updated_form_data.update({
+                        'legal_business_name': crm_company_name or form_data.get('legal_business_name', ''),
+                        'primary_contact_name': contact_name or form_data.get('primary_contact_name', ''),
+                        'primary_contact_email': crm_email or customer_email,
+                        'primary_contact_phone': crm_phone or form_data.get('primary_contact_phone', ''),
+                        'federal_tax_id': federal_tax_id or form_data.get('federal_tax_id', ''),
+                        'state_tax_id': state_tax_id or form_data.get('state_tax_id', ''),
+                        'business_type': business_type or form_data.get('business_type', ''),
+                        'years_in_business': years_in_business or form_data.get('years_in_business', ''),
+                        # Structured address fields from CRM cache
+                        'physical_address': crm_address_data.get('street_address', '') or form_data.get('physical_address', ''),
+                        'physical_city': crm_address_data.get('city', '') or form_data.get('physical_city', ''),
+                        'physical_state': crm_address_data.get('state', '') or form_data.get('physical_state', ''),
+                        'physical_zip': crm_address_data.get('zip_code', '') or form_data.get('physical_zip', ''),
+                        # Use same data for mailing if not specified
+                        'mailing_address': form_data.get('mailing_address', '') or crm_address_data.get('street_address', ''),
+                        'mailing_city': form_data.get('mailing_city', '') or crm_address_data.get('city', ''),
+                        'mailing_state': form_data.get('mailing_state', '') or crm_address_data.get('state', ''),
+                        'mailing_zip': form_data.get('mailing_zip', '') or crm_address_data.get('zip_code', '')
+                    })
+                    
+                    form_data = updated_form_data
+                    logger.info(f"✅ Customer Setup form enhanced with updated CRM data for {crm_company_name}")
+                else:
+                    logger.info(f"⚠️ No CRM data found for customer: {customer_email or company_name}")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Could not load CRM data for Customer Setup form: {e}")
         
         # Generate pre-filled form HTML
         form_html = generate_customer_setup_completion_form(transaction_id, form_data)
