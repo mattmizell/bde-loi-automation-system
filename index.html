@@ -241,36 +241,30 @@
         
         async function loadTransactions() {
             try {
-                console.log('Loading transactions...');
-                
-                // Use relative URL for same-origin requests
                 const response = await fetch('/api/v1/transactions/all');
-                console.log('Response status:', response.status);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                console.log('Response data:', data);
                 
                 if (data.success) {
                     allTransactions = data.transactions;
-                    filteredTransactions = [...allTransactions]; // Copy for filtering
-                    updateFilteredStats(); // Update stats
-                    applySorting(); // Apply current sorting and filters
-                    console.log(`Loaded ${allTransactions.length} transactions`);
+                    filteredTransactions = [...allTransactions];
+                    updateFilteredStats();
+                    applySorting();
                 } else {
                     throw new Error(data.error || 'Failed to load transactions');
                 }
             } catch (error) {
                 console.error('Error loading transactions:', error);
-                document.getElementById('transaction-stats').textContent = 'Error loading data';
+                document.getElementById('transaction-stats').textContent = 'Transaction data unavailable';
                 document.getElementById('transactions-body').innerHTML = `
                     <tr>
-                        <td colspan="6" style="padding: 40px; text-align: center; color: #dc3545;">
-                            ❌ Error loading transactions: ${error.message}<br>
-                            <small>Check browser console for details. URL: ${window.location.origin}/api/v1/transactions/all</small>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #6c757d;">
+                            📊 Transaction tracking temporarily unavailable<br>
+                            <small>The dashboard will retry automatically</small>
                         </td>
                     </tr>
                 `;
@@ -498,10 +492,13 @@
         
         // Load transactions on page load
         document.addEventListener('DOMContentLoaded', function() {
-            loadTransactions();
+            // Wait a moment for page to fully load, then try to load transactions
+            setTimeout(() => {
+                loadTransactions();
+            }, 1000);
             
-            // Auto-refresh every 30 seconds
-            setInterval(loadTransactions, 30000);
+            // Auto-refresh every 2 minutes (less aggressive)
+            setInterval(loadTransactions, 120000);
         });
     </script>
 </body>
