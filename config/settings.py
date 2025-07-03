@@ -124,8 +124,8 @@ class Settings:
         """Load configuration from environment variables"""
         
         # CRM Configuration
-        self.crm.api_key = os.getenv("CRM_API_KEY", self.crm.api_key)
-        self.crm.base_url = os.getenv("CRM_BASE_URL", self.crm.base_url)
+        self.crm.api_key = os.getenv("LACRM_API_TOKEN", os.getenv("CRM_API_KEY", self.crm.api_key))
+        self.crm.base_url = os.getenv("LACRM_API_BASE", os.getenv("CRM_BASE_URL", self.crm.base_url))
         
         # Document Storage Configuration (CRM-based)
         self.document_storage.storage_type = os.getenv("DOCUMENT_STORAGE_TYPE", self.document_storage.storage_type)
