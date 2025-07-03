@@ -144,6 +144,72 @@
                 </div>
             </div>
             
+            <!-- Filters and Search -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: 600; color: #495057;">🔍 Search:</label>
+                    <input type="text" id="search-input" placeholder="Company, contact, email..." 
+                           style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px; width: 200px;"
+                           onkeyup="applyFilters()">
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: 600; color: #495057;">📋 Type:</label>
+                    <select id="type-filter" onchange="applyFilters()" 
+                            style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <option value="">All Types</option>
+                        <option value="VP Racing LOI">VP Racing LOI</option>
+                        <option value="Phillips 66 LOI">Phillips 66 LOI</option>
+                        <option value="EFT Authorization">EFT Authorization</option>
+                        <option value="Customer Setup">Customer Setup</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: 600; color: #495057;">📊 Status:</label>
+                    <select id="status-filter" onchange="applyFilters()" 
+                            style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <option value="">All Status</option>
+                        <option value="Waiting for Customer">Waiting for Customer</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Failed">Failed</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: 600; color: #495057;">⚡ Urgency:</label>
+                    <select id="urgency-filter" onchange="applyFilters()" 
+                            style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <option value="">All Urgency</option>
+                        <option value="new">New (< 1 hour)</option>
+                        <option value="low">Low (1-3 days)</option>
+                        <option value="medium">Medium (3-7 days)</option>
+                        <option value="high">High (> 7 days)</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-weight: 600; color: #495057;">📅 Sort:</label>
+                    <select id="sort-select" onchange="applySorting()" 
+                            style="padding: 8px 12px; border: 1px solid #ced4da; border-radius: 4px;">
+                        <option value="created_at_desc">Newest First</option>
+                        <option value="created_at_asc">Oldest First</option>
+                        <option value="company_asc">Company A-Z</option>
+                        <option value="company_desc">Company Z-A</option>
+                        <option value="type_asc">Type A-Z</option>
+                        <option value="urgency_desc">Most Urgent</option>
+                        <option value="status_asc">Status</option>
+                    </select>
+                </div>
+                
+                <button onclick="clearFilters()" 
+                        style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                    🗑️ Clear Filters
+                </button>
+            </div>
+            
             <div style="overflow-x: auto;">
                 <table id="transactions-table" style="width: 100%; border-collapse: collapse; font-size: 14px;">
                     <thead>
@@ -171,6 +237,7 @@
     <script>
         // Transaction tracking functionality
         let allTransactions = [];
+        let filteredTransactions = [];
         
         async function loadTransactions() {
             try {
@@ -179,8 +246,9 @@
                 
                 if (data.success) {
                     allTransactions = data.transactions;
-                    updateTransactionStats(data);
-                    renderTransactionsTable(allTransactions);
+                    filteredTransactions = [...allTransactions]; // Copy for filtering
+                    updateFilteredStats(); // Update stats
+                    applySorting(); // Apply current sorting and filters
                 } else {
                     throw new Error(data.error || 'Failed to load transactions');
                 }
@@ -197,12 +265,7 @@
         }
         
         function updateTransactionStats(data) {
-            const statsDiv = document.getElementById('transaction-stats');
-            statsDiv.innerHTML = `
-                <strong>${data.total_count}</strong> total | 
-                <span style="color: #ffc107;">${data.pending_count}</span> pending | 
-                <span style="color: #28a745;">${data.completed_count}</span> completed
-            `;
+            // This will be handled by updateFilteredStats() after loading
         }
         
         function renderTransactionsTable(transactions) {
@@ -299,6 +362,125 @@
         function refreshTransactions() {
             document.getElementById('transaction-stats').textContent = 'Refreshing...';
             loadTransactions();
+        }
+        
+        // Filtering functions
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const typeFilter = document.getElementById('type-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+            const urgencyFilter = document.getElementById('urgency-filter').value;
+            
+            filteredTransactions = allTransactions.filter(transaction => {
+                // Search filter (company, contact, email)
+                const searchMatch = !searchTerm || 
+                    transaction.customer_company.toLowerCase().includes(searchTerm) ||
+                    transaction.contact_name.toLowerCase().includes(searchTerm) ||
+                    transaction.email.toLowerCase().includes(searchTerm);
+                
+                // Type filter
+                const typeMatch = !typeFilter || transaction.type_display === typeFilter;
+                
+                // Status filter
+                const statusMatch = !statusFilter || transaction.status_display === statusFilter;
+                
+                // Urgency filter
+                const urgencyMatch = !urgencyFilter || transaction.urgency === urgencyFilter;
+                
+                return searchMatch && typeMatch && statusMatch && urgencyMatch;
+            });
+            
+            // Update stats with filtered data
+            updateFilteredStats();
+            
+            // Apply current sorting to filtered results
+            applySorting();
+        }
+        
+        function updateFilteredStats() {
+            const statsDiv = document.getElementById('transaction-stats');
+            const totalFiltered = filteredTransactions.length;
+            const pendingFiltered = filteredTransactions.filter(t => t.status !== 'COMPLETED').length;
+            const completedFiltered = filteredTransactions.filter(t => t.status === 'COMPLETED').length;
+            
+            if (totalFiltered === allTransactions.length) {
+                // No filtering applied
+                statsDiv.innerHTML = `
+                    <strong>${totalFiltered}</strong> total | 
+                    <span style="color: #ffc107;">${pendingFiltered}</span> pending | 
+                    <span style="color: #28a745;">${completedFiltered}</span> completed
+                `;
+            } else {
+                // Filtering applied
+                statsDiv.innerHTML = `
+                    <strong>${totalFiltered}</strong> of ${allTransactions.length} shown | 
+                    <span style="color: #ffc107;">${pendingFiltered}</span> pending | 
+                    <span style="color: #28a745;">${completedFiltered}</span> completed
+                `;
+            }
+        }
+        
+        function applySorting() {
+            const sortValue = document.getElementById('sort-select').value;
+            const [field, direction] = sortValue.split('_');
+            
+            filteredTransactions.sort((a, b) => {
+                let aValue, bValue;
+                
+                switch (field) {
+                    case 'created':
+                        aValue = new Date(a.created_at);
+                        bValue = new Date(b.created_at);
+                        break;
+                    case 'company':
+                        aValue = a.customer_company.toLowerCase();
+                        bValue = b.customer_company.toLowerCase();
+                        break;
+                    case 'type':
+                        aValue = a.type_display.toLowerCase();
+                        bValue = b.type_display.toLowerCase();
+                        break;
+                    case 'status':
+                        aValue = a.status_display.toLowerCase();
+                        bValue = b.status_display.toLowerCase();
+                        break;
+                    case 'urgency':
+                        // Custom urgency ordering
+                        const urgencyOrder = { 'high': 4, 'medium': 3, 'low': 2, 'new': 1, 'completed': 0 };
+                        aValue = urgencyOrder[a.urgency] || 0;
+                        bValue = urgencyOrder[b.urgency] || 0;
+                        break;
+                    default:
+                        aValue = a.created_at;
+                        bValue = b.created_at;
+                }
+                
+                if (direction === 'asc') {
+                    if (aValue < bValue) return -1;
+                    if (aValue > bValue) return 1;
+                    return 0;
+                } else {
+                    if (aValue > bValue) return -1;
+                    if (aValue < bValue) return 1;
+                    return 0;
+                }
+            });
+            
+            renderTransactionsTable(filteredTransactions);
+        }
+        
+        function clearFilters() {
+            // Reset all filter inputs
+            document.getElementById('search-input').value = '';
+            document.getElementById('type-filter').value = '';
+            document.getElementById('status-filter').value = '';
+            document.getElementById('urgency-filter').value = '';
+            document.getElementById('sort-select').value = 'created_at_desc';
+            
+            // Reset filtered data and re-render
+            filteredTransactions = [...allTransactions];
+            updateFilteredStats();
+            applySorting();
         }
         
         // Load transactions on page load
