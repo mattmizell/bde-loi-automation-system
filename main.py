@@ -1415,102 +1415,135 @@ async def list_loi_transactions():
             'timestamp': datetime.now().isoformat()
         }
 
+# Global database manager to avoid repeated initialization
+_global_db_manager = None
+
+def get_global_db_manager():
+    """Get singleton database manager to avoid connection storms"""
+    global _global_db_manager
+    if _global_db_manager is None:
+        from database.connection import DatabaseManager
+        _global_db_manager = DatabaseManager()
+        # Only initialize if not already done
+        if not _global_db_manager._initialized:
+            _global_db_manager.initialize()
+    return _global_db_manager
+
 @app.get("/api/v1/transactions/all")
 async def list_all_transactions():
     """List ALL transactions from database (LOI, EFT, Customer Setup) for tracking dashboard"""
     
     try:
-        from database.connection import DatabaseManager
-        from database.models import LOITransaction, Customer, TransactionType, TransactionStatus
-        from sqlalchemy.orm import sessionmaker
-        from sqlalchemy import desc
+        # Use direct database connection to avoid connection storms
+        import psycopg2
+        import os
         
-        db_manager = DatabaseManager()
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
-        with db_manager.get_session() as session:
-            # Get all transactions with customer info, ordered by most recent first
-            transactions = session.query(LOITransaction, Customer)\
-                .join(Customer)\
-                .order_by(desc(LOITransaction.created_at))\
-                .all()
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                # Get all transactions with customer info, ordered by most recent first
+                cur.execute("""
+                    SELECT 
+                        lt.id,
+                        lt.transaction_type,
+                        lt.status,
+                        lt.workflow_stage,
+                        lt.created_at,
+                        lt.completed_at,
+                        c.company_name,
+                        c.contact_name,
+                        c.email,
+                        c.phone
+                    FROM loi_transactions lt
+                    JOIN customers c ON lt.customer_id = c.id
+                    ORDER BY lt.created_at DESC
+                    LIMIT 100
+                """)
+                
+                rows = cur.fetchall()
+        
+        transaction_list = []
+        for row in rows:
+            transaction_id, transaction_type, status, workflow_stage, created_at, completed_at, company_name, contact_name, email, phone = row
             
-            transaction_list = []
-            for transaction, customer in transactions:
-                # Determine completion URL based on transaction type
-                completion_url = ""
-                document_url = ""
-                type_display = ""
-                
-                if transaction.transaction_type == TransactionType.VP_RACING_LOI:
-                    completion_url = f"/api/v1/loi/sign/{transaction.id}"
-                    document_url = f"/api/v1/documents/loi/{transaction.id}"
-                    type_display = "VP Racing LOI"
-                elif transaction.transaction_type == TransactionType.P66_LOI:
-                    completion_url = f"/api/v1/loi/sign/{transaction.id}"
-                    document_url = f"/api/v1/documents/p66-loi/{transaction.id}"
-                    type_display = "Phillips 66 LOI"
-                elif transaction.transaction_type == TransactionType.EFT_FORM:
-                    completion_url = f"/api/v1/forms/eft/complete/{transaction.id}"
-                    document_url = f"/api/v1/documents/eft/{transaction.id}"
-                    type_display = "EFT Authorization"
-                elif transaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM:
-                    completion_url = f"/api/v1/forms/customer-setup/complete/{transaction.id}"
-                    document_url = f"/api/v1/documents/customer-setup/{transaction.id}"
-                    type_display = "Customer Setup"
-                
-                # Calculate time since creation
-                import datetime as dt
-                created_at = transaction.created_at
-                time_since_created = dt.datetime.utcnow() - created_at
-                
-                # Determine urgency based on age and status
-                days_old = time_since_created.days
-                hours_old = time_since_created.total_seconds() / 3600
-                urgency = "low"
-                
-                if transaction.status == TransactionStatus.COMPLETED:
-                    urgency = "completed"
-                elif days_old > 7:
-                    urgency = "high"  # Overdue
-                elif days_old > 3:
-                    urgency = "medium"  # Getting stale
-                elif hours_old < 1:
-                    urgency = "new"  # Just created
-                
-                # Status display
-                status_display = ""
-                if transaction.status == TransactionStatus.PENDING:
-                    if transaction.workflow_stage and "customer" in str(transaction.workflow_stage).lower():
-                        status_display = "Waiting for Customer"
-                    else:
-                        status_display = "Pending"
-                elif transaction.status == TransactionStatus.COMPLETED:
-                    status_display = "Completed"
-                elif transaction.status == TransactionStatus.FAILED:
-                    status_display = "Failed"
+            # Determine completion URL based on transaction type
+            completion_url = ""
+            document_url = ""
+            type_display = ""
+            
+            if transaction_type == "VP_RACING_LOI":
+                completion_url = f"/api/v1/loi/sign/{transaction_id}"
+                document_url = f"/api/v1/documents/loi/{transaction_id}"
+                type_display = "VP Racing LOI"
+            elif transaction_type == "P66_LOI":
+                completion_url = f"/api/v1/loi/sign/{transaction_id}"
+                document_url = f"/api/v1/documents/p66-loi/{transaction_id}"
+                type_display = "Phillips 66 LOI"
+            elif transaction_type == "EFT_FORM":
+                completion_url = f"/api/v1/forms/eft/complete/{transaction_id}"
+                document_url = f"/api/v1/documents/eft/{transaction_id}"
+                type_display = "EFT Authorization"
+            elif transaction_type == "CUSTOMER_SETUP_FORM":
+                completion_url = f"/api/v1/forms/customer-setup/complete/{transaction_id}"
+                document_url = f"/api/v1/documents/customer-setup/{transaction_id}"
+                type_display = "Customer Setup"
+            
+            # Calculate time since creation
+            import datetime as dt
+            if isinstance(created_at, str):
+                created_at = dt.datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            
+            time_since_created = dt.datetime.utcnow() - created_at.replace(tzinfo=None)
+            
+            # Determine urgency based on age and status
+            days_old = time_since_created.days
+            hours_old = time_since_created.total_seconds() / 3600
+            urgency = "low"
+            
+            if status == "COMPLETED":
+                urgency = "completed"
+            elif days_old > 7:
+                urgency = "high"  # Overdue
+            elif days_old > 3:
+                urgency = "medium"  # Getting stale
+            elif hours_old < 1:
+                urgency = "new"  # Just created
+            
+            # Status display
+            status_display = ""
+            if status == "PENDING":
+                if workflow_stage and "customer" in str(workflow_stage).lower():
+                    status_display = "Waiting for Customer"
                 else:
-                    status_display = str(transaction.status)
-                
-                transaction_list.append({
-                    'transaction_id': str(transaction.id),
-                    'transaction_type': transaction.transaction_type.value if hasattr(transaction.transaction_type, 'value') else str(transaction.transaction_type),
-                    'type_display': type_display,
-                    'customer_company': customer.company_name,
-                    'contact_name': customer.contact_name,
-                    'email': customer.email,
-                    'phone': customer.phone,
-                    'status': transaction.status.value if hasattr(transaction.status, 'value') else str(transaction.status),
-                    'status_display': status_display,
-                    'workflow_stage': transaction.workflow_stage.value if hasattr(transaction.workflow_stage, 'value') else str(transaction.workflow_stage),
-                    'created_at': transaction.created_at.isoformat(),
-                    'updated_at': transaction.updated_at.isoformat() if transaction.updated_at else None,
-                    'days_old': days_old,
-                    'hours_old': round(hours_old, 1),
-                    'urgency': urgency,
-                    'completion_url': completion_url,
-                    'document_url': document_url,
-                    'processing_context': transaction.processing_context or {}
-                })
+                    status_display = "Pending"
+            elif status == "COMPLETED":
+                status_display = "Completed"
+            elif status == "FAILED":
+                status_display = "Failed"
+            else:
+                status_display = str(status)
+            
+            transaction_list.append({
+                'transaction_id': str(transaction_id),
+                'transaction_type': transaction_type,
+                'type_display': type_display,
+                'customer_company': company_name,
+                'contact_name': contact_name,
+                'email': email,
+                'phone': phone,
+                'status': status,
+                'status_display': status_display,
+                'workflow_stage': workflow_stage,
+                'created_at': created_at.isoformat(),
+                'updated_at': completed_at.isoformat() if completed_at else None,
+                'days_old': days_old,
+                'hours_old': round(hours_old, 1),
+                'urgency': urgency,
+                'completion_url': completion_url,
+                'document_url': document_url,
+                'processing_context': {}
+            })
         
         return {
             'success': True,
