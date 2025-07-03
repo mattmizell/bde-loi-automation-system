@@ -219,23 +219,64 @@
         
         .alert {
             padding: 15px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
         }
         
         .alert-info {
             background: #cfe2ff;
-            border: 1px solid #b6d4fe;
+            border-color: #b6d4fe;
             color: #084298;
         }
         
         .alert-warning {
             background: #fff3cd;
-            border: 1px solid #ffecb5;
+            border-color: #ffecb5;
             color: #664d03;
+        }
+        
+        .alert-success {
+            background: #d1edcc;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+        
+        .alert-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-content strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 16px;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .legal-notice {
@@ -293,6 +334,23 @@
             <div class="alert alert-info">
                 <span>ℹ️</span>
                 <span>This form authorizes Better Day Energy to debit your bank account for fuel purchases. All information is encrypted and secure.</span>
+            </div>
+            
+            <!-- Success/Error Messages -->
+            <div id="success-message" class="alert alert-success" style="display: none;">
+                <span class="alert-icon">✅</span>
+                <div class="alert-content">
+                    <strong>Success!</strong>
+                    <span id="success-text">EFT authorization completed successfully!</span>
+                </div>
+            </div>
+            
+            <div id="error-message" class="alert alert-error" style="display: none;">
+                <span class="alert-icon">❌</span>
+                <div class="alert-content">
+                    <strong>Error:</strong>
+                    <span id="error-text">Failed to submit form. Please try again.</span>
+                </div>
             </div>
             
             <form id="eft-form">
@@ -618,7 +676,8 @@
                 return;
             }
             
-            // Show loading
+            // Hide any previous messages and show loading
+            hideMessages();
             form.style.display = 'none';
             loading.style.display = 'block';
             
@@ -643,14 +702,46 @@
                 
                 if (response.ok) {
                     const result = await response.json();
-                    window.location.href = `/forms/eft/complete/${result.id}`;
+                    
+                    // Show success message
+                    showSuccessMessage(`EFT authorization completed successfully! Form ID: ${result.id}`);
+                    
+                    // Hide form and loading
+                    loading.style.display = 'none';
+                    form.style.display = 'none';
+                    
+                    // Redirect after 2 seconds to let user see success message
+                    setTimeout(() => {
+                        window.location.href = `/forms/eft/complete/${result.id}`;
+                    }, 2000);
+                    
                 } else {
-                    throw new Error('Failed to submit form');
+                    // Parse error details
+                    let errorMessage = 'Failed to submit form. Please check all required fields.';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.detail) {
+                            if (Array.isArray(errorData.detail)) {
+                                // Pydantic validation errors
+                                const fieldErrors = errorData.detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
+                                errorMessage = `Validation errors: ${fieldErrors}`;
+                            } else {
+                                errorMessage = errorData.detail;
+                            }
+                        }
+                    } catch (e) {
+                        // Use default error message
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
                 loading.style.display = 'none';
                 form.style.display = 'block';
-                alert('Error submitting form. Please try again.');
+                showErrorMessage(error.message);
+                
+                // Scroll to top to show error message
+                document.querySelector('.form-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
         
@@ -700,6 +791,43 @@
                 // Could load more customer data here
             }
         });
+        
+        // Success/Error message functions
+        function showSuccessMessage(message) {
+            const successDiv = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            const errorDiv = document.getElementById('error-message');
+            
+            // Hide error message
+            errorDiv.style.display = 'none';
+            
+            // Show success message
+            successText.textContent = message;
+            successDiv.style.display = 'flex';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showErrorMessage(message) {
+            const errorDiv = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const successDiv = document.getElementById('success-message');
+            
+            // Hide success message
+            successDiv.style.display = 'none';
+            
+            // Show error message
+            errorText.textContent = message;
+            errorDiv.style.display = 'flex';
+        }
+        
+        function hideMessages() {
+            document.getElementById('success-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+        }
     </script>
 </body>
 </html>
