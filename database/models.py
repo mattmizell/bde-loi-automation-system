@@ -542,6 +542,10 @@ class EFTFormData(Base):
     customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False)
     transaction_id = Column(String(255))  # Link to LOI transaction for tracking
     
+    # Company Information
+    company_name = Column(String(255), nullable=False)
+    federal_tax_id = Column(String(50))  # EIN format: XX-XXXXXXX
+    
     # Bank Account Information
     bank_name = Column(String(255), nullable=False)
     bank_address = Column(String(500))

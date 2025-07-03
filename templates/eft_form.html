@@ -305,6 +305,12 @@
                             <input type="text" id="company-name" name="company_name" required>
                         </div>
                         <div class="form-group">
+                            <label for="federal-tax-id">Federal Tax ID (EIN) <span class="required">*</span></label>
+                            <input type="text" id="federal-tax-id" name="federal_tax_id" pattern="[0-9]{2}-[0-9]{7}" placeholder="XX-XXXXXXX" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="customer-id">Customer Number</label>
                             <input type="text" id="customer-id" name="customer_id" readonly>
                         </div>

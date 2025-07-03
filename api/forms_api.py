@@ -82,6 +82,7 @@ router = APIRouter(prefix="/api/v1/forms", tags=["Forms"])
 # Pydantic models for request validation
 class EFTFormRequest(BaseModel):
     company_name: str
+    federal_tax_id: str
     customer_id: Optional[str] = None
     bank_name: str
     bank_address: Optional[str] = None
@@ -933,6 +934,8 @@ async def submit_eft_form(
         eft_form = EFTFormData(
             id=uuid.uuid4(),
             customer_id=customer.id,
+            company_name=form_data.company_name,
+            federal_tax_id=form_data.federal_tax_id,
             bank_name=form_data.bank_name,
             bank_address=form_data.bank_address,
             bank_city=form_data.bank_city,
@@ -1330,6 +1333,8 @@ async def complete_eft_form(
             id=uuid.uuid4(),
             customer_id=customer.id,
             transaction_id=transaction_id,
+            company_name=form_data.company_name,
+            federal_tax_id=form_data.federal_tax_id,
             bank_name=form_data.bank_name,
             bank_address=form_data.bank_address,
             bank_city=form_data.bank_city,

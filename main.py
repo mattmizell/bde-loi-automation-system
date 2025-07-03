@@ -2049,6 +2049,10 @@ async def get_eft_document(transaction_id: str):
                                         <span class="info-value">{company_name or form_data.get('company_name', 'Unknown')}</span>
                                     </div>
                                     <div class="info-item">
+                                        <span class="info-label">Federal Tax ID (EIN):</span>
+                                        <span class="info-value">{form_data.get('federal_tax_id', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
                                         <span class="info-label">Contact Name:</span>
                                         <span class="info-value">{contact_name or 'Unknown'}</span>
                                     </div>
