@@ -241,23 +241,36 @@
         
         async function loadTransactions() {
             try {
+                console.log('Loading transactions...');
+                
+                // Use relative URL for same-origin requests
                 const response = await fetch('/api/v1/transactions/all');
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('Response data:', data);
                 
                 if (data.success) {
                     allTransactions = data.transactions;
                     filteredTransactions = [...allTransactions]; // Copy for filtering
                     updateFilteredStats(); // Update stats
                     applySorting(); // Apply current sorting and filters
+                    console.log(`Loaded ${allTransactions.length} transactions`);
                 } else {
                     throw new Error(data.error || 'Failed to load transactions');
                 }
             } catch (error) {
                 console.error('Error loading transactions:', error);
+                document.getElementById('transaction-stats').textContent = 'Error loading data';
                 document.getElementById('transactions-body').innerHTML = `
                     <tr>
                         <td colspan="6" style="padding: 40px; text-align: center; color: #dc3545;">
-                            ❌ Error loading transactions: ${error.message}
+                            ❌ Error loading transactions: ${error.message}<br>
+                            <small>Check browser console for details. URL: ${window.location.origin}/api/v1/transactions/all</small>
                         </td>
                     </tr>
                 `;
