@@ -542,28 +542,16 @@
             document.getElementById('customer-email').value = contact.email || '';
             document.getElementById('customer-phone').value = contact.phone || '';
             
-            // Parse address if available
-            if (contact.address) {
-                const addressParts = parseAddress(contact.address);
-                
-                // Set bank address fields (assuming business address)
-                if (addressParts.street) {
-                    document.getElementById('bank-address').value = addressParts.street;
-                }
-                if (addressParts.city) {
-                    document.getElementById('bank-city').value = addressParts.city;
-                }
-                if (addressParts.state) {
-                    document.getElementById('bank-state').value = addressParts.state;
-                }
-                if (addressParts.zip) {
-                    document.getElementById('bank-zip').value = addressParts.zip;
-                }
+            // Set account holder name to company name (if field exists)
+            const accountHolderField = document.getElementById('account-holder');
+            if (accountHolderField && contact.company_name) {
+                accountHolderField.value = contact.company_name;
             }
             
-            // Set account holder name to company name
-            if (contact.company_name) {
-                document.getElementById('account-holder').value = contact.company_name;
+            // Set bank name (if available in contact)
+            const bankNameField = document.getElementById('bank-name');
+            if (bankNameField && contact.bank_name) {
+                bankNameField.value = contact.bank_name;
             }
             
             // Show success status
