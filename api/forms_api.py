@@ -346,6 +346,12 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
             .alert {{ padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; display: none; }}
             .alert-success {{ background: #d1e7dd; border: 1px solid #badbcc; color: #0f5132; }}
             .alert-danger {{ background: #f8d7da; border: 1px solid #f5c2c7; color: #842029; }}
+            .signature-section {{ margin-top: 40px; padding: 30px; background: #e8f5e9; border-radius: 8px; border: 1px solid #4caf50; }}
+            .signature-pad-container {{ border: 2px solid #dee2e6; border-radius: 8px; margin: 20px 0; background: white; position: relative; overflow: hidden; }}
+            .signature-pad {{ display: block; width: 100%; height: 200px; cursor: crosshair; touch-action: none; }}
+            .signature-placeholder {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #adb5bd; font-style: italic; pointer-events: none; font-size: 18px; }}
+            .signature-placeholder.hidden {{ display: none; }}
+            .signature-controls {{ padding: 15px; background: #f8f9fa; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }}
         </style>
     </head>
     <body>
@@ -427,6 +433,27 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
                                 <input type="text" id="authorized-title" name="authorized_by_title" value="{authorized_by_title}" required>
                             </div>
                         </div>
+                        
+                        <div class="signature-section">
+                            <h4>Electronic Signature Required</h4>
+                            <p>Please sign below to complete your EFT authorization:</p>
+                            
+                            <div class="signature-pad-container">
+                                <canvas id="signature-pad" class="signature-pad" width="820" height="200"></canvas>
+                                <div id="signature-placeholder" class="signature-placeholder">
+                                    Sign here with your mouse or touch device
+                                </div>
+                                
+                                <div class="signature-controls">
+                                    <button type="button" id="clear-signature" class="btn btn-secondary">
+                                        🗑️ Clear Signature
+                                    </button>
+                                    <span id="signature-status" style="color: #6c757d; font-style: italic;">
+                                        Signature required
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
                     <div style="text-align: center; margin-top: 30px;">
@@ -441,8 +468,114 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
         <script>
             const TRANSACTION_ID = '{transaction_id}';
             
+            // Signature pad functionality
+            const canvas = document.getElementById('signature-pad');
+            const ctx = canvas.getContext('2d');
+            const placeholder = document.getElementById('signature-placeholder');
+            const clearButton = document.getElementById('clear-signature');
+            const signatureStatus = document.getElementById('signature-status');
+            
+            let isDrawing = false;
+            let hasSignature = false;
+            
+            // Canvas setup
+            function setupCanvas() {{
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                return {{ scaleX, scaleY }};
+            }}
+            
+            const {{ scaleX, scaleY }} = setupCanvas();
+            
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch events for mobile
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouch);
+            canvas.addEventListener('touchend', stopDrawing);
+            
+            function startDrawing(e) {{
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                
+                if (!hasSignature) {{
+                    placeholder.classList.add('hidden');
+                    hasSignature = true;
+                    updateSignatureStatus();
+                }}
+            }}
+            
+            function draw(e) {{
+                if (!isDrawing) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }}
+            
+            function stopDrawing() {{
+                if (isDrawing) {{
+                    isDrawing = false;
+                    ctx.beginPath();
+                }}
+            }}
+            
+            function handleTouch(e) {{
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
+                                                e.type === 'touchmove' ? 'mousemove' : 'mouseup', {{
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                }});
+                canvas.dispatchEvent(mouseEvent);
+            }}
+            
+            function clearSignature() {{
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+                placeholder.classList.remove('hidden');
+                updateSignatureStatus();
+            }}
+            
+            function updateSignatureStatus() {{
+                if (hasSignature) {{
+                    signatureStatus.textContent = 'Signature captured ✓';
+                    signatureStatus.style.color = '#28a745';
+                }} else {{
+                    signatureStatus.textContent = 'Signature required';
+                    signatureStatus.style.color = '#6c757d';
+                }}
+            }}
+            
+            // Clear signature button
+            clearButton.addEventListener('click', clearSignature);
+            
             document.getElementById('eft-form').addEventListener('submit', async (e) => {{
                 e.preventDefault();
+                
+                if (!hasSignature) {{
+                    alert('Please provide your signature before submitting.');
+                    return;
+                }}
                 
                 const form = e.target;
                 const formData = new FormData(form);
@@ -450,7 +583,7 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
                 
                 // Add required fields
                 data.authorization_date = new Date().toISOString();
-                data.signature_data = 'electronic_signature_' + Date.now();
+                data.signature_data = canvas.toDataURL('image/png');
                 data.signature_timestamp = new Date().toISOString();
                 
                 try {{
