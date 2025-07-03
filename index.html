@@ -490,15 +490,25 @@
             applySorting();
         }
         
-        // Load transactions on page load
+        // Load transactions on page load - DISABLED until database connection issues are fixed
         document.addEventListener('DOMContentLoaded', function() {
-            // Wait a moment for page to fully load, then try to load transactions
-            setTimeout(() => {
-                loadTransactions();
-            }, 1000);
+            // Disable automatic loading for now due to database connection issues
+            document.getElementById('transaction-stats').textContent = 'Transaction tracking disabled temporarily';
+            document.getElementById('transactions-body').innerHTML = `
+                <tr>
+                    <td colspan="6" style="padding: 40px; text-align: center; color: #6c757d;">
+                        📊 Transaction tracking temporarily disabled<br>
+                        <small>Click refresh to manually load transactions</small>
+                        <br><br>
+                        <button onclick="loadTransactions()" style="background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                            🔄 Load Transactions
+                        </button>
+                    </td>
+                </tr>
+            `;
             
-            // Auto-refresh every 2 minutes (less aggressive)
-            setInterval(loadTransactions, 120000);
+            // Disable auto-refresh for now
+            // setInterval(loadTransactions, 120000);
         });
     </script>
 </body>
