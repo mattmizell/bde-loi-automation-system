@@ -15,26 +15,51 @@ import json
 
 # Database imports - simplified for now
 try:
+    import os
     from sqlalchemy.orm import Session
-    from database.connection import DatabaseManager
+    from sqlalchemy import create_engine, text
+    
+    # Test basic database connectivity first
+    database_url = os.getenv('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
+    engine = create_engine(database_url, pool_pre_ping=True)
+    
+    # Test connection
+    with engine.connect() as conn:
+        conn.execute(text("SELECT 1"))
+    
+    # If we get here, database is available
+    from database.connection import DatabaseManager, get_db_session
     from database.models import (
         Customer, EFTFormData, CustomerSetupFormData, P66LOIFormData,
         LOITransaction, TransactionType, TransactionStatus, WorkflowStage
     )
     
-    # Create get_db dependency function
+    # Use lazy initialization - don't initialize on import
+    db_manager = None
+    
     def get_db():
-        db_manager = DatabaseManager()
-        db_manager.initialize()
-        db = db_manager.get_session()
+        global db_manager
+        if db_manager is None:
+            db_manager = DatabaseManager()
+            # Skip full initialization for now to avoid timeout
+            db_manager.engine = engine
+            from sqlalchemy.orm import sessionmaker
+            db_manager.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+            db_manager._initialized = True
+        
+        session = db_manager.SessionLocal()
         try:
-            yield db
+            yield session
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
-            db.close()
+            session.close()
             
     DATABASE_AVAILABLE = True
-except ImportError as e:
-    print(f"Database not available: {e}")
+    print("✅ Database connection verified - lazy initialization enabled")
+except Exception as e:
+    print(f"❌ Database not available: {e}")
     DATABASE_AVAILABLE = False
     
     # Mock classes for when database is not available
@@ -247,6 +272,10 @@ def get_client_ip(request: Request) -> str:
 
 def create_or_get_customer(db: Session, company_name: str, email: str = None, phone: str = None) -> Customer:
     """Create or retrieve customer record"""
+    # Database must be available
+    if not DATABASE_AVAILABLE or db is None:
+        raise HTTPException(status_code=503, detail="Database service unavailable")
+    
     # First try to find existing customer
     customer = db.query(Customer).filter(Customer.company_name == company_name).first()
     

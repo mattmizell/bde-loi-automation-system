@@ -41,17 +41,37 @@ class DatabaseManager:
         import os
         self.database_url = os.getenv('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
+        # Log which database URL we're using (without password)
+        safe_url = self.database_url.replace('2laNcRN0ATESCFQg1mGhknBielnDJfiS', '***')
+        logger.info(f"🗄️ Using database URL: {safe_url}")
+        
         # Parse database URL for individual components (if needed)
         if self.database_url.startswith('postgresql://'):
-            url_parts = self.database_url.replace('postgresql://', '').split('/')
-            user_host_part = url_parts[0]
-            self.db_config = {
-                'database': url_parts[1] if len(url_parts) > 1 else 'loi_automation',
-                'host': 'production' if 'DATABASE_URL' in os.environ else 'localhost',
-                'port': 5432,
-                'username': user_host_part.split('@')[0].split(':')[0] if '@' in user_host_part else 'mattmizell',
-                'password': '***'  # Don't expose password in logs
-            }
+            # Parse URL: postgresql://username:password@host:port/database
+            import re
+            url_pattern = r'postgresql://([^:]+):([^@]+)@([^:]+):?(\d+)?/(.+)'
+            match = re.match(url_pattern, self.database_url)
+            
+            if match:
+                username, password, host, port, database = match.groups()
+                self.db_config = {
+                    'database': database,
+                    'host': host,
+                    'port': int(port) if port else 5432,
+                    'username': username,
+                    'password': password  # Keep real password for connections
+                }
+            else:
+                # Fallback parsing
+                url_parts = self.database_url.replace('postgresql://', '').split('/')
+                user_host_part = url_parts[0]
+                self.db_config = {
+                    'database': url_parts[1] if len(url_parts) > 1 else 'loi_automation',
+                    'host': 'production' if 'DATABASE_URL' in os.environ else 'localhost',
+                    'port': 5432,
+                    'username': user_host_part.split('@')[0].split(':')[0] if '@' in user_host_part else 'mattmizell',
+                    'password': '2laNcRN0ATESCFQg1mGhknBielnDJfiS'  # Use actual password
+                }
         else:
             # Use environment variables for database configuration
             self.db_config = {
