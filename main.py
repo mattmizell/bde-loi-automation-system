@@ -1512,19 +1512,19 @@ async def list_all_transactions():
             type_display = ""
             
             if transaction_type == "VP_RACING_LOI":
-                completion_url = f"/api/v1/loi/sign/{transaction_id}"
+                completion_url = f"/api/v1/loi/sign/{transaction_id}"  # LOI signatures are still allowed
                 document_url = f"/api/v1/documents/loi/{transaction_id}"
                 type_display = "VP Racing LOI"
             elif transaction_type == "P66_LOI":
-                completion_url = f"/api/v1/loi/sign/{transaction_id}"
+                completion_url = f"/api/v1/loi/sign/{transaction_id}"  # LOI signatures are still allowed
                 document_url = f"/api/v1/documents/p66-loi/{transaction_id}"
                 type_display = "Phillips 66 LOI"
             elif transaction_type == "EFT_FORM":
-                completion_url = f"/api/v1/forms/eft/complete/{transaction_id}"
+                completion_url = ""  # Disabled to prevent shortcuts - users must use proper form flow
                 document_url = f"/api/v1/documents/eft/{transaction_id}"
                 type_display = "EFT Authorization"
             elif transaction_type == "CUSTOMER_SETUP_FORM":
-                completion_url = f"/api/v1/forms/customer-setup/complete/{transaction_id}"
+                completion_url = ""  # Disabled to prevent shortcuts - users must use proper form flow
                 document_url = f"/api/v1/documents/customer-setup/{transaction_id}"
                 type_display = "Customer Setup"
             
@@ -1583,7 +1583,7 @@ async def list_all_transactions():
                 'days_old': days_old,
                 'hours_old': round(hours_old, 1),
                 'urgency': urgency,
-                'completion_url': completion_url,
+                'completion_url': "",  # Disabled to prevent shortcuts - users must use proper form flow
                 'document_url': document_url,
                 'processing_context': {},
                 # Customer Setup form data
@@ -3296,7 +3296,7 @@ async def get_customer_setup_document(transaction_id: str):
                     'workflow_stage': workflow_stage,
                     'created_at': created_at.isoformat() if created_at else None,
                     'updated_at': completed_at.isoformat() if completed_at else None,
-                    'completion_url': f"/api/v1/forms/customer-setup/complete/{id}",
+                    'completion_url': "",  # Disabled to prevent shortcuts - users must use proper form flow
                     'business_info': {
                         'legal_business_name': form_data.get('legal_business_name', ''),
                         'dba_name': form_data.get('dba_name', ''),
@@ -3524,7 +3524,7 @@ async def get_customer_setup_document(transaction_id: str):
                     
                     <div class="actions">
                         <a href="/" class="btn">← Back to Dashboard</a>
-                        {f'<a href="{document_info["completion_url"]}" class="btn" style="background: #28a745;">Complete Form</a>' if not document_info['is_completed'] and document_info['status'] != 'CANCELLED' else ''}
+                        {f'<div class="btn" style="background: #6c757d; cursor: not-allowed; opacity: 0.6;" title="Complete button disabled - Use proper form flow instead">Complete Form (Disabled)</div>' if not document_info['is_completed'] and document_info['status'] != 'CANCELLED' else ''}
                     </div>
                 </div>
             </div>

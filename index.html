@@ -296,6 +296,9 @@
                 const statusBadge = getStatusBadge(transaction.status_display);
                 const ageDisplay = getAgeDisplay(transaction.days_old, transaction.hours_old);
                 
+                // Disable completion shortcuts - users must use proper form flow
+                transaction.completion_url = "";
+                
                 return `
                     <tr style="border-bottom: 1px solid #dee2e6;">
                         <td style="padding: 12px;">
@@ -332,6 +335,7 @@
                                         ❌ Cancel
                                     </button>
                                 ` : ''}
+                                <!-- Complete button removed to prevent shortcuts - users must use proper form flow -->
                             </div>
                         </td>
                     </tr>
