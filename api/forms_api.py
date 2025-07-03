@@ -330,6 +330,10 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
     authorized_by_name = pre_filled_data.get('authorized_by_name', '')
     authorized_by_title = pre_filled_data.get('authorized_by_title', '')
     federal_tax_id = pre_filled_data.get('federal_tax_id', '')
+    business_type = pre_filled_data.get('business_type', '')
+    company_address = pre_filled_data.get('company_address', '')
+    contact_name = pre_filled_data.get('contact_name', '')
+    contact_phone = pre_filled_data.get('contact_phone', '')
     notes = pre_filled_data.get('notes', '')
     
     # Read the EFT form template
@@ -402,6 +406,29 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
                                 <label for="federal-tax-id">Federal Tax ID (EIN)</label>
                                 <input type="text" id="federal-tax-id" name="federal_tax_id" value="{federal_tax_id}" placeholder="XX-XXXXXXX">
                             </div>
+                        </div>
+                        
+                        {f'''<div class="form-row">
+                            <div class="form-group">
+                                <label for="business-type">Business Type</label>
+                                <input type="text" id="business-type" name="business_type" value="{business_type}" readonly style="background-color: #f8f9fa;">
+                            </div>
+                            <div class="form-group">
+                                <label for="company-address">Company Address</label>
+                                <input type="text" id="company-address" name="company_address" value="{company_address}" readonly style="background-color: #f8f9fa;">
+                            </div>
+                        </div>''' if business_type or company_address else ''}
+                        
+                        {f'''<div class="form-row">
+                            <div class="form-group">
+                                <label for="contact-name">Primary Contact</label>
+                                <input type="text" id="contact-name" name="contact_name" value="{contact_name}" readonly style="background-color: #f8f9fa;">
+                            </div>
+                            <div class="form-group">
+                                <label for="contact-phone">Contact Phone</label>
+                                <input type="text" id="contact-phone" name="contact_phone" value="{contact_phone}" readonly style="background-color: #f8f9fa;">
+                            </div>
+                        </div>''' if contact_name or contact_phone else ''}
                         </div>
                     </div>
                     
@@ -1103,7 +1130,84 @@ async def get_eft_completion_page(
         # Extract form data from processing context
         form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
         
-        # Generate pre-filled form HTML
+        # ========================================================================
+        # MERGE WITH UPDATED CUSTOMER DATA FROM CRM CACHE
+        # ========================================================================
+        
+        try:
+            # Get customer email/company from transaction context
+            customer_email = transaction.processing_context.get('customer_email', '') if transaction.processing_context else ''
+            company_name = form_data.get('company_name', '')
+            
+            if customer_email or company_name:
+                # Query CRM cache for updated customer information
+                import psycopg2
+                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+                crm_cur = crm_conn.cursor()
+                
+                # Search for customer in CRM cache
+                crm_cur.execute("""
+                    SELECT name, company_name, email, phone, address, notes
+                    FROM crm_contacts_cache 
+                    WHERE email = %s OR company_name = %s
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (customer_email, company_name))
+                
+                crm_contact = crm_cur.fetchone()
+                crm_cur.close()
+                crm_conn.close()
+                
+                if crm_contact:
+                    contact_name, crm_company_name, crm_email, crm_phone, crm_address, crm_notes = crm_contact
+                    
+                    # Parse address if it's JSON
+                    crm_address_data = {}
+                    if crm_address:
+                        try:
+                            crm_address_data = json.loads(crm_address) if isinstance(crm_address, str) else crm_address
+                        except:
+                            pass
+                    
+                    # Extract Federal Tax ID and other Customer Setup data from CRM notes
+                    federal_tax_id = ''
+                    business_type = ''
+                    if crm_notes:
+                        # Parse Federal Tax ID from Customer Setup notes
+                        import re
+                        fein_match = re.search(r'Federal Tax ID:\s*([^\n]+)', crm_notes)
+                        if fein_match:
+                            federal_tax_id = fein_match.group(1).strip()
+                        
+                        # Parse business type
+                        business_type_match = re.search(r'Business Type:\s*([^\n]+)', crm_notes)
+                        if business_type_match:
+                            business_type = business_type_match.group(1).strip()
+                    
+                    # Merge CRM data with original form data (CRM data takes precedence for customer info)
+                    updated_form_data = form_data.copy()
+                    updated_form_data.update({
+                        'company_name': crm_company_name or form_data.get('company_name', ''),
+                        'federal_tax_id': federal_tax_id or form_data.get('federal_tax_id', ''),
+                        'business_type': business_type,
+                        'contact_name': contact_name or form_data.get('contact_name', ''),
+                        'contact_email': crm_email or customer_email,
+                        'contact_phone': crm_phone or form_data.get('contact_phone', ''),
+                        'company_address': crm_address_data.get('physical_address') or crm_address_data.get('full_address', ''),
+                        'company_city': crm_address_data.get('city', ''),
+                        'company_state': crm_address_data.get('state', ''),
+                        'company_zip': crm_address_data.get('zip', '')
+                    })
+                    
+                    form_data = updated_form_data
+                    logger.info(f"✅ EFT form enhanced with updated CRM data for {crm_company_name}")
+                else:
+                    logger.info(f"⚠️ No CRM data found for customer: {customer_email or company_name}")
+            
+        except Exception as e:
+            logger.error(f"❌ Error fetching updated customer data from CRM cache: {e}")
+            # Continue with original form data if CRM lookup fails
+        
+        # Generate pre-filled form HTML with updated data
         form_html = generate_eft_completion_form(transaction_id, form_data)
         
         return HTMLResponse(content=form_html)
