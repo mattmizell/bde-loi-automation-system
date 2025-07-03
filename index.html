@@ -129,6 +129,185 @@
             <p><strong>✅ Database Storage:</strong> PostgreSQL with tamper-evident records</p>
             <p><strong>✅ API Endpoints:</strong> Complete REST API at /api/v1/*</p>
         </div>
+        
+        <!-- Transaction Tracking Dashboard -->
+        <div style="background: rgba(255,255,255,0.95); color: #333; border-radius: 15px; padding: 30px; margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #1f4e79;">📊 Transaction Tracking Dashboard</h3>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div id="transaction-stats" style="font-size: 14px; color: #6c757d;">
+                        Loading...
+                    </div>
+                    <button onclick="refreshTransactions()" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table id="transactions-table" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Type</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Company</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Contact</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Status</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Age</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-body">
+                        <tr>
+                            <td colspan="6" style="padding: 40px; text-align: center; color: #6c757d;">
+                                Loading transactions...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+    
+    <script>
+        // Transaction tracking functionality
+        let allTransactions = [];
+        
+        async function loadTransactions() {
+            try {
+                const response = await fetch('/api/v1/transactions/all');
+                const data = await response.json();
+                
+                if (data.success) {
+                    allTransactions = data.transactions;
+                    updateTransactionStats(data);
+                    renderTransactionsTable(allTransactions);
+                } else {
+                    throw new Error(data.error || 'Failed to load transactions');
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                document.getElementById('transactions-body').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #dc3545;">
+                            ❌ Error loading transactions: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function updateTransactionStats(data) {
+            const statsDiv = document.getElementById('transaction-stats');
+            statsDiv.innerHTML = `
+                <strong>${data.total_count}</strong> total | 
+                <span style="color: #ffc107;">${data.pending_count}</span> pending | 
+                <span style="color: #28a745;">${data.completed_count}</span> completed
+            `;
+        }
+        
+        function renderTransactionsTable(transactions) {
+            const tbody = document.getElementById('transactions-body');
+            
+            if (transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #6c757d;">
+                            No transactions found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = transactions.map(transaction => {
+                const urgencyColor = getUrgencyColor(transaction.urgency);
+                const statusBadge = getStatusBadge(transaction.status_display);
+                const ageDisplay = getAgeDisplay(transaction.days_old, transaction.hours_old);
+                
+                return `
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding: 12px;">
+                            <div style="font-weight: 600; color: ${urgencyColor};">
+                                ${transaction.type_display}
+                            </div>
+                            <div style="font-size: 12px; color: #6c757d;">
+                                ${transaction.transaction_id.substring(0, 8)}...
+                            </div>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="font-weight: 600;">${transaction.customer_company}</div>
+                            <div style="font-size: 12px; color: #6c757d;">${transaction.email}</div>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div>${transaction.contact_name}</div>
+                            <div style="font-size: 12px; color: #6c757d;">${transaction.phone || ''}</div>
+                        </td>
+                        <td style="padding: 12px;">
+                            ${statusBadge}
+                        </td>
+                        <td style="padding: 12px;">
+                            ${ageDisplay}
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                ${transaction.status !== 'COMPLETED' ? `
+                                    <a href="${transaction.completion_url}" target="_blank" 
+                                       style="background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                        📝 Complete
+                                    </a>
+                                ` : ''}
+                                <a href="${transaction.document_url}" target="_blank" 
+                                   style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                    📄 View
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function getUrgencyColor(urgency) {
+            switch (urgency) {
+                case 'high': return '#dc3545';
+                case 'medium': return '#ffc107';
+                case 'new': return '#17a2b8';
+                case 'completed': return '#28a745';
+                default: return '#6c757d';
+            }
+        }
+        
+        function getStatusBadge(status) {
+            let color = '#6c757d';
+            if (status === 'Completed') color = '#28a745';
+            if (status === 'Waiting for Customer') color = '#ffc107';
+            if (status === 'Failed') color = '#dc3545';
+            
+            return `<span style="background: ${color}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${status}</span>`;
+        }
+        
+        function getAgeDisplay(days, hours) {
+            if (days > 0) {
+                return `${days} day${days === 1 ? '' : 's'}`;
+            } else if (hours > 1) {
+                return `${Math.floor(hours)} hour${Math.floor(hours) === 1 ? '' : 's'}`;
+            } else {
+                return 'Just created';
+            }
+        }
+        
+        function refreshTransactions() {
+            document.getElementById('transaction-stats').textContent = 'Refreshing...';
+            loadTransactions();
+        }
+        
+        // Load transactions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTransactions();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(loadTransactions, 30000);
+        });
+    </script>
 </body>
 </html>

@@ -1415,6 +1415,122 @@ async def list_loi_transactions():
             'timestamp': datetime.now().isoformat()
         }
 
+@app.get("/api/v1/transactions/all")
+async def list_all_transactions():
+    """List ALL transactions from database (LOI, EFT, Customer Setup) for tracking dashboard"""
+    
+    try:
+        from database.connection import DatabaseManager
+        from database.models import LOITransaction, Customer, TransactionType, TransactionStatus
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import desc
+        
+        db_manager = DatabaseManager()
+        
+        with db_manager.get_session() as session:
+            # Get all transactions with customer info, ordered by most recent first
+            transactions = session.query(LOITransaction, Customer)\
+                .join(Customer)\
+                .order_by(desc(LOITransaction.created_at))\
+                .all()
+            
+            transaction_list = []
+            for transaction, customer in transactions:
+                # Determine completion URL based on transaction type
+                completion_url = ""
+                document_url = ""
+                type_display = ""
+                
+                if transaction.transaction_type == TransactionType.VP_RACING_LOI:
+                    completion_url = f"/api/v1/loi/sign/{transaction.id}"
+                    document_url = f"/api/v1/documents/loi/{transaction.id}"
+                    type_display = "VP Racing LOI"
+                elif transaction.transaction_type == TransactionType.P66_LOI:
+                    completion_url = f"/api/v1/loi/sign/{transaction.id}"
+                    document_url = f"/api/v1/documents/p66-loi/{transaction.id}"
+                    type_display = "Phillips 66 LOI"
+                elif transaction.transaction_type == TransactionType.EFT_FORM:
+                    completion_url = f"/api/v1/forms/eft/complete/{transaction.id}"
+                    document_url = f"/api/v1/documents/eft/{transaction.id}"
+                    type_display = "EFT Authorization"
+                elif transaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM:
+                    completion_url = f"/api/v1/forms/customer-setup/complete/{transaction.id}"
+                    document_url = f"/api/v1/documents/customer-setup/{transaction.id}"
+                    type_display = "Customer Setup"
+                
+                # Calculate time since creation
+                import datetime as dt
+                created_at = transaction.created_at
+                time_since_created = dt.datetime.utcnow() - created_at
+                
+                # Determine urgency based on age and status
+                days_old = time_since_created.days
+                hours_old = time_since_created.total_seconds() / 3600
+                urgency = "low"
+                
+                if transaction.status == TransactionStatus.COMPLETED:
+                    urgency = "completed"
+                elif days_old > 7:
+                    urgency = "high"  # Overdue
+                elif days_old > 3:
+                    urgency = "medium"  # Getting stale
+                elif hours_old < 1:
+                    urgency = "new"  # Just created
+                
+                # Status display
+                status_display = ""
+                if transaction.status == TransactionStatus.PENDING:
+                    if transaction.workflow_stage and "customer" in str(transaction.workflow_stage).lower():
+                        status_display = "Waiting for Customer"
+                    else:
+                        status_display = "Pending"
+                elif transaction.status == TransactionStatus.COMPLETED:
+                    status_display = "Completed"
+                elif transaction.status == TransactionStatus.FAILED:
+                    status_display = "Failed"
+                else:
+                    status_display = str(transaction.status)
+                
+                transaction_list.append({
+                    'transaction_id': str(transaction.id),
+                    'transaction_type': transaction.transaction_type.value if hasattr(transaction.transaction_type, 'value') else str(transaction.transaction_type),
+                    'type_display': type_display,
+                    'customer_company': customer.company_name,
+                    'contact_name': customer.contact_name,
+                    'email': customer.email,
+                    'phone': customer.phone,
+                    'status': transaction.status.value if hasattr(transaction.status, 'value') else str(transaction.status),
+                    'status_display': status_display,
+                    'workflow_stage': transaction.workflow_stage.value if hasattr(transaction.workflow_stage, 'value') else str(transaction.workflow_stage),
+                    'created_at': transaction.created_at.isoformat(),
+                    'updated_at': transaction.updated_at.isoformat() if transaction.updated_at else None,
+                    'days_old': days_old,
+                    'hours_old': round(hours_old, 1),
+                    'urgency': urgency,
+                    'completion_url': completion_url,
+                    'document_url': document_url,
+                    'processing_context': transaction.processing_context or {}
+                })
+        
+        return {
+            'success': True,
+            'transactions': transaction_list,
+            'total_count': len(transaction_list),
+            'pending_count': len([t for t in transaction_list if t['status'] != 'COMPLETED']),
+            'completed_count': len([t for t in transaction_list if t['status'] == 'COMPLETED']),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error listing all transactions: {e}")
+        return {
+            'success': False,
+            'transactions': [],
+            'total_count': 0,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
 @app.get("/api/v1/documents/loi/{transaction_id}")
 async def get_loi_document(transaction_id: str):
     """Get LOI document details and status"""
@@ -2424,6 +2540,70 @@ async def search_crm_contacts(request: dict):
             'error': str(e),
             'contacts': []
         }
+
+@app.get("/api/v1/documents/customer-setup/{transaction_id}")
+async def get_customer_setup_document(transaction_id: str):
+    """Get Customer Setup document details and status"""
+    try:
+        from database.connection import DatabaseManager
+        from database.models import LOITransaction, Customer, TransactionType
+        
+        db_manager = DatabaseManager()
+        
+        with db_manager.get_session() as session:
+            # Get Customer Setup transaction details
+            transaction = session.query(LOITransaction)\
+                .filter(LOITransaction.id == transaction_id)\
+                .filter(LOITransaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM)\
+                .first()
+            
+            if not transaction:
+                raise HTTPException(status_code=404, detail="Customer Setup document not found")
+            
+            # Get customer details
+            customer = session.query(Customer).filter(Customer.id == transaction.customer_id).first()
+            
+            # Parse processing context for form data
+            form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
+            
+            document_info = {
+                'transaction_id': str(transaction.id),
+                'transaction_type': 'Customer Setup Form',
+                'customer_company': customer.company_name if customer else form_data.get('legal_business_name', 'Unknown'),
+                'contact_name': customer.contact_name if customer else form_data.get('primary_contact_name', 'Unknown'),
+                'email': customer.email if customer else form_data.get('primary_contact_email', 'Unknown'),
+                'phone': customer.phone if customer else form_data.get('primary_contact_phone', ''),
+                'status': transaction.status.value if hasattr(transaction.status, 'value') else str(transaction.status),
+                'workflow_stage': transaction.workflow_stage.value if hasattr(transaction.workflow_stage, 'value') else str(transaction.workflow_stage),
+                'created_at': transaction.created_at.isoformat(),
+                'updated_at': transaction.updated_at.isoformat() if transaction.updated_at else None,
+                'completion_url': f"/api/v1/forms/customer-setup/complete/{transaction.id}",
+                'business_info': {
+                    'legal_business_name': form_data.get('legal_business_name', ''),
+                    'dba_name': form_data.get('dba_name', ''),
+                    'federal_tax_id': form_data.get('federal_tax_id', ''),
+                    'business_type': form_data.get('business_type', ''),
+                    'years_in_business': form_data.get('years_in_business', ''),
+                    'physical_address': form_data.get('physical_address', ''),
+                    'physical_city': form_data.get('physical_city', ''),
+                    'physical_state': form_data.get('physical_state', ''),
+                    'physical_zip': form_data.get('physical_zip', '')
+                },
+                'contact_info': {
+                    'primary_contact_name': form_data.get('primary_contact_name', ''),
+                    'primary_contact_email': form_data.get('primary_contact_email', ''),
+                    'primary_contact_phone': form_data.get('primary_contact_phone', ''),
+                    'accounts_payable_contact': form_data.get('accounts_payable_contact', ''),
+                    'accounts_payable_email': form_data.get('accounts_payable_email', '')
+                },
+                'is_completed': transaction.status.value == 'COMPLETED' if hasattr(transaction.status, 'value') else False
+            }
+        
+        return JSONResponse(content=document_info)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving Customer Setup document: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve Customer Setup document")
 
 def main():
     """Main function to run the application"""
