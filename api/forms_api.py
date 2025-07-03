@@ -13,6 +13,7 @@ import base64
 import logging
 import json
 import secrets
+from cache_manager import CustomerCacheManager
 
 # Database imports - simplified for now
 try:
@@ -976,6 +977,17 @@ async def submit_eft_form(
         )
         
         db.add(eft_form)
+        
+        # ========================================================================
+        # SYNC TO CACHE - New cache-centric architecture
+        # ========================================================================
+        try:
+            cache_manager = CustomerCacheManager()
+            cache_manager.sync_eft_to_cache(str(customer.id), form_data.dict())
+            logger.info(f"✅ EFT data synced to cache for {customer.company_name}")
+        except Exception as e:
+            logger.error(f"⚠️ Cache sync failed but continuing: {e}")
+        
         db.commit()
         db.refresh(eft_form)
         
@@ -1154,82 +1166,46 @@ async def get_eft_completion_page(
         form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
         
         # ========================================================================
-        # MERGE WITH UPDATED CUSTOMER DATA FROM CRM CACHE
+        # PREFILL FROM CACHE - New cache-centric architecture
         # ========================================================================
         
         try:
-            # Get customer email/company from transaction context
-            customer_email = transaction.processing_context.get('customer_email', '') if transaction.processing_context else ''
-            company_name = form_data.get('company_name', '')
+            # Get customer ID from transaction
+            customer_id = transaction.customer_id
             
-            if customer_email or company_name:
-                # Query CRM cache for updated customer information
-                import psycopg2
-                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
-                crm_cur = crm_conn.cursor()
+            if customer_id:
+                # Get cached customer data
+                cache_manager = CustomerCacheManager()
+                cached_data = cache_manager.get_cached_customer_data(customer_id=str(customer_id))
                 
-                # Search for customer in CRM cache
-                crm_cur.execute("""
-                    SELECT name, company_name, email, phone, address, notes
-                    FROM crm_contacts_cache 
-                    WHERE email = %s OR company_name = %s
-                    ORDER BY last_sync DESC LIMIT 1
-                """, (customer_email, company_name))
-                
-                crm_contact = crm_cur.fetchone()
-                crm_cur.close()
-                crm_conn.close()
-                
-                if crm_contact:
-                    contact_name, crm_company_name, crm_email, crm_phone, crm_address, crm_notes = crm_contact
+                if cached_data:
+                    # Extract data from cache structure
+                    address_data = cached_data.get('address', {})
+                    custom_fields = cached_data.get('custom_fields', {})
                     
-                    # Parse address if it's JSON
-                    crm_address_data = {}
-                    if crm_address:
-                        try:
-                            crm_address_data = json.loads(crm_address) if isinstance(crm_address, str) else crm_address
-                        except:
-                            pass
-                    
-                    # Extract Federal Tax ID and other Customer Setup data from CRM notes
-                    federal_tax_id = ''
-                    business_type = ''
-                    if crm_notes:
-                        # Parse Federal Tax ID from Customer Setup notes
-                        import re
-                        fein_match = re.search(r'Federal Tax ID:\s*([^\n]+)', crm_notes)
-                        if fein_match:
-                            federal_tax_id = fein_match.group(1).strip()
-                        
-                        # Parse business type
-                        business_type_match = re.search(r'Business Type:\s*([^\n]+)', crm_notes)
-                        if business_type_match:
-                            business_type = business_type_match.group(1).strip()
-                    
-                    # Merge CRM data with original form data (CRM data takes precedence for customer info)
+                    # Merge cached data with original form data (cache takes precedence)
                     updated_form_data = form_data.copy()
                     updated_form_data.update({
-                        'company_name': crm_company_name or form_data.get('company_name', ''),
-                        'federal_tax_id': federal_tax_id or form_data.get('federal_tax_id', ''),
-                        'business_type': business_type,
-                        'contact_name': contact_name or form_data.get('contact_name', ''),
-                        'contact_email': crm_email or customer_email,
-                        'contact_phone': crm_phone or form_data.get('contact_phone', ''),
-                        # Fixed address field mapping to match CRM cache structure
-                        'company_address': crm_address_data.get('street_address', '') or form_data.get('company_address', ''),
-                        'company_city': crm_address_data.get('city', '') or form_data.get('company_city', ''),
-                        'company_state': crm_address_data.get('state', '') or form_data.get('company_state', ''),
-                        'company_zip': crm_address_data.get('zip_code', '') or form_data.get('company_zip', '')
+                        'company_name': cached_data.get('company_name', form_data.get('company_name', '')),
+                        'federal_tax_id': custom_fields.get('federal_tax_id', form_data.get('federal_tax_id', '')),
+                        'business_type': custom_fields.get('business_type', ''),
+                        'contact_name': custom_fields.get('primary_contact_name', form_data.get('contact_name', '')),
+                        'contact_email': cached_data.get('email', form_data.get('contact_email', '')),
+                        'contact_phone': cached_data.get('phone', form_data.get('contact_phone', '')),
+                        'company_address': address_data.get('street_address', form_data.get('company_address', '')),
+                        'company_city': address_data.get('city', form_data.get('company_city', '')),
+                        'company_state': address_data.get('state', form_data.get('company_state', '')),
+                        'company_zip': address_data.get('zip_code', form_data.get('company_zip', ''))
                     })
                     
                     form_data = updated_form_data
-                    logger.info(f"✅ EFT form enhanced with updated CRM data for {crm_company_name}")
+                    logger.info(f"✅ EFT form prefilled from cache for {cached_data.get('company_name')}")
                 else:
-                    logger.info(f"⚠️ No CRM data found for customer: {customer_email or company_name}")
+                    logger.info(f"⚠️ No cached data found for customer: {customer_id}")
             
         except Exception as e:
-            logger.error(f"❌ Error fetching updated customer data from CRM cache: {e}")
-            # Continue with original form data if CRM lookup fails
+            logger.error(f"❌ Error fetching cached customer data: {e}")
+            # Continue with original form data if cache lookup fails
         
         # Generate pre-filled form HTML with updated data
         form_html = generate_eft_completion_form(transaction_id, form_data)
@@ -1390,6 +1366,17 @@ async def complete_eft_form(
         transaction.completed_at = datetime.utcnow()
         
         db.add(eft_form)
+        
+        # ========================================================================
+        # SYNC TO CACHE - New cache-centric architecture
+        # ========================================================================
+        try:
+            cache_manager = CustomerCacheManager()
+            cache_manager.sync_eft_to_cache(str(customer.id), form_data.dict())
+            logger.info(f"✅ EFT data synced to cache for {customer.company_name}")
+        except Exception as e:
+            logger.error(f"⚠️ Cache sync failed but continuing: {e}")
+        
         db.commit()
         
         logger.info(f"✅ EFT form completed with ESIGN Act compliance: {eft_form.id} for transaction {transaction_id}")
@@ -1698,6 +1685,16 @@ async def complete_customer_setup_form(
         
         db.add(customer_setup_data)
         
+        # ========================================================================
+        # SYNC TO CACHE - New cache-centric architecture
+        # ========================================================================
+        try:
+            cache_manager = CustomerCacheManager()
+            cache_manager.sync_customer_setup_to_cache(str(customer.id), form_data.dict())
+            logger.info(f"✅ Customer Setup data synced to cache for {customer.company_name}")
+        except Exception as e:
+            logger.error(f"⚠️ Cache sync failed but continuing: {e}")
+        
         # Update transaction status
         transaction.status = TransactionStatus.COMPLETED
         transaction.workflow_stage = WorkflowStage.COMPLETED
@@ -1947,6 +1944,17 @@ async def submit_customer_setup_form(
         )
         
         db.add(setup_form)
+        
+        # ========================================================================
+        # SYNC TO CACHE - New cache-centric architecture
+        # ========================================================================
+        try:
+            cache_manager = CustomerCacheManager()
+            cache_manager.sync_customer_setup_to_cache(str(customer.id), form_data.dict())
+            logger.info(f"✅ Customer Setup data synced to cache for {customer.company_name}")
+        except Exception as e:
+            logger.error(f"⚠️ Cache sync failed but continuing: {e}")
+        
         db.commit()
         db.refresh(setup_form)
         

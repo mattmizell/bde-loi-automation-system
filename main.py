@@ -1454,9 +1454,37 @@ async def list_all_transactions():
                         c.company_name,
                         c.contact_name,
                         c.email,
-                        c.phone
+                        c.phone,
+                        -- Customer Setup form fields
+                        cs.legal_business_name,
+                        cs.business_type,
+                        cs.federal_tax_id,
+                        cs.physical_address,
+                        cs.physical_city,
+                        cs.physical_state,
+                        cs.physical_zip,
+                        cs.primary_contact_name,
+                        cs.primary_contact_email,
+                        cs.primary_contact_phone,
+                        cs.annual_fuel_volume,
+                        cs.number_of_locations,
+                        -- EFT form fields
+                        eft.bank_name,
+                        eft.account_holder_name,
+                        eft.authorized_by_name,
+                        eft.authorization_date,
+                        -- P66 LOI form fields
+                        p66.station_name,
+                        p66.monthly_gasoline_gallons,
+                        p66.monthly_diesel_gallons,
+                        p66.total_monthly_gallons,
+                        p66.volume_incentive_requested,
+                        p66.image_funding_requested
                     FROM loi_transactions lt
                     JOIN customers c ON lt.customer_id = c.id
+                    LEFT JOIN customer_setup_form_data cs ON lt.customer_id = cs.customer_id
+                    LEFT JOIN eft_form_data eft ON lt.id::text = eft.transaction_id
+                    LEFT JOIN p66_loi_form_data p66 ON lt.customer_id = p66.customer_id
                     ORDER BY lt.created_at DESC
                     LIMIT 100
                 """)
@@ -1465,7 +1493,18 @@ async def list_all_transactions():
         
         transaction_list = []
         for row in rows:
-            transaction_id, transaction_type, status, workflow_stage, created_at, completed_at, company_name, contact_name, email, phone = row
+            (transaction_id, transaction_type, status, workflow_stage, created_at, completed_at, 
+             company_name, contact_name, email, phone,
+             # Customer Setup fields
+             legal_business_name, business_type, federal_tax_id, 
+             physical_address, physical_city, physical_state, physical_zip,
+             primary_contact_name, primary_contact_email, primary_contact_phone,
+             annual_fuel_volume, number_of_locations,
+             # EFT fields
+             bank_name, account_holder_name, authorized_by_name, authorization_date,
+             # P66 LOI fields
+             station_name, monthly_gasoline_gallons, monthly_diesel_gallons, 
+             total_monthly_gallons, volume_incentive_requested, image_funding_requested) = row
             
             # Determine completion URL based on transaction type
             completion_url = ""
@@ -1546,7 +1585,42 @@ async def list_all_transactions():
                 'urgency': urgency,
                 'completion_url': completion_url,
                 'document_url': document_url,
-                'processing_context': {}
+                'processing_context': {},
+                # Customer Setup form data
+                'business_info': {
+                    'legal_business_name': legal_business_name,
+                    'business_type': business_type,
+                    'federal_tax_id': federal_tax_id,
+                    'annual_fuel_volume': annual_fuel_volume,
+                    'number_of_locations': number_of_locations
+                },
+                'business_address': {
+                    'address': physical_address,
+                    'city': physical_city,
+                    'state': physical_state,
+                    'zip': physical_zip
+                },
+                'primary_contact': {
+                    'name': primary_contact_name,
+                    'email': primary_contact_email,
+                    'phone': primary_contact_phone
+                },
+                # EFT form data
+                'banking_info': {
+                    'bank_name': bank_name,
+                    'account_holder_name': account_holder_name,
+                    'authorized_by_name': authorized_by_name,
+                    'authorization_date': authorization_date.isoformat() if authorization_date else None
+                },
+                # LOI form data
+                'station_info': {
+                    'station_name': station_name,
+                    'monthly_gasoline_gallons': monthly_gasoline_gallons,
+                    'monthly_diesel_gallons': monthly_diesel_gallons,
+                    'total_monthly_gallons': total_monthly_gallons,
+                    'volume_incentive_requested': volume_incentive_requested,
+                    'image_funding_requested': image_funding_requested
+                }
             })
         
         return {
