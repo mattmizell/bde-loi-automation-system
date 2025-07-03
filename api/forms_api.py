@@ -12,6 +12,7 @@ import uuid
 import base64
 import logging
 import json
+import secrets
 
 # Database imports - simplified for now
 try:
@@ -1253,6 +1254,88 @@ async def complete_eft_form(
         
         logger.info(f"✅ EFT form completed with ESIGN Act compliance: {eft_form.id} for transaction {transaction_id}")
         
+        # ========================================================================
+        # UPDATE CRM CACHE WITH EFT DATA - Store EFT info in notes since CRM lacks EFT fields
+        # ========================================================================
+        
+        try:
+            # Create EFT notes for CRM (CRM doesn't have EFT-specific fields)
+            eft_notes = f"""
+EFT AUTHORIZATION COMPLETED: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+Bank: {form_data.bank_name}
+Account Holder: {form_data.account_holder_name}
+Account Type: {form_data.account_type}
+Routing Number: {form_data.routing_number[-4:]}  (last 4 digits)
+Account Number: ****{form_data.account_number[-4:]}  (last 4 digits)
+Authorized By: {form_data.authorized_by_name} ({form_data.authorized_by_title})
+Authorization Date: {form_data.authorization_date}
+Signature Verification: {verification_code}
+            """.strip()
+            
+            # Update CRM cache with EFT completion info
+            import psycopg2
+            try:
+                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+                crm_cur = crm_conn.cursor()
+                
+                # Find existing contact
+                crm_cur.execute("""
+                    SELECT contact_id, notes FROM crm_contacts_cache 
+                    WHERE email = %s OR company_name = %s
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (customer_email, form_data.company_name))
+                
+                existing_contact = crm_cur.fetchone()
+                
+                if existing_contact:
+                    contact_id, existing_notes = existing_contact
+                    # Append EFT notes to existing notes
+                    updated_notes = f"{existing_notes or ''}\n\n{eft_notes}".strip()
+                    
+                    crm_cur.execute("""
+                        UPDATE crm_contacts_cache SET
+                            notes = %s,
+                            last_sync = %s,
+                            sync_status = 'pending_sync'
+                        WHERE contact_id = %s
+                    """, (updated_notes, datetime.utcnow(), contact_id))
+                    
+                    logger.info(f"✅ Updated CRM cache with EFT data: {contact_id}")
+                    
+                    # Queue for CRM sync
+                    queue_data = {
+                        "contact_id": contact_id,
+                        "operation": "update_contact",
+                        "data": {
+                            "notes": updated_notes
+                        },
+                        "app_source": "EFT Authorization Form",
+                        "transaction_id": transaction_id
+                    }
+                    
+                    crm_cur.execute("""
+                        INSERT INTO crm_write_queue 
+                        (operation, data, status, created_at, max_attempts)
+                        VALUES (%s, %s, 'pending', %s, %s)
+                    """, (
+                        "update_contact",
+                        json.dumps(queue_data),
+                        datetime.utcnow(),
+                        5
+                    ))
+                    
+                    crm_conn.commit()
+                    logger.info(f"✅ EFT data queued for CRM sync: {form_data.company_name}")
+                
+                crm_cur.close()
+                crm_conn.close()
+                
+            except Exception as crm_error:
+                logger.error(f"❌ Error updating CRM cache with EFT data: {crm_error}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error in EFT CRM update process: {e}")
+        
         return {
             "success": True,
             "id": str(eft_form.id),
@@ -1260,7 +1343,8 @@ async def complete_eft_form(
             "verification_code": verification_code,
             "message": "EFT authorization completed successfully with full audit trail",
             "audit_compliant": True,
-            "esign_act_compliant": True
+            "esign_act_compliant": True,
+            "crm_updated": True
         }
         
     except Exception as e:
@@ -1392,6 +1476,151 @@ async def complete_customer_setup_form(
             transaction.processing_context = {'final_form_data': form_data.dict()}
         
         db.commit()
+        
+        # ========================================================================
+        # UPDATE CRM CACHE AND SYNC TO CRM - Critical for future form pre-fill
+        # ========================================================================
+        
+        try:
+            # Update customer record with complete Customer Setup data
+            customer.company_name = form_data.legal_business_name
+            customer.contact_name = form_data.primary_contact_name
+            customer.email = form_data.primary_contact_email
+            customer.phone = form_data.primary_contact_phone
+            customer.street_address = form_data.physical_address
+            customer.city = form_data.physical_city
+            customer.state = form_data.physical_state
+            customer.zip_code = form_data.physical_zip
+            
+            # Build comprehensive address for CRM
+            address_parts = [
+                form_data.physical_address,
+                form_data.physical_city,
+                form_data.physical_state,
+                form_data.physical_zip
+            ]
+            full_address = ", ".join([part for part in address_parts if part])
+            
+            # Create comprehensive notes for CRM with all Customer Setup data
+            customer_setup_notes = f"""
+CUSTOMER SETUP COMPLETED: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+Business Type: {form_data.business_type}
+Federal Tax ID: {form_data.federal_tax_id}
+DBA Name: {form_data.dba_name or 'N/A'}
+Years in Business: {form_data.years_in_business or 'N/A'}
+Annual Fuel Volume: {form_data.annual_fuel_volume or 'N/A'} gallons
+Number of Locations: {form_data.number_of_locations or 'N/A'}
+Dispenser Count: {form_data.dispenser_count or 'N/A'}
+POS System: {form_data.pos_system or 'N/A'}
+Authorized Signer: {form_data.authorized_signer_name} ({form_data.authorized_signer_title})
+            """.strip()
+            
+            # Update CRM cache immediately for instant availability in future forms
+            import psycopg2
+            try:
+                # Direct database connection for CRM cache update
+                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+                crm_cur = crm_conn.cursor()
+                
+                # First check if contact exists in cache
+                crm_cur.execute("""
+                    SELECT contact_id FROM crm_contacts_cache 
+                    WHERE email = %s OR (company_name = %s AND name = %s)
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (form_data.primary_contact_email, form_data.legal_business_name, form_data.primary_contact_name))
+                
+                existing_contact = crm_cur.fetchone()
+                
+                if existing_contact:
+                    # Update existing contact in cache
+                    contact_id = existing_contact[0]
+                    crm_cur.execute("""
+                        UPDATE crm_contacts_cache SET
+                            name = %s,
+                            company_name = %s,
+                            email = %s,
+                            phone = %s,
+                            address = %s,
+                            notes = %s,
+                            last_sync = %s,
+                            sync_status = 'pending_sync'
+                        WHERE contact_id = %s
+                    """, (
+                        form_data.primary_contact_name,
+                        form_data.legal_business_name,
+                        form_data.primary_contact_email,
+                        form_data.primary_contact_phone,
+                        json.dumps({"full_address": full_address, "physical_address": form_data.physical_address, "city": form_data.physical_city, "state": form_data.physical_state, "zip": form_data.physical_zip}),
+                        customer_setup_notes,
+                        datetime.utcnow(),
+                        contact_id
+                    ))
+                    
+                    logger.info(f"✅ Updated existing CRM cache contact: {contact_id}")
+                    
+                else:
+                    # Create new contact in cache
+                    import secrets
+                    contact_id = f"CUST_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+                    
+                    crm_cur.execute("""
+                        INSERT INTO crm_contacts_cache 
+                        (contact_id, name, company_name, email, phone, address, notes, created_at, last_sync, sync_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending_sync')
+                    """, (
+                        contact_id,
+                        form_data.primary_contact_name,
+                        form_data.legal_business_name,
+                        form_data.primary_contact_email,
+                        form_data.primary_contact_phone,
+                        json.dumps({"full_address": full_address, "physical_address": form_data.physical_address, "city": form_data.physical_city, "state": form_data.physical_state, "zip": form_data.physical_zip}),
+                        customer_setup_notes,
+                        datetime.utcnow(),
+                        datetime.utcnow()
+                    ))
+                    
+                    logger.info(f"✅ Created new CRM cache contact: {contact_id}")
+                
+                # Add to CRM write queue for background sync to actual CRM
+                queue_data = {
+                    "contact_id": contact_id,
+                    "operation": "update_contact" if existing_contact else "create_contact",
+                    "data": {
+                        "name": form_data.primary_contact_name,
+                        "company_name": form_data.legal_business_name,
+                        "email": form_data.primary_contact_email,
+                        "phone": form_data.primary_contact_phone,
+                        "address": full_address,
+                        "notes": customer_setup_notes
+                    },
+                    "app_source": "Customer Setup Form",
+                    "transaction_id": transaction_id
+                }
+                
+                crm_cur.execute("""
+                    INSERT INTO crm_write_queue 
+                    (operation, data, status, created_at, max_attempts)
+                    VALUES (%s, %s, 'pending', %s, %s)
+                """, (
+                    queue_data["operation"],
+                    json.dumps(queue_data),
+                    datetime.utcnow(),
+                    5
+                ))
+                
+                crm_conn.commit()
+                crm_cur.close()
+                crm_conn.close()
+                
+                logger.info(f"✅ Customer Setup data queued for CRM sync: {form_data.legal_business_name}")
+                
+            except Exception as crm_error:
+                logger.error(f"❌ Error updating CRM cache: {crm_error}")
+                # Continue execution - don't fail form submission for CRM sync issues
+                
+        except Exception as e:
+            logger.error(f"❌ Error in CRM update process: {e}")
+            # Continue execution - don't fail form submission for CRM sync issues
         
         logger.info(f"Customer Setup form completed for {form_data.legal_business_name}: {transaction_id}")
         
