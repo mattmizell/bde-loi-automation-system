@@ -16,15 +16,9 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from database.models import Base, Customer, LOITransaction, CRMFormData, ProcessingEvent, AIDecision
-try:
-    from config.settings import get_settings
-except ImportError:
-    # Fallback for standalone execution
-    def get_settings():
-        class Settings:
-            def __init__(self):
-                self.coordinator = type('obj', (object,), {'max_queue_size': 5000, 'batch_size': 25})()
-        return Settings()
+
+# Database connection doesn't need complex settings - just DATABASE_URL
+# Forms only need database access, not LACRM API access
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +26,6 @@ class DatabaseManager:
     """Database manager for LOI Automation System"""
     
     def __init__(self):
-        self.settings = get_settings()
         self.engine = None
         self.SessionLocal = None
         self._initialized = False
