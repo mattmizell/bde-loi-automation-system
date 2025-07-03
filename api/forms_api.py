@@ -167,16 +167,16 @@ class SalesInitiatedCustomerSetupRequest(BaseModel):
     notes: Optional[str] = None
 
 class CustomerSetupFormRequest(BaseModel):
-    # Support both simplified and full form field names
-    legal_business_name: Optional[str] = None
-    business_name: Optional[str] = None  # Simplified form
+    # Support both simplified and full form field names - required fields match form
+    legal_business_name: str  # Required
+    business_name: Optional[str] = None  # Simplified form fallback
     dba_name: Optional[str] = None
-    federal_tax_id: Optional[str] = None
+    federal_tax_id: str  # Required  
     state_tax_id: Optional[str] = None
-    business_type: str
+    business_type: str  # Required
     years_in_business: Optional[int] = None
     years_business: Optional[int] = None  # Simplified form
-    physical_address: Optional[str] = None
+    physical_address: str  # Required
     physical_city: Optional[str] = None
     physical_state: Optional[str] = None
     physical_zip: Optional[str] = None
@@ -184,13 +184,13 @@ class CustomerSetupFormRequest(BaseModel):
     mailing_city: Optional[str] = None
     mailing_state: Optional[str] = None
     mailing_zip: Optional[str] = None
-    primary_contact_name: Optional[str] = None
-    contact_name: Optional[str] = None  # Simplified form
+    primary_contact_name: str  # Required
+    contact_name: Optional[str] = None  # Simplified form fallback
     primary_contact_title: Optional[str] = None
-    primary_contact_phone: Optional[str] = None
-    contact_phone: Optional[str] = None  # Simplified form
-    primary_contact_email: Optional[EmailStr] = None
-    contact_email: Optional[EmailStr] = None  # Simplified form
+    primary_contact_phone: str  # Required
+    contact_phone: Optional[str] = None  # Simplified form fallback
+    primary_contact_email: EmailStr  # Required
+    contact_email: Optional[EmailStr] = None  # Simplified form fallback
     accounts_payable_contact: Optional[str] = None
     accounts_payable_email: Optional[EmailStr] = None
     accounts_payable_phone: Optional[str] = None
@@ -833,9 +833,7 @@ def generate_customer_setup_completion_form(transaction_id: str, pre_filled_data
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
                 
-                // Add signature fields
-                data.authorized_signature_name = data.primary_contact_name;
-                data.signature_date = new Date().toISOString();
+                // No signature required for Customer Setup forms
                 
                 try {{
                     const response = await fetch(`/api/v1/forms/customer-setup/complete/${{TRANSACTION_ID}}`, {{
