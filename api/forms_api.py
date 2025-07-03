@@ -316,22 +316,166 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
     import os
     template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'eft_completion_form.html')
     
-    # For now, return a simple form with pre-filled data
-    # In production, this would use a proper template engine
+    # Generate complete self-contained HTML form
     return f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Complete EFT Authorization - Better Day Energy</title>
-        <script>
-            window.TRANSACTION_ID = '{transaction_id}';
-            window.PRE_FILLED_DATA = {json.dumps(pre_filled_data)};
-        </script>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; }}
+            .header {{ background: linear-gradient(135deg, #1f4e79, #2563eb); color: white; padding: 30px; text-align: center; }}
+            .header h1 {{ font-size: 28px; margin-bottom: 10px; }}
+            .header p {{ opacity: 0.9; font-size: 16px; }}
+            .form-content {{ padding: 40px; }}
+            .form-section {{ background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef; }}
+            .form-section h3 {{ color: #1f4e79; margin-bottom: 20px; font-size: 20px; }}
+            .form-row {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }}
+            .form-group {{ display: flex; flex-direction: column; }}
+            .form-group label {{ font-weight: 600; margin-bottom: 8px; color: #495057; font-size: 14px; }}
+            .form-group input, .form-group select {{ padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; transition: border-color 0.3s ease; }}
+            .form-group input:focus, .form-group select:focus {{ outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }}
+            .required {{ color: #dc3545; }}
+            .btn {{ padding: 15px 30px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 16px; }}
+            .btn-success {{ background: #28a745; color: white; }}
+            .btn-success:hover {{ background: #218838; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3); }}
+            .alert {{ padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; display: none; }}
+            .alert-success {{ background: #d1e7dd; border: 1px solid #badbcc; color: #0f5132; }}
+            .alert-danger {{ background: #f8d7da; border: 1px solid #f5c2c7; color: #842029; }}
+        </style>
     </head>
     <body>
-        <h1>Complete Your EFT Authorization</h1>
-        <p>Transaction ID: {transaction_id}</p>
-        <script src="/static/eft_completion.js"></script>
+        <div class="container">
+            <div class="header">
+                <h1>🏦 Complete EFT Authorization</h1>
+                <p>Better Day Energy - Electronic Funds Transfer Setup</p>
+            </div>
+            
+            <div class="form-content">
+                <div class="alert alert-success" id="success-alert">
+                    ✅ EFT Authorization completed successfully!
+                </div>
+                
+                <div class="alert alert-danger" id="error-alert">
+                    ❌ <span id="error-message">Error submitting form</span>
+                </div>
+                
+                <form id="eft-form">
+                    <div class="form-section">
+                        <h3>📋 Company Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="company-name">Company Name <span class="required">*</span></label>
+                                <input type="text" id="company-name" name="company_name" value="{company_name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="federal-tax-id">Federal Tax ID (EIN)</label>
+                                <input type="text" id="federal-tax-id" name="federal_tax_id" value="{federal_tax_id}" placeholder="XX-XXXXXXX">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>🏦 Banking Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="bank-name">Bank Name <span class="required">*</span></label>
+                                <input type="text" id="bank-name" name="bank_name" value="{bank_name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="account-holder">Account Holder Name <span class="required">*</span></label>
+                                <input type="text" id="account-holder" name="account_holder_name" value="{account_holder_name}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="account-type">Account Type <span class="required">*</span></label>
+                                <select id="account-type" name="account_type" required>
+                                    <option value="">Select Account Type</option>
+                                    <option value="checking" {'selected' if account_type == 'checking' else ''}>Checking</option>
+                                    <option value="savings" {'selected' if account_type == 'savings' else ''}>Savings</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="routing-number">Routing Number <span class="required">*</span></label>
+                                <input type="text" id="routing-number" name="routing_number" required placeholder="9 digits" maxlength="9">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="account-number">Account Number <span class="required">*</span></label>
+                                <input type="text" id="account-number" name="account_number" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>✍️ Authorization</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="authorized-name">Authorized Signer Name <span class="required">*</span></label>
+                                <input type="text" id="authorized-name" name="authorized_by_name" value="{authorized_by_name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="authorized-title">Title <span class="required">*</span></label>
+                                <input type="text" id="authorized-title" name="authorized_by_title" value="{authorized_by_title}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn btn-success">
+                            ✅ Complete EFT Authorization
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <script>
+            const TRANSACTION_ID = '{transaction_id}';
+            
+            document.getElementById('eft-form').addEventListener('submit', async (e) => {{
+                e.preventDefault();
+                
+                const form = e.target;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Add required fields
+                data.authorization_date = new Date().toISOString();
+                data.signature_data = 'electronic_signature_' + Date.now();
+                data.signature_timestamp = new Date().toISOString();
+                
+                try {{
+                    const response = await fetch(`/api/v1/forms/eft/complete/${{TRANSACTION_ID}}`, {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(data)
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {{
+                        document.getElementById('success-alert').style.display = 'block';
+                        document.getElementById('error-alert').style.display = 'none';
+                        form.style.display = 'none';
+                    }} else {{
+                        throw new Error(result.detail || result.message || 'Failed to submit form');
+                    }}
+                }} catch (error) {{
+                    document.getElementById('error-alert').style.display = 'block';
+                    document.getElementById('error-message').textContent = error.message;
+                    document.getElementById('success-alert').style.display = 'none';
+                }}
+            }});
+        </script>
     </body>
     </html>
     """
@@ -361,24 +505,209 @@ def generate_customer_setup_completion_form(transaction_id: str, pre_filled_data
     notes = pre_filled_data.get('notes', '')
     initiated_by = pre_filled_data.get('initiated_by', 'Better Day Energy Sales Team')
     
-    # For now, return a simple form with pre-filled data
-    # In production, this would use a proper template engine
+    # Generate complete self-contained HTML form
     return f"""
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Complete Customer Setup - Better Day Energy</title>
-        <script>
-            window.TRANSACTION_ID = '{transaction_id}';
-            window.PRE_FILLED_DATA = {json.dumps(pre_filled_data)};
-        </script>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }}
+            .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; }}
+            .header {{ background: linear-gradient(135deg, #1f4e79, #2563eb); color: white; padding: 30px; text-align: center; }}
+            .header h1 {{ font-size: 28px; margin-bottom: 10px; }}
+            .header p {{ opacity: 0.9; font-size: 16px; }}
+            .form-content {{ padding: 40px; }}
+            .form-section {{ background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e9ecef; }}
+            .form-section h3 {{ color: #1f4e79; margin-bottom: 20px; font-size: 20px; }}
+            .form-row {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }}
+            .form-group {{ display: flex; flex-direction: column; }}
+            .form-group label {{ font-weight: 600; margin-bottom: 8px; color: #495057; font-size: 14px; }}
+            .form-group input, .form-group select, .form-group textarea {{ padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 16px; transition: border-color 0.3s ease; }}
+            .form-group input:focus, .form-group select:focus, .form-group textarea:focus {{ outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }}
+            .form-group textarea {{ resize: vertical; min-height: 100px; }}
+            .form-group.full-width {{ grid-column: 1 / -1; }}
+            .required {{ color: #dc3545; }}
+            .btn {{ padding: 15px 30px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; font-size: 16px; }}
+            .btn-success {{ background: #28a745; color: white; }}
+            .btn-success:hover {{ background: #218838; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3); }}
+            .alert {{ padding: 15px 20px; border-radius: 6px; margin-bottom: 20px; display: none; }}
+            .alert-success {{ background: #d1e7dd; border: 1px solid #badbcc; color: #0f5132; }}
+            .alert-danger {{ background: #f8d7da; border: 1px solid #f5c2c7; color: #842029; }}
+            .alert-info {{ background: #cfe2ff; border: 1px solid #b6d4fe; color: #084298; }}
+        </style>
     </head>
     <body>
-        <h1>Complete Your Customer Setup</h1>
-        <p>Transaction ID: {transaction_id}</p>
-        <p>Initiated by: {initiated_by}</p>
-        {f'<p><strong>Note:</strong> {notes}</p>' if notes else ''}
-        <script src="/static/customer_setup_completion.js"></script>
+        <div class="container">
+            <div class="header">
+                <h1>🏢 Complete Customer Setup</h1>
+                <p>Better Day Energy - New Customer Registration</p>
+            </div>
+            
+            <div class="form-content">
+                {f'<div class="alert alert-info">📋 <strong>Initiated by:</strong> {initiated_by}</div>' if initiated_by else ''}
+                {f'<div class="alert alert-info">📝 <strong>Note:</strong> {notes}</div>' if notes else ''}
+                
+                <div class="alert alert-success" id="success-alert">
+                    ✅ Customer setup completed successfully!
+                </div>
+                
+                <div class="alert alert-danger" id="error-alert">
+                    ❌ <span id="error-message">Error submitting form</span>
+                </div>
+                
+                <form id="customer-setup-form">
+                    <div class="form-section">
+                        <h3>📋 Business Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="legal-business-name">Legal Business Name <span class="required">*</span></label>
+                                <input type="text" id="legal-business-name" name="legal_business_name" value="{legal_business_name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="dba-name">DBA Name (if different)</label>
+                                <input type="text" id="dba-name" name="dba_name" value="{dba_name}">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="business-type">Business Type <span class="required">*</span></label>
+                                <select id="business-type" name="business_type" required>
+                                    <option value="">Select Business Type</option>
+                                    <option value="LLC" {'selected' if business_type == 'LLC' else ''}>LLC</option>
+                                    <option value="Corporation" {'selected' if business_type == 'Corporation' else ''}>Corporation</option>
+                                    <option value="Partnership" {'selected' if business_type == 'Partnership' else ''}>Partnership</option>
+                                    <option value="Sole Proprietorship" {'selected' if business_type == 'Sole Proprietorship' else ''}>Sole Proprietorship</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="years-in-business">Years in Business</label>
+                                <input type="number" id="years-in-business" name="years_in_business" value="{years_in_business}" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="federal-tax-id">Federal Tax ID (EIN) <span class="required">*</span></label>
+                                <input type="text" id="federal-tax-id" name="federal_tax_id" value="{federal_tax_id}" required placeholder="XX-XXXXXXX">
+                            </div>
+                            <div class="form-group">
+                                <label for="state-tax-id">State Tax ID</label>
+                                <input type="text" id="state-tax-id" name="state_tax_id" value="{state_tax_id}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>👤 Contact Information</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="primary-contact-name">Primary Contact Name <span class="required">*</span></label>
+                                <input type="text" id="primary-contact-name" name="primary_contact_name" value="{primary_contact_name}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="primary-contact-email">Primary Contact Email <span class="required">*</span></label>
+                                <input type="email" id="primary-contact-email" name="primary_contact_email" value="{primary_contact_email}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="primary-contact-phone">Primary Contact Phone <span class="required">*</span></label>
+                                <input type="tel" id="primary-contact-phone" name="primary_contact_phone" value="{primary_contact_phone}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>📍 Business Address</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="physical-address">Physical Address <span class="required">*</span></label>
+                                <input type="text" id="physical-address" name="physical_address" value="{physical_address}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="physical-city">City <span class="required">*</span></label>
+                                <input type="text" id="physical-city" name="physical_city" value="{physical_city}" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="physical-state">State <span class="required">*</span></label>
+                                <input type="text" id="physical-state" name="physical_state" value="{physical_state}" required maxlength="2">
+                            </div>
+                            <div class="form-group">
+                                <label for="physical-zip">ZIP Code <span class="required">*</span></label>
+                                <input type="text" id="physical-zip" name="physical_zip" value="{physical_zip}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3>⛽ Business Details</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="annual-fuel-volume">Annual Fuel Volume (gallons)</label>
+                                <input type="number" id="annual-fuel-volume" name="annual_fuel_volume" value="{annual_fuel_volume}" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="number-of-locations">Number of Locations</label>
+                                <input type="number" id="number-of-locations" name="number_of_locations" value="{number_of_locations}" min="1">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn btn-success">
+                            ✅ Complete Customer Setup
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <script>
+            const TRANSACTION_ID = '{transaction_id}';
+            
+            document.getElementById('customer-setup-form').addEventListener('submit', async (e) => {{
+                e.preventDefault();
+                
+                const form = e.target;
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Add signature fields
+                data.authorized_signature_name = data.primary_contact_name;
+                data.signature_date = new Date().toISOString();
+                
+                try {{
+                    const response = await fetch(`/api/v1/forms/customer-setup/complete/${{TRANSACTION_ID}}`, {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: JSON.stringify(data)
+                    }});
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {{
+                        document.getElementById('success-alert').style.display = 'block';
+                        document.getElementById('error-alert').style.display = 'none';
+                        form.style.display = 'none';
+                    }} else {{
+                        throw new Error(result.detail || result.message || 'Failed to submit form');
+                    }}
+                }} catch (error) {{
+                    document.getElementById('error-alert').style.display = 'block';
+                    document.getElementById('error-message').textContent = error.message;
+                    document.getElementById('success-alert').style.display = 'none';
+                }}
+            }});
+        </script>
     </body>
     </html>
     """
