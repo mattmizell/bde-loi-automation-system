@@ -34,26 +34,12 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import logging
 from pydantic import BaseModel
+import asyncio
+from contextlib import asynccontextmanager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Initialize FastAPI
-app = FastAPI(
-    title="Better Day Energy CRM Bridge Service",
-    description="Unified CRM authentication and API service for all BDE sales tools",
-    version="1.0.0"
-)
-
-# CORS middleware for cross-origin requests
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure based on your apps
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Security
 security = HTTPBearer()
@@ -282,13 +268,13 @@ class CRMBridge:
         try:
             cur = conn.cursor()
             
-            # Get pending operations (limit 10 per batch)
+            # Get pending operations (limit 5 per batch to avoid rate limits)
             cur.execute("""
                 SELECT id, operation, data, attempts
                 FROM crm_write_queue 
                 WHERE status = 'pending' AND attempts < max_attempts
                 ORDER BY created_at
-                LIMIT 10
+                LIMIT 5
             """)
             
             operations = cur.fetchall()
@@ -386,6 +372,75 @@ class CRMBridge:
             
         except Exception as e:
             logger.error(f"LACRM sync failed: {e}")
+            return False
+    
+    @staticmethod
+    def refresh_oldest_contacts(limit=50):
+        """🔄 Incremental refresh of oldest contacts to avoid rate limits"""
+        logger.info(f"📊 Starting incremental refresh of {limit} oldest contacts...")
+        
+        try:
+            conn = get_db_connection()
+            if not conn:
+                return False
+            
+            cur = conn.cursor()
+            
+            # Get the oldest contacts that need refresh
+            cur.execute("""
+                SELECT contact_id 
+                FROM crm_contacts_cache 
+                WHERE last_sync < NOW() - INTERVAL '2 hours'
+                   OR sync_status = 'pending_sync'
+                ORDER BY last_sync ASC NULLS FIRST
+                LIMIT %s
+            """, (limit,))
+            
+            contact_ids = [row[0] for row in cur.fetchall()]
+            
+            if not contact_ids:
+                logger.info("✅ No contacts need refreshing")
+                conn.close()
+                return True
+            
+            # Extract UserCode from API key
+            user_code = LACRM_API_KEY.split('-')[0]
+            
+            # Refresh each contact individually with small delay to avoid rate limits
+            refreshed = 0
+            for contact_id in contact_ids:
+                try:
+                    params = {
+                        'APIToken': LACRM_API_KEY,
+                        'UserCode': user_code,
+                        'Function': 'GetContact',
+                        'ContactId': contact_id
+                    }
+                    
+                    response = requests.post(LACRM_BASE_URL, data=params, timeout=10)
+                    
+                    if response.status_code == 200:
+                        data = json.loads(response.text)
+                        if 'Contact' in data:
+                            # Update this specific contact in cache
+                            contact = data['Contact']
+                            # Process and update contact (reuse existing logic)
+                            logger.debug(f"✅ Refreshed contact {contact_id}")
+                            refreshed += 1
+                    
+                    # Small delay between requests (100ms)
+                    import time
+                    time.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to refresh contact {contact_id}: {e}")
+            
+            conn.close()
+            logger.info(f"✅ Incremental refresh completed: {refreshed}/{len(contact_ids)} contacts updated")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Incremental refresh failed: {e}")
             return False
     
     @staticmethod
@@ -780,12 +835,118 @@ async def get_cache_info(auth_info: dict = Depends(verify_api_token)):
         raise HTTPException(status_code=500, detail=f"Cache info failed: {e}")
 
 # Background Scheduler (for production deployment)
-@app.on_event("startup")
-async def startup_tasks():
-    """Initialize background tasks on startup"""
+import asyncio
+from contextlib import asynccontextmanager
+
+# Global flag to control background tasks
+background_tasks_running = True
+
+async def periodic_write_queue_processor():
+    """Process write queue every 60 seconds"""
+    while background_tasks_running:
+        try:
+            logger.info("⏰ Processing write queue (1-minute interval)")
+            CRMBridge.process_write_queue()
+            await asyncio.sleep(60)  # Wait 60 seconds
+        except Exception as e:
+            logger.error(f"Error in periodic write queue processor: {e}")
+            await asyncio.sleep(60)  # Continue even on error
+
+async def periodic_cache_refresh():
+    """Refresh cache from LACRM every 60 seconds (incremental sync)"""
+    error_count = 0
+    while background_tasks_running:
+        try:
+            # Wait 30 seconds initially to stagger from write queue
+            await asyncio.sleep(30)
+            
+            # Incremental sync strategy to avoid rate limits
+            conn = get_db_connection()
+            if conn:
+                cur = conn.cursor()
+                
+                # Get the oldest synced timestamp to do incremental updates
+                cur.execute("""
+                    SELECT MIN(last_sync) as oldest_sync,
+                           COUNT(*) as total_contacts,
+                           COUNT(CASE WHEN last_sync < NOW() - INTERVAL '2 hours' THEN 1 END) as stale_count
+                    FROM crm_contacts_cache
+                """)
+                result = cur.fetchone()
+                oldest_sync, total_contacts, stale_count = result
+                
+                conn.close()
+                
+                # Incremental sync strategy
+                if stale_count > 100:  # Many stale records
+                    logger.info(f"🔄 {stale_count} stale contacts found, doing incremental refresh")
+                    # Only refresh 50 oldest records to avoid rate limits
+                    CRMBridge.refresh_oldest_contacts(limit=50)
+                elif stale_count > 0:  # Some stale records
+                    logger.info(f"📍 {stale_count} stale contacts, refreshing oldest 20")
+                    CRMBridge.refresh_oldest_contacts(limit=20)
+                else:
+                    logger.info(f"✅ Cache is fresh (all {total_contacts} contacts synced within 2 hours)")
+                
+                # Reset error count on success
+                error_count = 0
+            
+            await asyncio.sleep(30)  # Complete the 60-second cycle
+            
+        except Exception as e:
+            error_count += 1
+            logger.error(f"Error in periodic cache refresh (attempt {error_count}): {e}")
+            
+            # Exponential backoff with max delay of 5 minutes
+            backoff_delay = min(60 * (2 ** error_count), 300)
+            logger.warning(f"⏸️ Backing off for {backoff_delay} seconds due to errors")
+            await asyncio.sleep(backoff_delay)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifecycle with background tasks"""
+    # Startup
     logger.info("🚀 CRM Bridge Service Starting Up")
     logger.info("⚡ Cache-first reads enabled")
-    logger.info("🔄 Background sync enabled")
+    logger.info("🔄 Background sync enabled - 60 second intervals")
+    
+    # Start background tasks
+    write_queue_task = asyncio.create_task(periodic_write_queue_processor())
+    cache_refresh_task = asyncio.create_task(periodic_cache_refresh())
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 Shutting down background tasks...")
+    global background_tasks_running
+    background_tasks_running = False
+    
+    # Cancel tasks
+    write_queue_task.cancel()
+    cache_refresh_task.cancel()
+    
+    try:
+        await write_queue_task
+        await cache_refresh_task
+    except asyncio.CancelledError:
+        pass
+
+# Initialize FastAPI with lifespan
+app = FastAPI(
+    title="Better Day Energy CRM Bridge Service",
+    description="Unified CRM authentication and API service for all BDE sales tools",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware for cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure based on your apps
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 if __name__ == "__main__":
     import uvicorn
