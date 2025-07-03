@@ -84,6 +84,16 @@ class EFTFormRequest(BaseModel):
     company_name: str
     federal_tax_id: str
     customer_id: Optional[str] = None
+    # Business address fields
+    company_address: Optional[str] = None
+    company_city: Optional[str] = None
+    company_state: Optional[str] = None
+    company_zip: Optional[str] = None
+    # Contact fields
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    # Bank information
     bank_name: str
     bank_address: Optional[str] = None
     bank_city: Optional[str] = None
@@ -936,6 +946,16 @@ async def submit_eft_form(
             customer_id=customer.id,
             company_name=form_data.company_name,
             federal_tax_id=form_data.federal_tax_id,
+            # Business address
+            company_address=form_data.company_address,
+            company_city=form_data.company_city,
+            company_state=form_data.company_state,
+            company_zip=form_data.company_zip,
+            # Contact information
+            contact_name=form_data.contact_name,
+            contact_email=form_data.contact_email,
+            contact_phone=form_data.contact_phone,
+            # Bank information
             bank_name=form_data.bank_name,
             bank_address=form_data.bank_address,
             bank_city=form_data.bank_city,
@@ -1335,6 +1355,16 @@ async def complete_eft_form(
             transaction_id=transaction_id,
             company_name=form_data.company_name,
             federal_tax_id=form_data.federal_tax_id,
+            # Business address
+            company_address=form_data.company_address,
+            company_city=form_data.company_city,
+            company_state=form_data.company_state,
+            company_zip=form_data.company_zip,
+            # Contact information
+            contact_name=form_data.contact_name,
+            contact_email=form_data.contact_email,
+            contact_phone=form_data.contact_phone,
+            # Bank information
             bank_name=form_data.bank_name,
             bank_address=form_data.bank_address,
             bank_city=form_data.bank_city,

@@ -2052,17 +2052,41 @@ async def get_eft_document(transaction_id: str):
                                         <span class="info-label">Federal Tax ID (EIN):</span>
                                         <span class="info-value">{form_data.get('federal_tax_id', 'Not provided')}</span>
                                     </div>
+                                </div>
+                                
+                                <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1f4e79;">📍 Business Address</h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Address:</span>
+                                        <span class="info-value">{form_data.get('company_address', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">City:</span>
+                                        <span class="info-value">{form_data.get('company_city', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">State:</span>
+                                        <span class="info-value">{form_data.get('company_state', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">ZIP Code:</span>
+                                        <span class="info-value">{form_data.get('company_zip', 'Not provided')}</span>
+                                    </div>
+                                </div>
+                                
+                                <h3 style="margin-top: 25px; margin-bottom: 15px; color: #1f4e79;">👤 Primary Contact</h3>
+                                <div class="info-grid">
                                     <div class="info-item">
                                         <span class="info-label">Contact Name:</span>
-                                        <span class="info-value">{contact_name or 'Unknown'}</span>
+                                        <span class="info-value">{form_data.get('contact_name', contact_name or 'Not provided')}</span>
                                     </div>
                                     <div class="info-item">
                                         <span class="info-label">Email:</span>
-                                        <span class="info-value">{email or form_data.get('customer_email', 'Unknown')}</span>
+                                        <span class="info-value">{form_data.get('contact_email', email or 'Not provided')}</span>
                                     </div>
                                     <div class="info-item">
                                         <span class="info-label">Phone:</span>
-                                        <span class="info-value">{phone or form_data.get('customer_phone', 'Not provided')}</span>
+                                        <span class="info-value">{form_data.get('contact_phone', phone or 'Not provided')}</span>
                                     </div>
                                 </div>
                             </div>

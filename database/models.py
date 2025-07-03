@@ -546,6 +546,17 @@ class EFTFormData(Base):
     company_name = Column(String(255), nullable=False)
     federal_tax_id = Column(String(50))  # EIN format: XX-XXXXXXX
     
+    # Business Address
+    company_address = Column(String(500))
+    company_city = Column(String(100))
+    company_state = Column(String(50))
+    company_zip = Column(String(20))
+    
+    # Contact Information
+    contact_name = Column(String(255))
+    contact_email = Column(String(255))
+    contact_phone = Column(String(50))
+    
     # Bank Account Information
     bank_name = Column(String(255), nullable=False)
     bank_address = Column(String(500))
