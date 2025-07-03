@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initiate Customer Setup Form - Better Day Energy Sales Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1f4e79, #2563eb);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .form-content {
+            padding: 40px;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .form-section h3 {
+            color: #1f4e79;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .required {
+            color: #dc3545;
+        }
+        
+        .optional-label {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: normal;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1f4e79;
+            transform: translateY(-1px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert-info {
+            background: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            color: #084298;
+        }
+        
+        .alert-success {
+            background: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+            display: none;
+        }
+        
+        .pre-fill-note {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #bbdefb;
+        }
+        
+        .crm-search-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #28a745;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-top: none;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-result {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result:hover {
+            background: #f8f9fa;
+        }
+        
+        .search-result:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-name {
+            font-weight: 600;
+            color: #1f4e79;
+        }
+        
+        .search-result-company {
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .search-result-email {
+            color: #6c757d;
+            font-size: 13px;
+        }
+        
+        .crm-status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .crm-status.found {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+            display: block;
+        }
+        
+        .crm-status.loading {
+            background: #fff3cd;
+            color: #664d03;
+            border: 1px solid #ffecb5;
+            display: block;
+        }
+        
+        .clear-crm-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .clear-crm-btn:hover {
+            background: #5a6268;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f4e79;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .form-content {
+                padding: 20px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Initiate Customer Setup Form</h1>
+            <p>Sales Portal - Send Customer Setup form to customer for completion</p>
+        </div>
+        
+        <div class="form-content">
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Fill out as much information as you have available. Only Company Name and Email are required. The customer will complete any missing fields and provide their signature.</span>
+            </div>
+            
+            <div class="alert alert-success" id="success-alert">
+                <span>✅</span>
+                <span id="success-message">Customer Setup form sent successfully!</span>
+            </div>
+            
+            <form id="customer-setup-initiate-form">
+                <!-- CRM Search Section -->
+                <div class="crm-search-section">
+                    <h3>🔍 Search CRM Database</h3>
+                    <p style="margin-bottom: 15px; color: #495057;">Search our 2,500+ customer database to auto-populate form fields</p>
+                    
+                    <div class="search-box">
+                        <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off" style="flex: 1;">
+                            <button type="button" class="btn btn-primary" onclick="performManualCRMSearch()" style="padding: 12px 20px;">🔍 Search</button>
+                        </div>
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                    
+                    <div class="crm-status" id="crm-status"></div>
+                </div>
+
+                <!-- Required Information -->
+                <div class="form-section">
+                    <h3>📋 Required Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="legal-business-name">Legal Business Name <span class="required">*</span></label>
+                            <input type="text" id="legal-business-name" name="legal_business_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="primary-contact-email">Primary Contact Email <span class="required">*</span></label>
+                            <input type="email" id="primary-contact-email" name="primary_contact_email" required placeholder="contact@company.com">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Optional Pre-fill Information -->
+                <div class="form-section">
+                    <h3>📝 Optional Pre-fill Information</h3>
+                    <div class="pre-fill-note">
+                        <p><strong>💡 Tip:</strong> Any information you provide here will be pre-filled in the customer's form, saving them time. They can still edit any field and complete the signature.</p>
+                    </div>
+                    
+                    <!-- Basic Company Information -->
+                    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">Basic Company Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="primary-contact-name">Primary Contact Name <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="primary-contact-name" name="primary_contact_name" placeholder="Contact person name">
+                        </div>
+                        <div class="form-group">
+                            <label for="primary-contact-phone">Primary Contact Phone <span class="optional-label">(optional)</span></label>
+                            <input type="tel" id="primary-contact-phone" name="primary_contact_phone" placeholder="(555) 123-4567">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dba-name">DBA Name <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="dba-name" name="dba_name" placeholder="Doing business as...">
+                        </div>
+                        <div class="form-group">
+                            <label for="business-type">Business Type <span class="optional-label">(optional)</span></label>
+                            <select id="business-type" name="business_type">
+                                <option value="">Not specified</option>
+                                <option value="corporation">Corporation</option>
+                                <option value="llc">LLC</option>
+                                <option value="partnership">Partnership</option>
+                                <option value="sole_proprietor">Sole Proprietor</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="years-in-business">Years in Business <span class="optional-label">(optional)</span></label>
+                            <input type="number" id="years-in-business" name="years_in_business" min="0" max="200" placeholder="Years">
+                        </div>
+                        <div class="form-group">
+                            <label for="federal-tax-id">Federal Tax ID (EIN) <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="federal-tax-id" name="federal_tax_id" placeholder="XX-XXXXXXX">
+                        </div>
+                    </div>
+                    
+                    <!-- Location Information -->
+                    <h4 style="color: #495057; margin: 20px 0 15px 0; font-size: 16px;">Location Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physical-address">Physical Address <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="physical-address" name="physical_address" placeholder="Street address">
+                        </div>
+                        <div class="form-group">
+                            <label for="physical-city">City <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="physical-city" name="physical_city" placeholder="City">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="physical-state">State <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="physical-state" name="physical_state" placeholder="State">
+                        </div>
+                        <div class="form-group">
+                            <label for="physical-zip">ZIP Code <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="physical-zip" name="physical_zip" placeholder="ZIP">
+                        </div>
+                    </div>
+                    
+                    <!-- Business Details -->
+                    <h4 style="color: #495057; margin: 20px 0 15px 0; font-size: 16px;">Business Details</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="annual-fuel-volume">Annual Fuel Volume (gallons) <span class="optional-label">(optional)</span></label>
+                            <input type="number" id="annual-fuel-volume" name="annual_fuel_volume" min="0" placeholder="Gallons per year">
+                        </div>
+                        <div class="form-group">
+                            <label for="number-of-locations">Number of Locations <span class="optional-label">(optional)</span></label>
+                            <input type="number" id="number-of-locations" name="number_of_locations" min="1" placeholder="Number of locations">
+                        </div>
+                    </div>
+                    
+                    <!-- Sales Information -->
+                    <h4 style="color: #495057; margin: 20px 0 15px 0; font-size: 16px;">Sales Information</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="initiated-by">Your Name <span class="optional-label">(optional)</span></label>
+                            <input type="text" id="initiated-by" name="initiated_by" placeholder="Sales representative name">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes for Customer <span class="optional-label">(optional)</span></label>
+                        <textarea id="notes" name="notes" placeholder="Any special instructions or notes for the customer..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">
+                        ← Back to Dashboard
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        📧 Send Customer Setup Form to Customer
+                    </button>
+                </div>
+            </form>
+            
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Sending Customer Setup form...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Manual search function for button click
+        async function performManualCRMSearch() {
+            const searchInput = document.getElementById('crm-search');
+            const query = searchInput ? searchInput.value.trim() : '';
+            
+            if (!query) {
+                alert('Please enter a search term');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('search-results');
+            const statusDiv = document.getElementById('crm-status');
+            
+            try {
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status loading';
+                    statusDiv.textContent = 'Searching CRM...';
+                    statusDiv.style.display = 'block';
+                }
+                
+                const response = await fetch('/api/v1/crm-bridge/contacts/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer bde_loi_auth_e6db5173a4393421ffadae85f9a3513e'
+                    },
+                    body: JSON.stringify({ query: query, limit: 10 })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.contacts) {
+                    displayCRMResults(data.contacts);
+                    if (statusDiv) statusDiv.style.display = 'none';
+                } else {
+                    if (resultsDiv) resultsDiv.style.display = 'none';
+                    if (statusDiv) {
+                        statusDiv.className = 'crm-status';
+                        statusDiv.textContent = 'Search failed. Please try again.';
+                    }
+                }
+            } catch (error) {
+                console.error('CRM search error:', error);
+                if (resultsDiv) resultsDiv.style.display = 'none';
+                if (statusDiv) {
+                    statusDiv.className = 'crm-status';
+                    statusDiv.textContent = 'Search error. Please try again.';
+                }
+            }
+        }
+        
+        // Display search results
+        function displayCRMResults(contacts) {
+            const resultsDiv = document.getElementById('search-results');
+            if (!resultsDiv) return;
+            
+            if (contacts.length === 0) {
+                resultsDiv.innerHTML = '<div class="search-result">No results found</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            
+            const resultsHtml = contacts.map(contact => `
+                <div class="search-result" onclick="selectCRMContact(${JSON.stringify(contact).replace(/"/g, '&quot;')})">
+                    <div class="search-result-name">${contact.name || 'No name'}</div>
+                    <div class="search-result-company">${contact.company_name || 'No company'}</div>
+                    <div class="search-result-email">${contact.email || 'No email'}</div>
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = resultsHtml;
+            resultsDiv.style.display = 'block';
+        }
+        
+        // Select contact
+        function selectCRMContact(contact) {
+            // Populate basic fields
+            setFieldValue('legal-business-name', contact.company_name);
+            setFieldValue('primary-contact-email', contact.email);
+            setFieldValue('primary-contact-phone', contact.phone);
+            setFieldValue('primary-contact-name', contact.name);
+            setFieldValue('dba-name', contact.dba_name);
+            
+            // Parse and populate address with zip code extraction
+            if (contact.address) {
+                const addressParts = parseAddressWithZip(contact.address);
+                setFieldValue('physical-address', addressParts.street);
+                setFieldValue('physical-city', addressParts.city);
+                setFieldValue('physical-state', addressParts.state);
+                setFieldValue('physical-zip', addressParts.zip);
+            }
+            
+            hideSearchResults();
+            
+            const searchInput = document.getElementById('crm-search');
+            if (searchInput) {
+                searchInput.value = `${contact.company_name || 'Unknown'} - ${contact.name || 'No name'}`;
+            }
+            
+            const statusDiv = document.getElementById('crm-status');
+            if (statusDiv) {
+                statusDiv.className = 'crm-status found';
+                statusDiv.innerHTML = `✅ Found: ${contact.company_name} - ${contact.name} <button type="button" class="clear-crm-btn" onclick="clearCRMData()">Clear</button>`;
+                statusDiv.style.display = 'block';
+            }
+        }
+        
+        // Helper functions
+        function parseAddressWithZip(addressString) {
+            if (!addressString) return {};
+            
+            const cleanAddress = addressString.replace(/\n/g, ', ').replace(/\s+/g, ' ');
+            const parts = cleanAddress.split(',').map(part => part.trim());
+            
+            if (parts.length >= 3) {
+                const street = parts[0];
+                const city = parts[1];
+                const lastPart = parts[parts.length - 1];
+                const stateZipMatch = lastPart.match(/^([A-Z]{2})\s*,?\s*(\d{5}(-\d{4})?)$/i);
+                
+                if (stateZipMatch) {
+                    return { street, city, state: stateZipMatch[1], zip: stateZipMatch[2] };
+                } else {
+                    const zipMatch = lastPart.match(/(\d{5}(-\d{4})?)$/);
+                    if (zipMatch) {
+                        const zip = zipMatch[1];
+                        const state = lastPart.replace(zipMatch[0], '').trim().replace(/,$/, '');
+                        return { street, city, state, zip };
+                    }
+                }
+            }
+            
+            return { street: addressString };
+        }
+        
+        function setFieldValue(fieldId, value) {
+            if (!fieldId || !value) return;
+            const element = document.getElementById(fieldId);
+            if (element) element.value = value;
+        }
+        
+        function hideSearchResults() {
+            const resultsDiv = document.getElementById('search-results');
+            if (resultsDiv) resultsDiv.style.display = 'none';
+        }
+        
+        function clearCRMData() {
+            const searchInput = document.getElementById('crm-search');
+            const statusDiv = document.getElementById('crm-status');
+            
+            if (searchInput) searchInput.value = '';
+            if (statusDiv) statusDiv.style.display = 'none';
+            
+            // Clear CRM-populated fields
+            const fieldsToClear = [
+                'legal-business-name', 'primary-contact-email', 'primary-contact-phone',
+                'primary-contact-name', 'dba-name', 'physical-address', 'physical-city', 
+                'physical-state', 'physical-zip'
+            ];
+            fieldsToClear.forEach(fieldId => {
+                const element = document.getElementById(fieldId);
+                if (element) element.value = '';
+            });
+        }
+        
+        // Make functions global
+        window.performManualCRMSearch = performManualCRMSearch;
+        window.selectCRMContact = selectCRMContact;
+        window.clearCRMData = clearCRMData;
+        
+        // Form submission handler
+        document.getElementById('customer-setup-initiate-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const loadingDiv = document.querySelector('.loading');
+            const formContent = document.querySelector('form');
+            const successAlert = document.getElementById('success-alert');
+            
+            // Show loading
+            formContent.style.display = 'none';
+            loadingDiv.style.display = 'block';
+            submitButton.disabled = true;
+            
+            // Gather form data
+            const formData = {
+                legal_business_name: form.legal_business_name.value,
+                primary_contact_email: form.primary_contact_email.value
+            };
+            
+            // Add optional fields if they have values
+            const optionalFields = [
+                'primary_contact_name', 'primary_contact_phone', 'dba_name',
+                'business_type', 'years_in_business', 'federal_tax_id', 'state_tax_id',
+                'physical_address', 'physical_city', 'physical_state', 'physical_zip',
+                'mailing_address', 'mailing_city', 'mailing_state', 'mailing_zip',
+                'annual_fuel_volume', 'number_of_locations',
+                'initiated_by', 'notes'
+            ];
+            
+            optionalFields.forEach(field => {
+                const value = form[field]?.value;
+                if (value && value.trim()) {
+                    formData[field] = value.trim();
+                }
+            });
+            
+            try {
+                const response = await fetch('/api/v1/forms/customer-setup/initiate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    // Show success message
+                    loadingDiv.style.display = 'none';
+                    successAlert.style.display = 'flex';
+                    document.getElementById('success-message').textContent = 
+                        `Customer Setup form sent successfully to ${formData.primary_contact_email}! Transaction ID: ${result.transaction_id}`;
+                    
+                    // Reset form
+                    form.reset();
+                    
+                    // Show form again after 3 seconds
+                    setTimeout(() => {
+                        formContent.style.display = 'block';
+                        submitButton.disabled = false;
+                        // Keep success message visible
+                    }, 1000);
+                } else {
+                    throw new Error(result.detail || result.message || 'Failed to send Customer Setup form');
+                }
+            } catch (error) {
+                // Show error
+                loadingDiv.style.display = 'none';
+                formContent.style.display = 'block';
+                submitButton.disabled = false;
+                
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+        // Auto-format phone number
+        document.getElementById('primary-contact-phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                if (value.length <= 3) {
+                    value = `(${value}`;
+                } else if (value.length <= 6) {
+                    value = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                } else {
+                    value = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                }
+            }
+            e.target.value = value;
+        });
+        
+        // Hide search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-box')) {
+                hideSearchResults();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -163,6 +163,140 @@ def send_loi_signature_email(customer_email: str, customer_name: str, company_na
         logger.error(f"❌ Failed to send LOI signature email to {customer_email}: {e}")
         return False
 
+async def send_customer_setup_completion_email(customer_email: str, customer_name: str, transaction_id: str, pre_filled_data: dict):
+    """Send email to customer with Customer Setup completion link"""
+    
+    try:
+        # Create completion URL (environment-aware)
+        base_url = os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')
+        completion_url = f"{base_url}/api/v1/forms/customer-setup/complete/{transaction_id}"
+        
+        # Extract sales notes if any
+        notes = pre_filled_data.get('notes', '')
+        initiated_by = pre_filled_data.get('initiated_by', 'Better Day Energy Sales Team')
+        
+        # Create email content
+        subject = f"Complete Your Customer Setup - {customer_name}"
+        
+        # Create HTML email body
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: #1f4e79; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <h1>🏢 Better Day Energy</h1>
+                    <h2>Complete Your Customer Setup</h2>
+                </div>
+                
+                <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #dee2e6;">
+                    <p>Dear {customer_name},</p>
+                    
+                    <p>{initiated_by} has initiated a Customer Setup form for your company. 
+                    Please complete the form to establish your account with Better Day Energy.</p>
+                    
+                    {'<div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 6px; margin: 20px 0;"><p style="margin: 0;"><strong>📝 Note from sales team:</strong> ' + notes + '</p></div>' if notes else ''}
+                    
+                    <div style="background: #e8f5e9; border: 1px solid #4caf50; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                        <h3 style="color: #2e7d32; margin-top: 0;">📋 What You Need to Complete:</h3>
+                        <ul>
+                            <li>Business information and contact details</li>
+                            <li>Location and mailing addresses</li>
+                            <li>Business type and tax identification</li>
+                            <li>Annual fuel volume and equipment details</li>
+                            <li>Authorized signer information and signature</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{completion_url}" 
+                           style="background: #28a745; color: white; padding: 15px 30px; 
+                                  text-decoration: none; border-radius: 6px; font-weight: bold; 
+                                  display: inline-block; font-size: 16px;">
+                            ✏️ Complete Customer Setup Now
+                        </a>
+                    </div>
+                    
+                    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                        <p style="margin: 0;"><strong>⚠️ Important:</strong> This link will expire in 30 days. 
+                        Some fields may be pre-filled based on information we have on file. Please review and update as needed.</p>
+                    </div>
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                        <p><strong>Transaction ID:</strong> {transaction_id}</p>
+                        <p><strong>Company:</strong> {customer_name}</p>
+                        <p><strong>Form Type:</strong> Customer Setup</p>
+                    </div>
+                    
+                    <p>If you have any questions or need assistance, please contact our team.</p>
+                    
+                    <p>Thank you for choosing Better Day Energy!</p>
+                    
+                    <div style="margin-top: 30px; text-align: center; color: #666; font-size: 14px;">
+                        <p>Better Day Energy Customer Onboarding System<br>
+                        This is an automated message - please do not reply to this email.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Create plain text version
+        text_body = f"""
+        Better Day Energy - Complete Your Customer Setup
+        
+        Dear {customer_name},
+        
+        {initiated_by} has initiated a Customer Setup form for your company.
+        Please complete the form to establish your account with Better Day Energy.
+        
+        {'Note from sales team: ' + notes if notes else ''}
+        
+        Please visit the following link to complete your Customer Setup:
+        {completion_url}
+        
+        What You Need to Complete:
+        - Business information and contact details
+        - Location and mailing addresses
+        - Business type and tax identification
+        - Annual fuel volume and equipment details
+        - Authorized signer information and signature
+        
+        Transaction ID: {transaction_id}
+        Company: {customer_name}
+        Form Type: Customer Setup
+        
+        If you have any questions, please contact our team.
+        
+        Thank you for choosing Better Day Energy!
+        """
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+        msg['To'] = customer_email
+        
+        # Attach parts
+        text_part = MIMEText(text_body, 'plain')
+        html_part = MIMEText(html_body, 'html')
+        
+        msg.attach(text_part)
+        msg.attach(html_part)
+        
+        # Send email
+        with smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port']) as server:
+            server.starttls()
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+            server.send_message(msg)
+            
+        logger.info(f"✅ Customer Setup completion email sent successfully to {customer_email}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to send Customer Setup completion email to {customer_email}: {e}")
+        return False
+
 async def send_eft_completion_email(customer_email: str, customer_name: str, transaction_id: str, pre_filled_data: dict):
     """Send email to customer with EFT completion link"""
     
@@ -321,6 +455,7 @@ app.add_middleware(
 
 # Add email functions to app state
 app.state.send_eft_completion_email = send_eft_completion_email
+app.state.send_customer_setup_completion_email = send_customer_setup_completion_email
 
 # Include forms API router
 if forms_router:
@@ -368,6 +503,15 @@ async def eft_sales_initiate():
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Sales form not found</h1>", status_code=404)
+
+@app.get("/customer-setup/initiate", response_class=HTMLResponse)
+async def customer_setup_sales_initiate():
+    """Serve Customer Setup sales initiation form"""
+    try:
+        with open("customer_setup_sales_initiate.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Customer Setup sales form not found</h1>", status_code=404)
 
 @app.get("/p66_loi_form.html", response_class=HTMLResponse)
 async def p66_loi_form():

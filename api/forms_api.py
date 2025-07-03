@@ -105,6 +105,42 @@ class SalesInitiatedEFTRequest(BaseModel):
     initiated_by: Optional[str] = None
     notes: Optional[str] = None
 
+class SalesInitiatedCustomerSetupRequest(BaseModel):
+    """Minimal Customer Setup form data for sales-initiated workflow"""
+    # Required fields - only company name and email required for sales initiation
+    legal_business_name: str
+    primary_contact_email: EmailStr
+    
+    # Basic contact info (optional for sales person to pre-fill)
+    primary_contact_name: Optional[str] = None
+    primary_contact_phone: Optional[str] = None
+    dba_name: Optional[str] = None
+    
+    # Business details (optional)
+    business_type: Optional[str] = None
+    years_in_business: Optional[int] = None
+    federal_tax_id: Optional[str] = None
+    state_tax_id: Optional[str] = None
+    
+    # Location info (optional)
+    physical_address: Optional[str] = None
+    physical_city: Optional[str] = None
+    physical_state: Optional[str] = None
+    physical_zip: Optional[str] = None
+    mailing_address: Optional[str] = None
+    mailing_city: Optional[str] = None
+    mailing_state: Optional[str] = None
+    mailing_zip: Optional[str] = None
+    
+    # Business details (optional)
+    annual_fuel_volume: Optional[float] = None
+    number_of_locations: Optional[int] = None
+    current_fuel_brands: Optional[List[str]] = []
+    
+    # Sales person info
+    initiated_by: Optional[str] = None
+    notes: Optional[str] = None
+
 class CustomerSetupFormRequest(BaseModel):
     # Support both simplified and full form field names
     legal_business_name: Optional[str] = None
@@ -271,6 +307,53 @@ def generate_eft_completion_form(transaction_id: str, pre_filled_data: dict) -> 
     </html>
     """
 
+def generate_customer_setup_completion_form(transaction_id: str, pre_filled_data: dict) -> str:
+    """Generate HTML form with pre-filled data for customer setup completion"""
+    # Extract pre-filled values
+    legal_business_name = pre_filled_data.get('legal_business_name', '')
+    primary_contact_email = pre_filled_data.get('primary_contact_email', '')
+    primary_contact_name = pre_filled_data.get('primary_contact_name', '')
+    primary_contact_phone = pre_filled_data.get('primary_contact_phone', '')
+    dba_name = pre_filled_data.get('dba_name', '')
+    business_type = pre_filled_data.get('business_type', '')
+    years_in_business = pre_filled_data.get('years_in_business', '')
+    federal_tax_id = pre_filled_data.get('federal_tax_id', '')
+    state_tax_id = pre_filled_data.get('state_tax_id', '')
+    physical_address = pre_filled_data.get('physical_address', '')
+    physical_city = pre_filled_data.get('physical_city', '')
+    physical_state = pre_filled_data.get('physical_state', '')
+    physical_zip = pre_filled_data.get('physical_zip', '')
+    mailing_address = pre_filled_data.get('mailing_address', '')
+    mailing_city = pre_filled_data.get('mailing_city', '')
+    mailing_state = pre_filled_data.get('mailing_state', '')
+    mailing_zip = pre_filled_data.get('mailing_zip', '')
+    annual_fuel_volume = pre_filled_data.get('annual_fuel_volume', '')
+    number_of_locations = pre_filled_data.get('number_of_locations', '')
+    notes = pre_filled_data.get('notes', '')
+    initiated_by = pre_filled_data.get('initiated_by', 'Better Day Energy Sales Team')
+    
+    # For now, return a simple form with pre-filled data
+    # In production, this would use a proper template engine
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Complete Customer Setup - Better Day Energy</title>
+        <script>
+            window.TRANSACTION_ID = '{transaction_id}';
+            window.PRE_FILLED_DATA = {json.dumps(pre_filled_data)};
+        </script>
+    </head>
+    <body>
+        <h1>Complete Your Customer Setup</h1>
+        <p>Transaction ID: {transaction_id}</p>
+        <p>Initiated by: {initiated_by}</p>
+        {f'<p><strong>Note:</strong> {notes}</p>' if notes else ''}
+        <script src="/static/customer_setup_completion.js"></script>
+    </body>
+    </html>
+    """
+
 def save_signature_image(signature_data: str, form_type: str, form_id: str) -> str:
     """Save base64 signature image and return file path"""
     try:
@@ -362,17 +445,27 @@ async def initiate_eft_form(
         # Generate unique transaction ID
         transaction_id = str(uuid.uuid4())
         
+        # Create or get customer first
+        customer = create_or_get_customer(
+            db, 
+            form_data.company_name,
+            email=form_data.customer_email,
+            phone=form_data.customer_phone
+        )
+        
         # Create LOI transaction record for tracking
         loi_transaction = LOITransaction(
             id=transaction_id,
             transaction_type=TransactionType.EFT_FORM,
-            customer_name=form_data.company_name,
-            customer_email=form_data.customer_email,
-            customer_phone=form_data.customer_phone,
-            initiated_by=form_data.initiated_by or "Sales Team",
+            customer_id=customer.id,
             workflow_stage=WorkflowStage.PENDING_CUSTOMER_COMPLETION,
             status=TransactionStatus.PENDING,
-            form_data=form_data.dict(),  # Store pre-filled data
+            processing_context={
+                "initiated_by": form_data.initiated_by or "Sales Team",
+                "customer_email": form_data.customer_email,
+                "customer_phone": form_data.customer_phone,
+                "form_data": form_data.dict()  # Store pre-filled data
+            },
             created_at=datetime.utcnow()
         )
         
@@ -404,6 +497,69 @@ async def initiate_eft_form(
             db.rollback()
         raise HTTPException(status_code=500, detail="Failed to initiate EFT form")
 
+@router.post("/customer-setup/initiate")
+async def initiate_customer_setup_form(
+    form_data: SalesInitiatedCustomerSetupRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Sales-initiated Customer Setup form for customer completion"""
+    try:
+        # Generate unique transaction ID
+        transaction_id = str(uuid.uuid4())
+        
+        # Create or get customer first
+        customer = create_or_get_customer(
+            db, 
+            form_data.legal_business_name,
+            email=form_data.primary_contact_email,
+            phone=form_data.primary_contact_phone
+        )
+        
+        # Create LOI transaction record for tracking
+        loi_transaction = LOITransaction(
+            id=transaction_id,
+            transaction_type=TransactionType.CUSTOMER_SETUP_FORM,
+            customer_id=customer.id,
+            workflow_stage=WorkflowStage.PENDING_CUSTOMER_COMPLETION,
+            status=TransactionStatus.PENDING,
+            processing_context={
+                "initiated_by": form_data.initiated_by or "Sales Team",
+                "customer_email": form_data.primary_contact_email,
+                "customer_phone": form_data.primary_contact_phone,
+                "form_data": form_data.dict()  # Store pre-filled data
+            },
+            created_at=datetime.utcnow()
+        )
+        
+        if DATABASE_AVAILABLE:
+            db.add(loi_transaction)
+            db.commit()
+            
+        # Send email to customer with completion link
+        if hasattr(request.app.state, 'send_customer_setup_completion_email'):
+            await request.app.state.send_customer_setup_completion_email(
+                customer_email=form_data.primary_contact_email,
+                customer_name=form_data.legal_business_name,
+                transaction_id=transaction_id,
+                pre_filled_data=form_data.dict()
+            )
+        
+        logger.info(f"Customer Setup form initiated for {form_data.legal_business_name}: {transaction_id}")
+        
+        return {
+            "success": True,
+            "transaction_id": transaction_id,
+            "message": "Customer Setup form initiated successfully. Email sent to customer.",
+            "completion_url": f"/forms/customer-setup/complete/{transaction_id}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error initiating Customer Setup form: {e}")
+        if DATABASE_AVAILABLE:
+            db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to initiate Customer Setup form")
+
 @router.get("/eft/complete/{transaction_id}")
 async def get_eft_completion_page(
     transaction_id: str,
@@ -427,8 +583,11 @@ async def get_eft_completion_page(
         if transaction.status == TransactionStatus.COMPLETED:
             return HTMLResponse(content="<h1>Already Completed</h1><p>This EFT form has already been completed.</p>")
             
+        # Extract form data from processing context
+        form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
+        
         # Generate pre-filled form HTML
-        form_html = generate_eft_completion_form(transaction_id, transaction.form_data)
+        form_html = generate_eft_completion_form(transaction_id, form_data)
         
         return HTMLResponse(content=form_html)
         
@@ -460,12 +619,17 @@ async def complete_eft_form(
         if transaction.status == TransactionStatus.COMPLETED:
             raise HTTPException(status_code=400, detail="Form already completed")
         
+        # Get customer info from processing context
+        processing_context = transaction.processing_context or {}
+        customer_email = processing_context.get('customer_email', '')
+        customer_phone = processing_context.get('customer_phone', '')
+        
         # Create or get customer
         customer = create_or_get_customer(
             db, 
             form_data.company_name,
-            email=transaction.customer_email,
-            phone=transaction.customer_phone
+            email=customer_email,
+            phone=customer_phone
         )
         
         # Create EFT form record with complete data
@@ -514,6 +678,145 @@ async def complete_eft_form(
         if DATABASE_AVAILABLE:
             db.rollback()
         raise HTTPException(status_code=500, detail="Failed to complete EFT form")
+
+@router.get("/customer-setup/complete/{transaction_id}")
+async def get_customer_setup_completion_page(
+    transaction_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get pre-filled Customer Setup form for customer completion"""
+    try:
+        if not DATABASE_AVAILABLE:
+            # Return mock data for testing
+            return HTMLResponse(content="<h1>Customer Setup Completion Form</h1><p>Database not available</p>")
+            
+        # Get transaction record
+        transaction = db.query(LOITransaction).filter(
+            LOITransaction.id == transaction_id,
+            LOITransaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        if transaction.status == TransactionStatus.COMPLETED:
+            return HTMLResponse(content="<h1>Already Completed</h1><p>This Customer Setup form has already been completed.</p>")
+            
+        # Extract form data from processing context
+        form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
+        
+        # Generate pre-filled form HTML
+        form_html = generate_customer_setup_completion_form(transaction_id, form_data)
+        
+        return HTMLResponse(content=form_html)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving Customer Setup completion form: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve form")
+
+@router.post("/customer-setup/complete/{transaction_id}")
+async def complete_customer_setup_form(
+    transaction_id: str,
+    form_data: CustomerSetupFormRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Complete Customer Setup form with full validation and signature"""
+    try:
+        if not DATABASE_AVAILABLE:
+            return {"success": True, "message": "Test mode - form completed"}
+            
+        # Get transaction record
+        transaction = db.query(LOITransaction).filter(
+            LOITransaction.id == transaction_id,
+            LOITransaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM
+        ).first()
+        
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        if transaction.status == TransactionStatus.COMPLETED:
+            raise HTTPException(status_code=400, detail="Form already completed")
+        
+        # Get customer info from processing context
+        processing_context = transaction.processing_context or {}
+        customer_email = processing_context.get('customer_email', '')
+        customer_phone = processing_context.get('customer_phone', '')
+        
+        # Create or get customer
+        customer = create_or_get_customer(
+            db, 
+            form_data.legal_business_name or form_data.business_name,
+            email=customer_email,
+            phone=customer_phone
+        )
+        
+        # Create customer setup form record
+        customer_setup_data = CustomerSetupFormData(
+            customer_id=customer.id,
+            legal_business_name=form_data.legal_business_name or form_data.business_name,
+            dba_name=form_data.dba_name,
+            federal_tax_id=form_data.federal_tax_id,
+            state_tax_id=form_data.state_tax_id,
+            business_type=form_data.business_type,
+            years_in_business=form_data.years_in_business or form_data.years_business,
+            physical_address=form_data.physical_address,
+            physical_city=form_data.physical_city,
+            physical_state=form_data.physical_state,
+            physical_zip=form_data.physical_zip,
+            mailing_address=form_data.mailing_address,
+            mailing_city=form_data.mailing_city,
+            mailing_state=form_data.mailing_state,
+            mailing_zip=form_data.mailing_zip,
+            primary_contact_name=form_data.primary_contact_name or form_data.contact_name,
+            primary_contact_title=form_data.primary_contact_title,
+            primary_contact_phone=form_data.primary_contact_phone or form_data.contact_phone,
+            primary_contact_email=form_data.primary_contact_email or form_data.contact_email,
+            accounts_payable_contact=form_data.accounts_payable_contact,
+            accounts_payable_email=form_data.accounts_payable_email,
+            accounts_payable_phone=form_data.accounts_payable_phone,
+            annual_fuel_volume=form_data.annual_fuel_volume or form_data.fuel_volume,
+            number_of_locations=form_data.number_of_locations or form_data.locations,
+            current_fuel_brands=form_data.current_fuel_brands,
+            dispenser_count=form_data.dispenser_count,
+            pos_system=form_data.pos_system,
+            authorized_signer_name=form_data.authorized_signer_name,
+            authorized_signer_title=form_data.authorized_signer_title,
+            signature_data=form_data.signature_data,
+            signature_date=datetime.fromisoformat(form_data.signature_date.replace('Z', '+00:00')) if form_data.signature_date else None,
+            signature_ip=get_client_ip(request),
+            form_status='completed',
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(customer_setup_data)
+        
+        # Update transaction status
+        transaction.status = TransactionStatus.COMPLETED
+        transaction.workflow_stage = WorkflowStage.COMPLETED
+        transaction.completed_at = datetime.utcnow()
+        # Update processing context with final form data
+        if transaction.processing_context:
+            transaction.processing_context['final_form_data'] = form_data.dict()
+        else:
+            transaction.processing_context = {'final_form_data': form_data.dict()}
+        
+        db.commit()
+        
+        logger.info(f"Customer Setup form completed for {form_data.legal_business_name}: {transaction_id}")
+        
+        return {
+            "success": True,
+            "transaction_id": transaction_id,
+            "message": "Customer Setup form completed successfully!",
+            "customer_id": customer.id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error completing Customer Setup form: {e}")
+        if DATABASE_AVAILABLE:
+            db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to complete Customer Setup form")
 
 @router.post("/customer-setup/submit")
 async def submit_customer_setup_form(

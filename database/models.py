@@ -37,6 +37,7 @@ class TransactionType(enum.Enum):
     STATUS_UPDATE = "status_update"
     COMPLETION_NOTIFICATION = "completion_notification"
     EFT_FORM = "eft_form"  # EFT authorization form workflow
+    CUSTOMER_SETUP_FORM = "customer_setup_form"  # Customer setup form workflow
 
 class TransactionPriority(enum.Enum):
     """Transaction priority enumeration"""

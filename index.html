@@ -87,29 +87,38 @@
         <div class="forms-grid">
             <div class="form-card">
                 <h3>🏦 EFT Authorization</h3>
-                <p>Electronic Funds Transfer authorization with secure signature capture.</p>
-                <a href="eft_form.html" class="btn btn-green">Complete EFT Form</a>
-                <div style="margin-top: 15px;">
-                    <a href="/eft/initiate" class="btn" style="background: #6c757d;">Sales: Send EFT Form</a>
+                <p>Sales initiates EFT form with available info. Customer completes missing fields and signs.</p>
+                <a href="/eft/initiate" class="btn btn-green">Start EFT</a>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <strong>Two-Stage Process:</strong> Sales → Customer completion & signature
                 </div>
             </div>
             
             <div class="form-card">
-                <h3>🏢 Customer Setup Document</h3>
-                <p>Complete business information and credit application with electronic signature.</p>
-                <a href="customer_setup_form.html" class="btn">Start Application</a>
+                <h3>🏢 Customer Setup</h3>
+                <p>Sales initiates customer setup with available info. Customer completes missing fields and signs.</p>
+                <a href="/customer-setup/initiate" class="btn">Start Customer Setup</a>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <strong>Two-Stage Process:</strong> Sales → Customer completion & signature
+                </div>
             </div>
             
             <div class="form-card">
                 <h3>🏁 VP Racing Fuels LOI</h3>
-                <p>Letter of Intent for VP Racing unbranded fuel supply with signature workflow.</p>
-                <a href="/forms/vp-racing-loi" class="btn" style="background: #4caf50;">Submit LOI</a>
+                <p>Complete Letter of Intent for VP Racing fuel supply. Customer will receive signature request.</p>
+                <a href="/forms/vp-racing-loi" class="btn" style="background: #4caf50;">Start VP Racing Fuels LOI</a>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <strong>Single Stage:</strong> Complete form → Route for signature
+                </div>
             </div>
             
             <div class="form-card">
                 <h3>⛽ Phillips 66 LOI</h3>
-                <p>Letter of Intent for Phillips 66 branded fuel supply with electronic signatures.</p>
-                <a href="/forms/p66-loi" class="btn btn-red">Submit LOI</a>
+                <p>Complete Letter of Intent for Phillips 66 fuel supply. Customer will receive signature request.</p>
+                <a href="p66_loi_form.html" class="btn btn-red">Start P66 LOI</a>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                    <strong>Single Stage:</strong> Complete form → Route for signature
+                </div>
             </div>
         </div>
         
