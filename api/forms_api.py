@@ -445,18 +445,17 @@ async def initiate_eft_form(
         # Generate unique transaction ID
         transaction_id = str(uuid.uuid4())
         
-        # Create or get customer first (only if database is available)
-        if DATABASE_AVAILABLE:
-            customer = create_or_get_customer(
-                db, 
-                form_data.company_name,
-                email=form_data.customer_email,
-                phone=form_data.customer_phone
-            )
-        else:
-            # Mock customer for testing
-            customer = type('MockCustomer', (), {'id': 'mock-id'})()
+        # Database must be available for production use
+        if not DATABASE_AVAILABLE:
+            raise HTTPException(status_code=503, detail="Database service unavailable. Cannot process form.")
         
+        # Create or get customer
+        customer = create_or_get_customer(
+            db, 
+            form_data.company_name,
+            email=form_data.customer_email,
+            phone=form_data.customer_phone
+        )
         
         # Create LOI transaction record for tracking
         loi_transaction = LOITransaction(
@@ -513,18 +512,17 @@ async def initiate_customer_setup_form(
         # Generate unique transaction ID
         transaction_id = str(uuid.uuid4())
         
-        # Create or get customer first (only if database is available)
-        if DATABASE_AVAILABLE:
-            customer = create_or_get_customer(
-                db, 
-                form_data.legal_business_name,
-                email=form_data.primary_contact_email,
-                phone=form_data.primary_contact_phone
-            )
-        else:
-            # Mock customer for testing
-            customer = type('MockCustomer', (), {'id': 'mock-id'})()
+        # Database must be available for production use
+        if not DATABASE_AVAILABLE:
+            raise HTTPException(status_code=503, detail="Database service unavailable. Cannot process form.")
         
+        # Create or get customer
+        customer = create_or_get_customer(
+            db, 
+            form_data.legal_business_name,
+            email=form_data.primary_contact_email,
+            phone=form_data.primary_contact_phone
+        )
         
         # Create LOI transaction record for tracking
         loi_transaction = LOITransaction(
