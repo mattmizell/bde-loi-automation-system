@@ -1257,6 +1257,100 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
         conn.commit()
         conn.close()
         
+        # ========================================================================
+        # UPDATE CRM WITH LOI COMPLETION AND DOCUMENT URL
+        # ========================================================================
+        
+        try:
+            # Generate document URL for CRM reference
+            base_url = os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')
+            document_url = f"{base_url}/api/v1/documents/loi/{transaction_id}"
+            signature_verification_url = f"{base_url}/api/v1/signatures/verify/{stored_signature or verification_code}"
+            
+            # Create comprehensive LOI notes for CRM
+            loi_type = loi_details.get('loi_type', 'Unknown')
+            loi_crm_notes = f"""
+LOI EXECUTED: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}
+LOI Type: {loi_type}
+Station: {loi_details.get('station_name', 'N/A')}
+Monthly Fuel Volume: {loi_details.get('total_monthly_gallons', 'N/A')} gallons
+Contract Start: {loi_details.get('contract_start_date', 'N/A')}
+Contract Term: {loi_details.get('contract_term_years', 'N/A')} years
+Volume Incentive: ${loi_details.get('volume_incentive_requested', 'N/A')}
+Image Funding: ${loi_details.get('image_funding_requested', 'N/A')}
+Equipment Funding: ${loi_details.get('equipment_funding_requested', 'N/A')}
+Document URL: {document_url}
+Signature Verification: {signature_verification_url}
+Status: EXECUTED
+            """.strip()
+            
+            # Update CRM cache with LOI completion
+            try:
+                crm_conn = psycopg2.connect(database_url)
+                crm_cur = crm_conn.cursor()
+                
+                # Find existing contact
+                crm_cur.execute("""
+                    SELECT contact_id, notes FROM crm_contacts_cache 
+                    WHERE email = %s OR (company_name = %s AND name = %s)
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (email, company_name, contact_name))
+                
+                existing_contact = crm_cur.fetchone()
+                
+                if existing_contact:
+                    contact_id, existing_notes = existing_contact
+                    # Append LOI notes to existing notes
+                    updated_notes = f"{existing_notes or ''}\n\n{loi_crm_notes}".strip()
+                    
+                    crm_cur.execute("""
+                        UPDATE crm_contacts_cache SET
+                            notes = %s,
+                            last_sync = %s,
+                            sync_status = 'pending_sync'
+                        WHERE contact_id = %s
+                    """, (updated_notes, datetime.now(), contact_id))
+                    
+                    logger.info(f"✅ Updated CRM cache with LOI completion: {contact_id}")
+                    
+                    # Queue for CRM sync
+                    queue_data = {
+                        "contact_id": contact_id,
+                        "operation": "update_contact",
+                        "data": {
+                            "notes": updated_notes
+                        },
+                        "app_source": f"LOI {loi_type} Form",
+                        "transaction_id": transaction_id,
+                        "document_url": document_url,
+                        "verification_code": stored_signature or verification_code
+                    }
+                    
+                    crm_cur.execute("""
+                        INSERT INTO crm_write_queue 
+                        (operation, data, status, created_at, max_attempts)
+                        VALUES (%s, %s, 'pending', %s, %s)
+                    """, (
+                        "update_contact",
+                        json.dumps(queue_data),
+                        datetime.now(),
+                        5
+                    ))
+                    
+                    crm_conn.commit()
+                    logger.info(f"✅ LOI completion queued for CRM sync: {company_name} - {loi_type}")
+                else:
+                    logger.warning(f"⚠️ Contact not found in CRM cache for LOI update: {email}")
+                
+                crm_cur.close()
+                crm_conn.close()
+                
+            except Exception as crm_error:
+                logger.error(f"❌ Error updating CRM cache with LOI data: {crm_error}")
+                
+        except Exception as e:
+            logger.error(f"❌ Error in LOI CRM update process: {e}")
+        
         logger.info(f"✅ LOI signature captured with audit compliance: {transaction_id} - Verification: {verification_code}")
         
         return {
@@ -1267,7 +1361,9 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
             'status': 'signed',
             'signed_at': datetime.now().isoformat(),
             'audit_compliant': True,
-            'next_step': 'pdf_generation'
+            'next_step': 'pdf_generation',
+            'document_url': f"{os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')}/api/v1/documents/loi/{transaction_id}",
+            'crm_updated': True
         }
         
     except Exception as e:
@@ -1318,6 +1414,146 @@ async def list_loi_transactions():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }
+
+@app.get("/api/v1/documents/loi/{transaction_id}")
+async def get_loi_document(transaction_id: str):
+    """Get LOI document details and status"""
+    try:
+        import psycopg2
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
+        conn = psycopg2.connect(database_url)
+        cur = conn.cursor()
+        
+        # Get LOI transaction details
+        cur.execute("""
+            SELECT company_name, contact_name, email, loi_data, signature_data, signed_at, status, created_at
+            FROM loi_transactions 
+            WHERE transaction_id = %s
+        """, (transaction_id,))
+        
+        result = cur.fetchone()
+        conn.close()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="LOI document not found")
+        
+        company_name, contact_name, email, loi_data, signature_data, signed_at, status, created_at = result
+        
+        # Parse LOI data
+        if isinstance(loi_data, str):
+            loi_details = json.loads(loi_data) if loi_data else {}
+        elif isinstance(loi_data, dict):
+            loi_details = loi_data
+        else:
+            loi_details = {}
+        
+        return {
+            "success": True,
+            "transaction_id": transaction_id,
+            "document_type": "Letter of Intent",
+            "company_name": company_name,
+            "contact_name": contact_name,
+            "email": email,
+            "status": status,
+            "created_at": created_at.isoformat() if created_at else None,
+            "signed_at": signed_at.isoformat() if signed_at else None,
+            "signature_verification_code": signature_data,
+            "loi_details": {
+                "loi_type": loi_details.get('loi_type'),
+                "station_name": loi_details.get('station_name'),
+                "monthly_gallons": loi_details.get('total_monthly_gallons'),
+                "contract_start": loi_details.get('contract_start_date'),
+                "contract_term": loi_details.get('contract_term_years'),
+                "incentives": {
+                    "volume": loi_details.get('volume_incentive_requested'),
+                    "image": loi_details.get('image_funding_requested'),
+                    "equipment": loi_details.get('equipment_funding_requested')
+                }
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error retrieving LOI document: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve document")
+
+@app.get("/api/v1/signatures/verify/{verification_code}")
+async def verify_signature(verification_code: str):
+    """Verify signature integrity and get audit details"""
+    try:
+        from signature_storage import TamperEvidentSignatureStorage
+        
+        signature_storage = TamperEvidentSignatureStorage()
+        
+        # Verify signature integrity
+        is_valid, integrity_message = signature_storage.verify_signature_integrity(verification_code)
+        
+        # Get full audit report
+        audit_report = signature_storage.get_audit_report(verification_code)
+        
+        if not audit_report:
+            raise HTTPException(status_code=404, detail="Signature verification code not found")
+        
+        return {
+            "success": True,
+            "verification_code": verification_code,
+            "integrity_valid": is_valid,
+            "integrity_message": integrity_message,
+            "audit_report": {
+                "transaction_id": audit_report['transaction_id'],
+                "signer_name": audit_report['signer_name'],
+                "signer_email": audit_report['signer_email'],
+                "company_name": audit_report['company_name'],
+                "document_name": audit_report['document_name'],
+                "signed_at": audit_report['signed_at'],
+                "ip_address": audit_report['ip_address'],
+                "browser_fingerprint": audit_report['browser_fingerprint'],
+                "compliance_flags": audit_report['compliance_flags'],
+                "created_at": audit_report['created_at']
+            },
+            "esign_act_compliant": audit_report['compliance_flags'].get('esign_act_compliant', False)
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error verifying signature: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify signature")
+
+@app.get("/api/v1/documents/eft/{transaction_id}")
+async def get_eft_document(transaction_id: str):
+    """Get EFT authorization document details and status"""
+    try:
+        from database.connection import DatabaseManager
+        from database.models import EFTFormData, LOITransaction
+        
+        db_manager = DatabaseManager()
+        
+        with db_manager.get_session() as session:
+            # Get EFT form data
+            eft_data = session.query(EFTFormData).filter(
+                EFTFormData.transaction_id == transaction_id
+            ).first()
+            
+            if not eft_data:
+                raise HTTPException(status_code=404, detail="EFT document not found")
+            
+            return {
+                "success": True,
+                "transaction_id": transaction_id,
+                "document_type": "EFT Authorization",
+                "company_name": eft_data.company_name if hasattr(eft_data, 'company_name') else "N/A",
+                "account_holder": eft_data.account_holder_name,
+                "bank_name": eft_data.bank_name,
+                "account_type": eft_data.account_type,
+                "authorized_by": f"{eft_data.authorized_by_name} ({eft_data.authorized_by_title})",
+                "authorization_date": eft_data.authorization_date.isoformat() if eft_data.authorization_date else None,
+                "signature_verification_code": eft_data.signature_data,  # Now contains verification code
+                "status": eft_data.form_status,
+                "created_at": eft_data.created_at.isoformat() if eft_data.created_at else None,
+                "signature_timestamp": eft_data.signature_timestamp.isoformat() if eft_data.signature_timestamp else None
+            }
+        
+    except Exception as e:
+        logger.error(f"❌ Error retrieving EFT document: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve EFT document")
 
 @app.get("/api/v1/health")
 async def health_check():
