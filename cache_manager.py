@@ -230,60 +230,70 @@ class CustomerCacheManager:
     def _get_cache_record(self, cur, email: str) -> Optional[Dict[str, Any]]:
         """Get existing cache record"""
         cur.execute("""
-            SELECT company_name, email, phone, address, custom_fields, 
-                   first_name, last_name
+            SELECT name, company_name, email, phone, address, notes
             FROM crm_contacts_cache 
             WHERE email = %s
-            ORDER BY last_synced DESC 
+            ORDER BY last_sync DESC 
             LIMIT 1
         """, (email,))
         
         result = cur.fetchone()
         if result:
-            company_name, email, phone, address, custom_fields, first_name, last_name = result
+            name, company_name, email, phone, address, notes = result
+            
+            # Parse notes for structured data
+            custom_fields = {}
+            if notes:
+                try:
+                    custom_fields = json.loads(notes) if notes.startswith('{') else {}
+                except:
+                    custom_fields = {}
+            
+            # Parse address if it's JSON
+            address_data = {}
+            if address:
+                try:
+                    address_data = json.loads(address) if address.startswith('{') else {}
+                except:
+                    address_data = {}
+            
             return {
                 'company_name': company_name,
                 'email': email,
                 'phone': phone,
-                'address': address if isinstance(address, dict) else (json.loads(address) if address else {}),
-                'custom_fields': custom_fields if isinstance(custom_fields, dict) else (json.loads(custom_fields) if custom_fields else {}),
-                'first_name': first_name,
-                'last_name': last_name
+                'address': address_data,
+                'custom_fields': custom_fields,
+                'name': name
             }
         return None
     
     def _upsert_cache_record(self, cur, email: str, cache_data: Dict[str, Any]):
         """Insert or update cache record"""
-        # Extract names from contact data
+        # Extract contact name from data
         contact_name = cache_data['custom_fields'].get('primary_contact_name', '')
-        name_parts = contact_name.split(' ', 1) if contact_name else ['', '']
-        first_name = name_parts[0] if len(name_parts) > 0 else ''
-        last_name = name_parts[1] if len(name_parts) > 1 else ''
         
         # Generate contact_id if needed
         contact_id = f"form_{email.replace('@', '_').replace('.', '_')}"
         
         cur.execute("""
             INSERT INTO crm_contacts_cache (
-                contact_id, first_name, last_name, company_name, email, phone, 
-                address, custom_fields, created_at, updated_at, last_synced, source
+                contact_id, name, company_name, email, phone, 
+                address, notes, created_at, updated_at, last_sync, sync_status
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             ON CONFLICT (contact_id) DO UPDATE SET
-                first_name = EXCLUDED.first_name,
-                last_name = EXCLUDED.last_name,
+                name = EXCLUDED.name,
                 company_name = EXCLUDED.company_name,
                 email = EXCLUDED.email,
                 phone = EXCLUDED.phone,
                 address = EXCLUDED.address,
-                custom_fields = EXCLUDED.custom_fields,
+                notes = EXCLUDED.notes,
                 updated_at = EXCLUDED.updated_at,
-                last_synced = EXCLUDED.last_synced
+                last_sync = EXCLUDED.last_sync
         """, (
             contact_id,
-            first_name,
-            last_name, 
+            contact_name,
             cache_data['company_name'],
             cache_data['email'],
             cache_data['phone'],
@@ -292,5 +302,5 @@ class CustomerCacheManager:
             datetime.utcnow(),
             datetime.utcnow(),
             datetime.utcnow(),
-            'forms'
+            'completed'
         ))

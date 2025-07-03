@@ -1209,7 +1209,7 @@ async def get_eft_completion_page(
                             'company_name': cached_data.get('company_name', form_data.get('company_name', '')),
                             'federal_tax_id': custom_fields.get('federal_tax_id', form_data.get('federal_tax_id', '')),
                             'business_type': custom_fields.get('business_type', ''),
-                            'contact_name': custom_fields.get('primary_contact_name', form_data.get('contact_name', '')),
+                            'contact_name': cached_data.get('name', custom_fields.get('primary_contact_name', form_data.get('contact_name', ''))),
                             'contact_email': cached_data.get('email', form_data.get('contact_email', '')),
                             'contact_phone': cached_data.get('phone', form_data.get('contact_phone', '')),
                             'company_address': address_data.get('street_address', form_data.get('company_address', '')),
@@ -1548,10 +1548,10 @@ async def get_customer_setup_completion_page(
                 
                 # Search for customer in CRM cache
                 crm_cur.execute("""
-                    SELECT first_name, last_name, company_name, email, phone, address, custom_fields
+                    SELECT name, company_name, email, phone, address, notes
                     FROM crm_contacts_cache 
                     WHERE email = %s OR company_name = %s
-                    ORDER BY last_synced DESC LIMIT 1
+                    ORDER BY last_sync DESC LIMIT 1
                 """, (customer_email, company_name))
                 
                 crm_contact = crm_cur.fetchone()
@@ -1559,9 +1559,7 @@ async def get_customer_setup_completion_page(
                 crm_conn.close()
                 
                 if crm_contact:
-                    first_name, last_name, crm_company_name, crm_email, crm_phone, crm_address, custom_fields = crm_contact
-                    contact_name = f"{first_name} {last_name}".strip() if first_name or last_name else ""
-                    crm_notes = ""  # Notes are now in custom_fields
+                    contact_name, crm_company_name, crm_email, crm_phone, crm_address, crm_notes = crm_contact
                     
                     # Parse structured address data from JSONB
                     crm_address_data = {}
