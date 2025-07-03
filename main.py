@@ -1821,35 +1821,56 @@ async def verify_signature(verification_code: str):
 async def get_eft_document(transaction_id: str):
     """Get EFT authorization document details and status"""
     try:
-        from database.connection import DatabaseManager
-        from database.models import EFTFormData, LOITransaction
+        import psycopg2
+        import os
         
-        db_manager = DatabaseManager()
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
-        with db_manager.get_session() as session:
-            # Get EFT form data
-            eft_data = session.query(EFTFormData).filter(
-                EFTFormData.transaction_id == transaction_id
-            ).first()
-            
-            if not eft_data:
-                raise HTTPException(status_code=404, detail="EFT document not found")
-            
-            return {
-                "success": True,
-                "transaction_id": transaction_id,
-                "document_type": "EFT Authorization",
-                "company_name": eft_data.company_name if hasattr(eft_data, 'company_name') else "N/A",
-                "account_holder": eft_data.account_holder_name,
-                "bank_name": eft_data.bank_name,
-                "account_type": eft_data.account_type,
-                "authorized_by": f"{eft_data.authorized_by_name} ({eft_data.authorized_by_title})",
-                "authorization_date": eft_data.authorization_date.isoformat() if eft_data.authorization_date else None,
-                "signature_verification_code": eft_data.signature_data,  # Now contains verification code
-                "status": eft_data.form_status,
-                "created_at": eft_data.created_at.isoformat() if eft_data.created_at else None,
-                "signature_timestamp": eft_data.signature_timestamp.isoformat() if eft_data.signature_timestamp else None
-            }
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                # Get EFT transaction details
+                cur.execute("""
+                    SELECT 
+                        lt.id,
+                        lt.status,
+                        lt.created_at,
+                        lt.processing_context,
+                        c.company_name,
+                        c.contact_name,
+                        c.email,
+                        c.phone
+                    FROM loi_transactions lt
+                    JOIN customers c ON lt.customer_id = c.id
+                    WHERE lt.id = %s AND lt.transaction_type = 'EFT_FORM'
+                """, (transaction_id,))
+                
+                result = cur.fetchone()
+                if not result:
+                    raise HTTPException(status_code=404, detail="EFT document not found")
+                
+                (id, status, created_at, processing_context, company_name, contact_name, email, phone) = result
+                
+                # Parse processing context for form data
+                form_data = processing_context.get('form_data', {}) if processing_context else {}
+                
+                return {
+                    'success': True,
+                    'transaction_id': str(id),
+                    'transaction_type': 'EFT Authorization Form',
+                    'customer_company': company_name or form_data.get('company_name', 'Unknown'),
+                    'contact_name': contact_name or 'Unknown',
+                    'email': email or form_data.get('customer_email', 'Unknown'),
+                    'phone': phone or form_data.get('customer_phone', ''),
+                    'status': status,
+                    'created_at': created_at.isoformat() if created_at else None,
+                    'is_completed': status == 'COMPLETED',
+                    'bank_info': {
+                        'bank_name': form_data.get('bank_name', ''),
+                        'routing_number': form_data.get('routing_number', ''),
+                        'account_type': form_data.get('account_type', ''),
+                        'account_holder_name': form_data.get('account_holder_name', '')
+                    }
+                }
         
     except Exception as e:
         logger.error(f"❌ Error retrieving EFT document: {e}")
@@ -1859,56 +1880,73 @@ async def get_eft_document(transaction_id: str):
 async def get_p66_loi_document(transaction_id: str):
     """Get P66 LOI document details and status"""
     try:
-        from database.connection import DatabaseManager
-        from database.models import P66LOIFormData, LOITransaction
+        import psycopg2
+        import os
         
-        db_manager = DatabaseManager()
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
-        with db_manager.get_session() as session:
-            # Get P66 LOI form data
-            p66_data = session.query(P66LOIFormData).filter(
-                P66LOIFormData.transaction_id == transaction_id
-            ).first()
-            
-            if not p66_data:
-                raise HTTPException(status_code=404, detail="P66 LOI document not found")
-            
-            return {
-                "success": True,
-                "transaction_id": transaction_id,
-                "document_type": "Phillips 66 Letter of Intent",
-                "station_name": p66_data.station_name,
-                "station_address": f"{p66_data.station_address}, {p66_data.station_city}, {p66_data.station_state} {p66_data.station_zip}",
-                "current_brand": p66_data.current_brand,
-                "brand_expiration": p66_data.brand_expiration_date.isoformat() if p66_data.brand_expiration_date else None,
-                "fuel_volumes": {
-                    "monthly_gasoline": p66_data.monthly_gasoline_gallons,
-                    "monthly_diesel": p66_data.monthly_diesel_gallons,
-                    "total_monthly": p66_data.total_monthly_gallons
-                },
-                "contract_details": {
-                    "start_date": p66_data.contract_start_date.isoformat() if p66_data.contract_start_date else None,
-                    "term_years": p66_data.contract_term_years
-                },
-                "incentives": {
-                    "volume_incentive": p66_data.volume_incentive_requested,
-                    "image_funding": p66_data.image_funding_requested,
-                    "equipment_funding": p66_data.equipment_funding_requested,
-                    "total_incentives": p66_data.total_incentives_requested
-                },
-                "equipment_upgrades": {
-                    "canopy_replacement": p66_data.canopy_replacement,
-                    "dispenser_replacement": p66_data.dispenser_replacement,
-                    "tank_replacement": p66_data.tank_replacement,
-                    "pos_upgrade": p66_data.pos_upgrade
-                },
-                "special_requirements": p66_data.special_requirements,
-                "authorized_representative": f"{p66_data.authorized_representative} ({p66_data.representative_title})",
-                "signature_verification_code": p66_data.signature_data,
-                "status": p66_data.form_status,
-                "created_at": p66_data.created_at.isoformat() if p66_data.created_at else None,
-                "submitted_at": p66_data.submitted_at.isoformat() if p66_data.submitted_at else None
-            }
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                # Get P66 LOI transaction details
+                cur.execute("""
+                    SELECT 
+                        lt.id,
+                        lt.status,
+                        lt.created_at,
+                        lt.processing_context,
+                        c.company_name,
+                        c.contact_name,
+                        c.email,
+                        c.phone
+                    FROM loi_transactions lt
+                    JOIN customers c ON lt.customer_id = c.id
+                    WHERE lt.id = %s AND lt.transaction_type = 'P66_LOI'
+                """, (transaction_id,))
+                
+                result = cur.fetchone()
+                if not result:
+                    raise HTTPException(status_code=404, detail="P66 LOI document not found")
+                
+                (id, status, created_at, processing_context, company_name, contact_name, email, phone) = result
+                
+                # Parse processing context for form data
+                form_data = processing_context.get('form_data', {}) if processing_context else {}
+                
+                return {
+                    "success": True,
+                    "transaction_id": str(id),
+                    "document_type": "Phillips 66 Letter of Intent",
+                    "customer_company": company_name,
+                    "contact_name": contact_name,
+                    "email": email,
+                    "phone": phone,
+                    "status": status,
+                    "created_at": created_at.isoformat() if created_at else None,
+                    "is_completed": status == 'COMPLETED',
+                    "station_info": {
+                        "station_name": form_data.get('station_name', ''),
+                        "station_address": form_data.get('station_address', ''),
+                        "station_city": form_data.get('station_city', ''),
+                        "station_state": form_data.get('station_state', ''),
+                        "station_zip": form_data.get('station_zip', ''),
+                        "current_brand": form_data.get('current_brand', '')
+                    },
+                    "fuel_volumes": {
+                        "monthly_gasoline": form_data.get('monthly_gasoline_gallons', 0),
+                        "monthly_diesel": form_data.get('monthly_diesel_gallons', 0),
+                        "total_monthly": form_data.get('total_monthly_gallons', 0)
+                    },
+                    "contract_details": {
+                        "start_date": form_data.get('contract_start_date', ''),
+                        "term_years": form_data.get('contract_term_years', '')
+                    },
+                    "incentives": {
+                        "volume_incentive": form_data.get('volume_incentive_requested', 0),
+                        "image_funding": form_data.get('image_funding_requested', 0),
+                        "equipment_funding": form_data.get('equipment_funding_requested', 0),
+                        "total_incentives": form_data.get('total_incentives_requested', 0)
+                    }
+                }
         
     except Exception as e:
         logger.error(f"❌ Error retrieving P66 LOI document: {e}")
@@ -1919,10 +1957,20 @@ async def health_check():
     """Health check endpoint"""
     
     try:
-        from database.connection import DatabaseManager
+        import psycopg2
+        import os
         
-        db_manager = DatabaseManager()
-        db_healthy = db_manager.health_check()
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
+        
+        # Quick database health check
+        db_healthy = False
+        try:
+            with psycopg2.connect(database_url) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    db_healthy = True
+        except:
+            db_healthy = False
         
         return {
             'status': 'healthy' if db_healthy else 'degraded',
@@ -2729,61 +2777,77 @@ async def search_crm_contacts(request: dict):
 async def get_customer_setup_document(transaction_id: str):
     """Get Customer Setup document details and status"""
     try:
-        from database.connection import DatabaseManager
-        from database.models import LOITransaction, Customer, TransactionType
+        import psycopg2
+        import os
         
-        db_manager = DatabaseManager()
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
         
-        with db_manager.get_session() as session:
-            # Get Customer Setup transaction details
-            transaction = session.query(LOITransaction)\
-                .filter(LOITransaction.id == transaction_id)\
-                .filter(LOITransaction.transaction_type == TransactionType.CUSTOMER_SETUP_FORM)\
-                .first()
-            
-            if not transaction:
-                raise HTTPException(status_code=404, detail="Customer Setup document not found")
-            
-            # Get customer details
-            customer = session.query(Customer).filter(Customer.id == transaction.customer_id).first()
-            
-            # Parse processing context for form data
-            form_data = transaction.processing_context.get('form_data', {}) if transaction.processing_context else {}
-            
-            document_info = {
-                'transaction_id': str(transaction.id),
-                'transaction_type': 'Customer Setup Form',
-                'customer_company': customer.company_name if customer else form_data.get('legal_business_name', 'Unknown'),
-                'contact_name': customer.contact_name if customer else form_data.get('primary_contact_name', 'Unknown'),
-                'email': customer.email if customer else form_data.get('primary_contact_email', 'Unknown'),
-                'phone': customer.phone if customer else form_data.get('primary_contact_phone', ''),
-                'status': transaction.status.value if hasattr(transaction.status, 'value') else str(transaction.status),
-                'workflow_stage': transaction.workflow_stage.value if hasattr(transaction.workflow_stage, 'value') else str(transaction.workflow_stage),
-                'created_at': transaction.created_at.isoformat(),
-                'updated_at': transaction.updated_at.isoformat() if transaction.updated_at else None,
-                'completion_url': f"/api/v1/forms/customer-setup/complete/{transaction.id}",
-                'business_info': {
-                    'legal_business_name': form_data.get('legal_business_name', ''),
-                    'dba_name': form_data.get('dba_name', ''),
-                    'federal_tax_id': form_data.get('federal_tax_id', ''),
-                    'business_type': form_data.get('business_type', ''),
-                    'years_in_business': form_data.get('years_in_business', ''),
-                    'physical_address': form_data.get('physical_address', ''),
-                    'physical_city': form_data.get('physical_city', ''),
-                    'physical_state': form_data.get('physical_state', ''),
-                    'physical_zip': form_data.get('physical_zip', '')
-                },
-                'contact_info': {
-                    'primary_contact_name': form_data.get('primary_contact_name', ''),
-                    'primary_contact_email': form_data.get('primary_contact_email', ''),
-                    'primary_contact_phone': form_data.get('primary_contact_phone', ''),
-                    'accounts_payable_contact': form_data.get('accounts_payable_contact', ''),
-                    'accounts_payable_email': form_data.get('accounts_payable_email', '')
-                },
-                'is_completed': transaction.status.value == 'COMPLETED' if hasattr(transaction.status, 'value') else False
-            }
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                # Get Customer Setup transaction details with customer info
+                cur.execute("""
+                    SELECT 
+                        lt.id,
+                        lt.transaction_type,
+                        lt.status,
+                        lt.workflow_stage,
+                        lt.created_at,
+                        lt.completed_at,
+                        lt.processing_context,
+                        c.company_name,
+                        c.contact_name,
+                        c.email,
+                        c.phone
+                    FROM loi_transactions lt
+                    JOIN customers c ON lt.customer_id = c.id
+                    WHERE lt.id = %s AND lt.transaction_type = 'CUSTOMER_SETUP_FORM'
+                """, (transaction_id,))
+                
+                result = cur.fetchone()
+                if not result:
+                    raise HTTPException(status_code=404, detail="Customer Setup document not found")
+                
+                (id, transaction_type, status, workflow_stage, created_at, completed_at, 
+                 processing_context, company_name, contact_name, email, phone) = result
+                
+                # Parse processing context for form data
+                form_data = processing_context.get('form_data', {}) if processing_context else {}
+                
+                document_info = {
+                    'success': True,
+                    'transaction_id': str(id),
+                    'transaction_type': 'Customer Setup Form',
+                    'customer_company': company_name or form_data.get('legal_business_name', 'Unknown'),
+                    'contact_name': contact_name or form_data.get('primary_contact_name', 'Unknown'),
+                    'email': email or form_data.get('primary_contact_email', 'Unknown'),
+                    'phone': phone or form_data.get('primary_contact_phone', ''),
+                    'status': status,
+                    'workflow_stage': workflow_stage,
+                    'created_at': created_at.isoformat() if created_at else None,
+                    'updated_at': completed_at.isoformat() if completed_at else None,
+                    'completion_url': f"/api/v1/forms/customer-setup/complete/{id}",
+                    'business_info': {
+                        'legal_business_name': form_data.get('legal_business_name', ''),
+                        'dba_name': form_data.get('dba_name', ''),
+                        'federal_tax_id': form_data.get('federal_tax_id', ''),
+                        'business_type': form_data.get('business_type', ''),
+                        'years_in_business': form_data.get('years_in_business', ''),
+                        'physical_address': form_data.get('physical_address', ''),
+                        'physical_city': form_data.get('physical_city', ''),
+                        'physical_state': form_data.get('physical_state', ''),
+                        'physical_zip': form_data.get('physical_zip', '')
+                    },
+                    'contact_info': {
+                        'primary_contact_name': form_data.get('primary_contact_name', ''),
+                        'primary_contact_email': form_data.get('primary_contact_email', ''),
+                        'primary_contact_phone': form_data.get('primary_contact_phone', ''),
+                        'accounts_payable_contact': form_data.get('accounts_payable_contact', ''),
+                        'accounts_payable_email': form_data.get('accounts_payable_email', '')
+                    },
+                    'is_completed': status == 'COMPLETED'
+                }
         
-        return JSONResponse(content=document_info)
+        return document_info
         
     except Exception as e:
         logger.error(f"Error retrieving Customer Setup document: {e}")
