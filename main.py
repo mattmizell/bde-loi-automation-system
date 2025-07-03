@@ -1503,6 +1503,8 @@ async def list_all_transactions():
             
             if status == "COMPLETED":
                 urgency = "completed"
+            elif status == "CANCELLED":
+                urgency = "cancelled"
             elif days_old > 7:
                 urgency = "high"  # Overdue
             elif days_old > 3:
@@ -1519,6 +1521,8 @@ async def list_all_transactions():
                     status_display = "Pending"
             elif status == "COMPLETED":
                 status_display = "Completed"
+            elif status == "CANCELLED":
+                status_display = "Cancelled"
             elif status == "FAILED":
                 status_display = "Failed"
             else:
@@ -1560,6 +1564,153 @@ async def list_all_transactions():
             'success': False,
             'transactions': [],
             'total_count': 0,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+@app.post("/api/v1/transactions/{transaction_id}/cancel")
+async def cancel_transaction(transaction_id: str):
+    """Cancel a transaction and notify the customer"""
+    
+    try:
+        import psycopg2
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        database_url = os.environ.get('DATABASE_URL', 'postgresql://loi_user:2laNcRN0ATESCFQg1mGhknBielnDJfiS@dpg-d1dd5nadbo4c73cmub8g-a.oregon-postgres.render.com/loi_automation')
+        
+        with psycopg2.connect(database_url) as conn:
+            with conn.cursor() as cur:
+                # Get transaction details first
+                cur.execute("""
+                    SELECT lt.status, c.company_name, c.contact_name, c.email, lt.transaction_type
+                    FROM loi_transactions lt
+                    JOIN customers c ON lt.customer_id = c.id
+                    WHERE lt.id = %s
+                """, (transaction_id,))
+                
+                result = cur.fetchone()
+                if not result:
+                    return {
+                        'success': False,
+                        'error': 'Transaction not found',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                
+                current_status, company_name, contact_name, customer_email, transaction_type = result
+                
+                # Check if already cancelled or completed
+                if current_status in ['CANCELLED', 'COMPLETED']:
+                    return {
+                        'success': False,
+                        'error': f'Transaction is already {current_status.lower()}',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                
+                # Update transaction status to CANCELLED
+                cur.execute("""
+                    UPDATE loi_transactions 
+                    SET status = 'CANCELLED', completed_at = %s
+                    WHERE id = %s
+                """, (datetime.now(), transaction_id))
+                
+                conn.commit()
+                
+                # Send cancellation email to customer
+                try:
+                    # Determine transaction type display
+                    type_display = ""
+                    if transaction_type == "VP_RACING_LOI":
+                        type_display = "VP Racing Fuels Letter of Intent"
+                    elif transaction_type == "P66_LOI":
+                        type_display = "Phillips 66 Letter of Intent"
+                    elif transaction_type == "EFT_FORM":
+                        type_display = "EFT Authorization Form"
+                    elif transaction_type == "CUSTOMER_SETUP_FORM":
+                        type_display = "Customer Setup Form"
+                    else:
+                        type_display = "Transaction"
+                    
+                    # Create cancellation email
+                    subject = f"Transaction Cancelled - {company_name} - {type_display}"
+                    
+                    html_body = f"""
+                    <html>
+                    <body style="font-family: Arial, sans-serif; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="background: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                                <h1>🏢 Better Day Energy</h1>
+                                <h2>Transaction Cancelled</h2>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #dee2e6;">
+                                <p>Dear {contact_name},</p>
+                                
+                                <p>Your <strong>{type_display}</strong> for <strong>{company_name}</strong> has been cancelled by our team.</p>
+                                
+                                <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                                    <h3 style="color: #721c24; margin-top: 0;">⚠️ Transaction Cancelled</h3>
+                                    <p style="margin: 0; color: #721c24;">
+                                        This transaction has been cancelled and can no longer be completed. 
+                                        If you have any questions or need to restart the process, please contact our team.
+                                    </p>
+                                </div>
+                                
+                                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <p><strong>Transaction ID:</strong> {transaction_id}</p>
+                                    <p><strong>Company:</strong> {company_name}</p>
+                                    <p><strong>Transaction Type:</strong> {type_display}</p>
+                                    <p><strong>Cancelled:</strong> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                                </div>
+                                
+                                <div style="margin-top: 30px; padding: 20px; background: #e2e3e5; border-radius: 6px;">
+                                    <p style="margin: 0;"><strong>Need Help?</strong></p>
+                                    <p style="margin: 5px 0 0 0;">Contact Better Day Energy if you have questions about this cancellation or need to start a new transaction.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    # Send email using the existing email configuration
+                    msg = MIMEMultipart('alternative')
+                    msg['Subject'] = subject
+                    msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+                    msg['To'] = customer_email
+                    
+                    html_part = MIMEText(html_body, 'html')
+                    msg.attach(html_part)
+                    
+                    # Send email
+                    server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+                    server.starttls()
+                    server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+                    server.send_message(msg)
+                    server.quit()
+                    
+                    logger.info(f"✅ Cancellation email sent to {customer_email} for transaction {transaction_id}")
+                    
+                except Exception as email_error:
+                    logger.error(f"❌ Failed to send cancellation email: {email_error}")
+                    # Don't fail the cancellation if email fails
+                
+                return {
+                    'success': True,
+                    'message': 'Transaction cancelled successfully',
+                    'transaction_id': transaction_id,
+                    'customer_email': customer_email,
+                    'company_name': company_name,
+                    'transaction_type': type_display,
+                    'cancelled_at': datetime.now().isoformat(),
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+    except Exception as e:
+        logger.error(f"❌ Error cancelling transaction {transaction_id}: {e}")
+        return {
+            'success': False,
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }
