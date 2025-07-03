@@ -1747,30 +1747,157 @@ async def get_loi_document(transaction_id: str):
         else:
             loi_details = {}
         
-        return {
-            "success": True,
-            "transaction_id": transaction_id,
-            "document_type": "Letter of Intent",
-            "company_name": company_name,
-            "contact_name": contact_name,
-            "email": email,
-            "status": status,
-            "created_at": created_at.isoformat() if created_at else None,
-            "signed_at": signed_at.isoformat() if signed_at else None,
-            "signature_verification_code": signature_data,
-            "loi_details": {
-                "loi_type": loi_details.get('loi_type'),
-                "station_name": loi_details.get('station_name'),
-                "monthly_gallons": loi_details.get('total_monthly_gallons'),
-                "contract_start": loi_details.get('contract_start_date'),
-                "contract_term": loi_details.get('contract_term_years'),
-                "incentives": {
-                    "volume": loi_details.get('volume_incentive_requested'),
-                    "image": loi_details.get('image_funding_requested'),
-                    "equipment": loi_details.get('equipment_funding_requested')
-                }
-            }
-        }
+        # Create formatted HTML response  
+        loi_type_display = loi_details.get('loi_type', 'VP Racing').replace('_', ' ').title()
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Letter of Intent - {company_name}</title>
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; color: #333; }}
+                .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }}
+                .header {{ background: linear-gradient(135deg, #8e24aa 0%, #ab47bc 100%); color: white; padding: 30px; text-align: center; }}
+                .header h1 {{ margin: 0 0 10px 0; font-size: 2.2em; font-weight: 300; }}
+                .header p {{ margin: 0; opacity: 0.9; font-size: 1.1em; }}
+                .content {{ padding: 40px; }}
+                .section {{ margin-bottom: 35px; padding: 25px; border: 1px solid #e9ecef; border-radius: 8px; background: #f8f9fa; }}
+                .section h2 {{ margin: 0 0 20px 0; color: #8e24aa; font-size: 1.4em; border-bottom: 2px solid #8e24aa; padding-bottom: 8px; }}
+                .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }}
+                .info-item {{ display: flex; align-items: center; }}
+                .info-label {{ font-weight: 600; color: #495057; min-width: 140px; }}
+                .info-value {{ color: #212529; flex: 1; }}
+                .status-badge {{ display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; text-transform: uppercase; }}
+                .status-pending {{ background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }}
+                .status-completed {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+                .status-cancelled {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                .status-failed {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                .status-signed {{ background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }}
+                .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; border-top: 1px solid #dee2e6; }}
+                .highlight-value {{ font-weight: 600; color: #8e24aa; }}
+                .signature-info {{ background: #e8f5e8; border: 1px solid #4caf50; padding: 15px; border-radius: 6px; margin: 15px 0; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📄 {loi_type_display} Letter of Intent</h1>
+                    <p>Fuel Supply Agreement</p>
+                </div>
+                
+                <div class="content">
+                    <div class="section">
+                        <h2>📋 Transaction Information</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Transaction ID:</span>
+                                <span class="info-value">{transaction_id}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Document Type:</span>
+                                <span class="info-value">{loi_type_display} Letter of Intent</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value">
+                                    <span class="status-badge status-{status.lower() if status else 'pending'}">{status or 'PENDING'}</span>
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Created:</span>
+                                <span class="info-value">{created_at.strftime('%B %d, %Y at %I:%M %p') if created_at else 'Unknown'}</span>
+                            </div>
+                        </div>
+                        
+                        {f'''
+                        <div class="signature-info">
+                            <h3 style="color: #2e7d32; margin-top: 0;">✅ Signature Information</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Signed Date:</span>
+                                    <span class="info-value">{signed_at.strftime('%B %d, %Y at %I:%M %p') if signed_at else 'Not signed'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Verification Code:</span>
+                                    <span class="info-value">{signature_data or 'Not available'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ''' if signed_at else ''}
+                    </div>
+                    
+                    <div class="section">
+                        <h2>🏢 Company Information</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Company Name:</span>
+                                <span class="info-value">{company_name or 'Not provided'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Contact Name:</span>
+                                <span class="info-value">{contact_name or 'Not provided'}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value">{email or 'Not provided'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>⛽ LOI Details</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Station Name:</span>
+                                <span class="info-value">{loi_details.get('station_name', 'Not provided')}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Monthly Gallons:</span>
+                                <span class="info-value highlight-value">{loi_details.get('total_monthly_gallons', 0):,} gallons</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Contract Start:</span>
+                                <span class="info-value">{loi_details.get('contract_start_date', 'Not provided')}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Contract Term:</span>
+                                <span class="info-value">{loi_details.get('contract_term_years', 'Not provided')} years</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>💰 Requested Incentives</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Volume Incentive:</span>
+                                <span class="info-value highlight-value">${loi_details.get('volume_incentive_requested', 0):,}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Image Funding:</span>
+                                <span class="info-value highlight-value">${loi_details.get('image_funding_requested', 0):,}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Equipment Funding:</span>
+                                <span class="info-value highlight-value">${loi_details.get('equipment_funding_requested', 0):,}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Better Day Energy - {loi_type_display} LOI System</p>
+                    <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return HTMLResponse(content=html_content)
         
     except Exception as e:
         logger.error(f"❌ Error retrieving LOI document: {e}")
@@ -1853,24 +1980,122 @@ async def get_eft_document(transaction_id: str):
                 # Parse processing context for form data
                 form_data = processing_context.get('form_data', {}) if processing_context else {}
                 
-                return {
-                    'success': True,
-                    'transaction_id': str(id),
-                    'transaction_type': 'EFT Authorization Form',
-                    'customer_company': company_name or form_data.get('company_name', 'Unknown'),
-                    'contact_name': contact_name or 'Unknown',
-                    'email': email or form_data.get('customer_email', 'Unknown'),
-                    'phone': phone or form_data.get('customer_phone', ''),
-                    'status': status,
-                    'created_at': created_at.isoformat() if created_at else None,
-                    'is_completed': status == 'COMPLETED',
-                    'bank_info': {
-                        'bank_name': form_data.get('bank_name', ''),
-                        'routing_number': form_data.get('routing_number', ''),
-                        'account_type': form_data.get('account_type', ''),
-                        'account_holder_name': form_data.get('account_holder_name', '')
-                    }
-                }
+                # Create formatted HTML response
+                html_content = f"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>EFT Authorization - {company_name or form_data.get('company_name', 'Unknown')}</title>
+                    <style>
+                        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; color: #333; }}
+                        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }}
+                        .header {{ background: linear-gradient(135deg, #1f4e79 0%, #2d5aa0 100%); color: white; padding: 30px; text-align: center; }}
+                        .header h1 {{ margin: 0 0 10px 0; font-size: 2.2em; font-weight: 300; }}
+                        .header p {{ margin: 0; opacity: 0.9; font-size: 1.1em; }}
+                        .content {{ padding: 40px; }}
+                        .section {{ margin-bottom: 35px; padding: 25px; border: 1px solid #e9ecef; border-radius: 8px; background: #f8f9fa; }}
+                        .section h2 {{ margin: 0 0 20px 0; color: #1f4e79; font-size: 1.4em; border-bottom: 2px solid #1f4e79; padding-bottom: 8px; }}
+                        .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }}
+                        .info-item {{ display: flex; align-items: center; }}
+                        .info-label {{ font-weight: 600; color: #495057; min-width: 140px; }}
+                        .info-value {{ color: #212529; flex: 1; }}
+                        .status-badge {{ display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; text-transform: uppercase; }}
+                        .status-pending {{ background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }}
+                        .status-completed {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+                        .status-cancelled {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                        .status-failed {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                        .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; border-top: 1px solid #dee2e6; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🏦 EFT Authorization Form</h1>
+                            <p>Electronic Funds Transfer Authorization</p>
+                        </div>
+                        
+                        <div class="content">
+                            <div class="section">
+                                <h2>📋 Transaction Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Transaction ID:</span>
+                                        <span class="info-value">{str(id)}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Document Type:</span>
+                                        <span class="info-value">EFT Authorization Form</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Status:</span>
+                                        <span class="info-value">
+                                            <span class="status-badge status-{status.lower()}">{status}</span>
+                                        </span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Created:</span>
+                                        <span class="info-value">{created_at.strftime('%B %d, %Y at %I:%M %p') if created_at else 'Unknown'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>🏢 Company Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Company Name:</span>
+                                        <span class="info-value">{company_name or form_data.get('company_name', 'Unknown')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Contact Name:</span>
+                                        <span class="info-value">{contact_name or 'Unknown'}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Email:</span>
+                                        <span class="info-value">{email or form_data.get('customer_email', 'Unknown')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Phone:</span>
+                                        <span class="info-value">{phone or form_data.get('customer_phone', 'Not provided')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>🏦 Banking Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Bank Name:</span>
+                                        <span class="info-value">{form_data.get('bank_name', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Routing Number:</span>
+                                        <span class="info-value">{form_data.get('routing_number', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Account Type:</span>
+                                        <span class="info-value">{form_data.get('account_type', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Account Holder:</span>
+                                        <span class="info-value">{form_data.get('account_holder_name', 'Not provided')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Better Day Energy - EFT Authorization System</p>
+                            <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                return HTMLResponse(content=html_content)
         
     except Exception as e:
         logger.error(f"❌ Error retrieving EFT document: {e}")
@@ -1912,41 +2137,185 @@ async def get_p66_loi_document(transaction_id: str):
                 # Parse processing context for form data
                 form_data = processing_context.get('form_data', {}) if processing_context else {}
                 
-                return {
-                    "success": True,
-                    "transaction_id": str(id),
-                    "document_type": "Phillips 66 Letter of Intent",
-                    "customer_company": company_name,
-                    "contact_name": contact_name,
-                    "email": email,
-                    "phone": phone,
-                    "status": status,
-                    "created_at": created_at.isoformat() if created_at else None,
-                    "is_completed": status == 'COMPLETED',
-                    "station_info": {
-                        "station_name": form_data.get('station_name', ''),
-                        "station_address": form_data.get('station_address', ''),
-                        "station_city": form_data.get('station_city', ''),
-                        "station_state": form_data.get('station_state', ''),
-                        "station_zip": form_data.get('station_zip', ''),
-                        "current_brand": form_data.get('current_brand', '')
-                    },
-                    "fuel_volumes": {
-                        "monthly_gasoline": form_data.get('monthly_gasoline_gallons', 0),
-                        "monthly_diesel": form_data.get('monthly_diesel_gallons', 0),
-                        "total_monthly": form_data.get('total_monthly_gallons', 0)
-                    },
-                    "contract_details": {
-                        "start_date": form_data.get('contract_start_date', ''),
-                        "term_years": form_data.get('contract_term_years', '')
-                    },
-                    "incentives": {
-                        "volume_incentive": form_data.get('volume_incentive_requested', 0),
-                        "image_funding": form_data.get('image_funding_requested', 0),
-                        "equipment_funding": form_data.get('equipment_funding_requested', 0),
-                        "total_incentives": form_data.get('total_incentives_requested', 0)
-                    }
-                }
+                # Create formatted HTML response
+                html_content = f"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Phillips 66 LOI - {company_name}</title>
+                    <style>
+                        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; color: #333; }}
+                        .container {{ max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }}
+                        .header {{ background: linear-gradient(135deg, #d32f2f 0%, #f44336 100%); color: white; padding: 30px; text-align: center; }}
+                        .header h1 {{ margin: 0 0 10px 0; font-size: 2.2em; font-weight: 300; }}
+                        .header p {{ margin: 0; opacity: 0.9; font-size: 1.1em; }}
+                        .content {{ padding: 40px; }}
+                        .section {{ margin-bottom: 35px; padding: 25px; border: 1px solid #e9ecef; border-radius: 8px; background: #f8f9fa; }}
+                        .section h2 {{ margin: 0 0 20px 0; color: #d32f2f; font-size: 1.4em; border-bottom: 2px solid #d32f2f; padding-bottom: 8px; }}
+                        .info-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }}
+                        .info-item {{ display: flex; align-items: center; }}
+                        .info-label {{ font-weight: 600; color: #495057; min-width: 140px; }}
+                        .info-value {{ color: #212529; flex: 1; }}
+                        .status-badge {{ display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; text-transform: uppercase; }}
+                        .status-pending {{ background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }}
+                        .status-completed {{ background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }}
+                        .status-cancelled {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                        .status-failed {{ background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }}
+                        .footer {{ background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; border-top: 1px solid #dee2e6; }}
+                        .highlight-value {{ font-weight: 600; color: #d32f2f; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🛢️ Phillips 66 Letter of Intent</h1>
+                            <p>Fuel Supply Agreement</p>
+                        </div>
+                        
+                        <div class="content">
+                            <div class="section">
+                                <h2>📋 Transaction Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Transaction ID:</span>
+                                        <span class="info-value">{str(id)}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Document Type:</span>
+                                        <span class="info-value">Phillips 66 Letter of Intent</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Status:</span>
+                                        <span class="info-value">
+                                            <span class="status-badge status-{status.lower()}">{status}</span>
+                                        </span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Created:</span>
+                                        <span class="info-value">{created_at.strftime('%B %d, %Y at %I:%M %p') if created_at else 'Unknown'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>🏢 Company Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Company Name:</span>
+                                        <span class="info-value">{company_name}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Contact Name:</span>
+                                        <span class="info-value">{contact_name}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Email:</span>
+                                        <span class="info-value">{email}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Phone:</span>
+                                        <span class="info-value">{phone or 'Not provided'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>⛽ Station Information</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Station Name:</span>
+                                        <span class="info-value">{form_data.get('station_name', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Address:</span>
+                                        <span class="info-value">{form_data.get('station_address', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">City:</span>
+                                        <span class="info-value">{form_data.get('station_city', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">State:</span>
+                                        <span class="info-value">{form_data.get('station_state', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">ZIP Code:</span>
+                                        <span class="info-value">{form_data.get('station_zip', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Current Brand:</span>
+                                        <span class="info-value">{form_data.get('current_brand', 'Not provided')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>📊 Fuel Volume Projections</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Monthly Gasoline:</span>
+                                        <span class="info-value highlight-value">{form_data.get('monthly_gasoline_gallons', 0):,} gallons</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Monthly Diesel:</span>
+                                        <span class="info-value highlight-value">{form_data.get('monthly_diesel_gallons', 0):,} gallons</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Total Monthly:</span>
+                                        <span class="info-value highlight-value">{form_data.get('total_monthly_gallons', 0):,} gallons</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>📝 Contract Details</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Start Date:</span>
+                                        <span class="info-value">{form_data.get('contract_start_date', 'Not provided')}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Term (Years):</span>
+                                        <span class="info-value">{form_data.get('contract_term_years', 'Not provided')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="section">
+                                <h2>💰 Requested Incentives</h2>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Volume Incentive:</span>
+                                        <span class="info-value highlight-value">${form_data.get('volume_incentive_requested', 0):,}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Image Funding:</span>
+                                        <span class="info-value highlight-value">${form_data.get('image_funding_requested', 0):,}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Equipment Funding:</span>
+                                        <span class="info-value highlight-value">${form_data.get('equipment_funding_requested', 0):,}</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Total Incentives:</span>
+                                        <span class="info-value highlight-value">${form_data.get('total_incentives_requested', 0):,}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Better Day Energy - Phillips 66 LOI System</p>
+                            <p>Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                return HTMLResponse(content=html_content)
         
     except Exception as e:
         logger.error(f"❌ Error retrieving P66 LOI document: {e}")
@@ -2847,7 +3216,221 @@ async def get_customer_setup_document(transaction_id: str):
                     'is_completed': status == 'COMPLETED'
                 }
         
-        return document_info
+        # Return formatted HTML view instead of raw JSON
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Customer Setup Document - {document_info['customer_company']}</title>
+            <style>
+                body {{
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    background: linear-gradient(135deg, #1f4e79, #2563eb);
+                    min-height: 100vh;
+                    margin: 0;
+                    padding: 20px;
+                    color: white;
+                }}
+                .container {{
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background: white;
+                    color: #333;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+                    overflow: hidden;
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #1f4e79, #2563eb);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }}
+                .content {{
+                    padding: 30px;
+                }}
+                .section {{
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    border: 1px solid #dee2e6;
+                }}
+                .section h3 {{
+                    color: #1f4e79;
+                    margin-bottom: 15px;
+                    font-size: 18px;
+                }}
+                .field-row {{
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 15px;
+                }}
+                .field {{
+                    display: flex;
+                    flex-direction: column;
+                }}
+                .field label {{
+                    font-weight: 600;
+                    color: #495057;
+                    font-size: 14px;
+                    margin-bottom: 5px;
+                }}
+                .field .value {{
+                    padding: 8px 12px;
+                    background: white;
+                    border: 1px solid #ced4da;
+                    border-radius: 4px;
+                    font-size: 14px;
+                }}
+                .status-badge {{
+                    display: inline-block;
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    font-weight: 600;
+                    font-size: 12px;
+                    text-transform: uppercase;
+                }}
+                .status-completed {{ background: #28a745; color: white; }}
+                .status-pending {{ background: #ffc107; color: #212529; }}
+                .status-cancelled {{ background: #6c757d; color: white; }}
+                .actions {{
+                    text-align: center;
+                    margin-top: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                }}
+                .btn {{
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background: #1f4e79;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                    font-weight: 600;
+                    margin: 0 10px;
+                }}
+                .btn:hover {{
+                    background: #2563eb;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🏢 Customer Setup Document</h1>
+                    <p>{document_info['customer_company']}</p>
+                    <span class="status-badge status-{document_info['status'].lower()}">{document_info['status']}</span>
+                </div>
+                
+                <div class="content">
+                    <div class="section">
+                        <h3>📋 Transaction Information</h3>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Transaction ID</label>
+                                <div class="value">{document_info['transaction_id']}</div>
+                            </div>
+                            <div class="field">
+                                <label>Created Date</label>
+                                <div class="value">{document_info['created_at'][:10] if document_info['created_at'] else 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Status</label>
+                                <div class="value">{document_info['status']}</div>
+                            </div>
+                            <div class="field">
+                                <label>Workflow Stage</label>
+                                <div class="value">{document_info['workflow_stage']}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>🏢 Business Information</h3>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Legal Business Name</label>
+                                <div class="value">{document_info['business_info']['legal_business_name'] or 'Not provided'}</div>
+                            </div>
+                            <div class="field">
+                                <label>DBA Name</label>
+                                <div class="value">{document_info['business_info']['dba_name'] or 'Not provided'}</div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Federal Tax ID</label>
+                                <div class="value">{document_info['business_info']['federal_tax_id'] or 'Not provided'}</div>
+                            </div>
+                            <div class="field">
+                                <label>Business Type</label>
+                                <div class="value">{document_info['business_info']['business_type'] or 'Not provided'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>👤 Contact Information</h3>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Primary Contact</label>
+                                <div class="value">{document_info['contact_name']}</div>
+                            </div>
+                            <div class="field">
+                                <label>Email</label>
+                                <div class="value">{document_info['email']}</div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Phone</label>
+                                <div class="value">{document_info['phone'] or 'Not provided'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h3>📍 Address Information</h3>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Physical Address</label>
+                                <div class="value">{document_info['business_info']['physical_address'] or 'Not provided'}</div>
+                            </div>
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>City</label>
+                                <div class="value">{document_info['business_info']['physical_city'] or 'Not provided'}</div>
+                            </div>
+                            <div class="field">
+                                <label>State</label>
+                                <div class="value">{document_info['business_info']['physical_state'] or 'Not provided'}</div>
+                            </div>
+                            <div class="field">
+                                <label>ZIP Code</label>
+                                <div class="value">{document_info['business_info']['physical_zip'] or 'Not provided'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="/" class="btn">← Back to Dashboard</a>
+                        {f'<a href="{document_info["completion_url"]}" class="btn" style="background: #28a745;">Complete Form</a>' if not document_info['is_completed'] and document_info['status'] != 'CANCELLED' else ''}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return HTMLResponse(content=html_content)
         
     except Exception as e:
         logger.error(f"Error retrieving Customer Setup document: {e}")
