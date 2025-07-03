@@ -487,6 +487,7 @@
         // CRM Search Functionality
         let searchTimeout;
         let selectedCrmContact = null;
+        let currentSearchResults = [];
         
         const searchInput = document.getElementById('crm-search');
         const searchResults = document.getElementById('search-results');
@@ -537,10 +538,14 @@
         function populateFormFromCrm(contact) {
             selectedCrmContact = contact;
             
-            // Populate basic fields
-            document.getElementById('company-name').value = contact.company_name || '';
-            document.getElementById('customer-email').value = contact.email || '';
-            document.getElementById('customer-phone').value = contact.phone || '';
+            // Populate basic fields (with null checks)
+            const companyNameField = document.getElementById('company-name');
+            const customerEmailField = document.getElementById('customer-email');
+            const customerPhoneField = document.getElementById('customer-phone');
+            
+            if (companyNameField) companyNameField.value = contact.company_name || '';
+            if (customerEmailField) customerEmailField.value = contact.email || '';
+            if (customerPhoneField) customerPhoneField.value = contact.phone || '';
             
             // Set account holder name to company name (if field exists)
             const accountHolderField = document.getElementById('account-holder');
@@ -554,13 +559,15 @@
                 bankNameField.value = contact.bank_name;
             }
             
-            // Show success status
-            crmStatus.className = 'crm-status found';
-            crmStatus.innerHTML = `✅ Found: ${contact.company_name} - ${contact.name} <button type="button" class="clear-crm-btn" onclick="clearCrmData()">Clear</button>`;
+            // Show success status (with null check)
+            if (crmStatus) {
+                crmStatus.className = 'crm-status found';
+                crmStatus.innerHTML = `✅ Found: ${contact.company_name} - ${contact.name} <button type="button" class="clear-crm-btn" onclick="clearCrmData()">Clear</button>`;
+            }
             
-            // Hide search results
-            searchResults.style.display = 'none';
-            searchInput.value = `${contact.company_name} - ${contact.name}`;
+            // Hide search results (with null checks)
+            if (searchResults) searchResults.style.display = 'none';
+            if (searchInput) searchInput.value = `${contact.company_name} - ${contact.name}`;
         }
         
         // Function to clear CRM data
@@ -629,14 +636,16 @@
         
         // Function to display search results
         function displaySearchResults(contacts) {
+            currentSearchResults = contacts; // Store contacts for later use
+            
             if (contacts.length === 0) {
                 searchResults.innerHTML = '<div class="search-result">No results found</div>';
                 searchResults.style.display = 'block';
                 return;
             }
             
-            const resultsHtml = contacts.map(contact => `
-                <div class="search-result" onclick="selectContact(${JSON.stringify(contact).replace(/"/g, '&quot;')})">
+            const resultsHtml = contacts.map((contact, index) => `
+                <div class="search-result" onclick="selectContactByIndex(${index})">
                     <div class="search-result-name">${contact.name || 'No name'}</div>
                     <div class="search-result-company">${contact.company_name || 'No company'}</div>
                     <div class="search-result-email">${contact.email || 'No email'}</div>
@@ -647,7 +656,14 @@
             searchResults.style.display = 'block';
         }
         
-        // Function to select a contact
+        // Function to select a contact by index (safer than passing JSON)
+        function selectContactByIndex(index) {
+            if (currentSearchResults && currentSearchResults[index]) {
+                populateFormFromCrm(currentSearchResults[index]);
+            }
+        }
+        
+        // Function to select a contact (legacy function, keep for compatibility)
         function selectContact(contact) {
             populateFormFromCrm(contact);
         }
