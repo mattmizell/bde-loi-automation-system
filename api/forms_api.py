@@ -1810,6 +1810,160 @@ async def submit_p66_loi_form(
         db.commit()
         db.refresh(p66_loi_form)
         
+        # ========================================================================
+        # UPDATE CRM WITH P66 LOI SUBMISSION AND DOCUMENT URL
+        # ========================================================================
+        
+        try:
+            # Generate document URL for CRM reference
+            base_url = os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')
+            document_url = f"{base_url}/api/v1/documents/p66-loi/{loi_transaction.id}"
+            
+            # Create comprehensive P66 LOI notes for CRM
+            p66_loi_crm_notes = f"""
+P66 LOI SUBMITTED: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}
+LOI Type: Phillips 66 Fuel Supply Agreement
+Station: {form_data.station_name}
+Location: {form_data.station_address}, {form_data.station_city}, {form_data.station_state} {form_data.station_zip}
+Current Brand: {form_data.current_brand}
+Brand Expiration: {form_data.brand_expiration_date or 'N/A'}
+Monthly Gasoline: {form_data.monthly_gasoline_gallons:,} gallons
+Monthly Diesel: {form_data.monthly_diesel_gallons:,} gallons
+Total Monthly Volume: {form_data.total_monthly_gallons:,} gallons
+Contract Start: {form_data.contract_start_date}
+Contract Term: {form_data.contract_term_years} years
+Volume Incentive: ${form_data.volume_incentive_requested:,}
+Image Funding: ${form_data.image_funding_requested:,}
+Equipment Funding: ${form_data.equipment_funding_requested:,}
+Total Incentives: ${form_data.total_incentives_requested:,}
+Equipment Upgrades: {', '.join([
+    'Canopy' if form_data.canopy_replacement else '',
+    'Dispensers' if form_data.dispenser_replacement else '',
+    'Tanks' if form_data.tank_replacement else '',
+    'POS' if form_data.pos_upgrade else ''
+]).strip(', ') or 'None'}
+Special Requirements: {form_data.special_requirements or 'None'}
+Authorized Rep: {form_data.authorized_representative} ({form_data.representative_title})
+Document URL: {document_url}
+Status: SUBMITTED - PENDING REVIEW
+            """.strip()
+            
+            # Update CRM cache with P66 LOI submission
+            import psycopg2
+            try:
+                crm_conn = psycopg2.connect(os.getenv('DATABASE_URL'))
+                crm_cur = crm_conn.cursor()
+                
+                # First check if contact exists in cache by station name or address
+                crm_cur.execute("""
+                    SELECT contact_id, notes FROM crm_contacts_cache 
+                    WHERE company_name = %s OR (address::text ILIKE %s)
+                    ORDER BY last_sync DESC LIMIT 1
+                """, (form_data.station_name, f"%{form_data.station_address}%"))
+                
+                existing_contact = crm_cur.fetchone()
+                
+                if existing_contact:
+                    # Update existing contact
+                    contact_id, existing_notes = existing_contact
+                    updated_notes = f"{existing_notes or ''}\n\n{p66_loi_crm_notes}".strip()
+                    
+                    # Update address information with station details
+                    station_address = {
+                        "full_address": f"{form_data.station_address}, {form_data.station_city}, {form_data.station_state} {form_data.station_zip}",
+                        "street": form_data.station_address,
+                        "city": form_data.station_city,
+                        "state": form_data.station_state,
+                        "zip": form_data.station_zip
+                    }
+                    
+                    crm_cur.execute("""
+                        UPDATE crm_contacts_cache SET
+                            company_name = %s,
+                            address = %s,
+                            notes = %s,
+                            last_sync = %s,
+                            sync_status = 'pending_sync'
+                        WHERE contact_id = %s
+                    """, (
+                        form_data.station_name,
+                        json.dumps(station_address),
+                        updated_notes,
+                        datetime.utcnow(),
+                        contact_id
+                    ))
+                    
+                    logger.info(f"✅ Updated existing CRM cache contact with P66 LOI: {contact_id}")
+                    
+                else:
+                    # Create new contact in cache
+                    contact_id = f"P66_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+                    
+                    station_address = {
+                        "full_address": f"{form_data.station_address}, {form_data.station_city}, {form_data.station_state} {form_data.station_zip}",
+                        "street": form_data.station_address,
+                        "city": form_data.station_city,
+                        "state": form_data.station_state,
+                        "zip": form_data.station_zip
+                    }
+                    
+                    crm_cur.execute("""
+                        INSERT INTO crm_contacts_cache 
+                        (contact_id, name, company_name, address, notes, created_at, last_sync, sync_status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending_sync')
+                    """, (
+                        contact_id,
+                        form_data.authorized_representative,
+                        form_data.station_name,
+                        json.dumps(station_address),
+                        p66_loi_crm_notes,
+                        datetime.utcnow(),
+                        datetime.utcnow()
+                    ))
+                    
+                    logger.info(f"✅ Created new CRM cache contact for P66 LOI: {contact_id}")
+                
+                # Add to CRM write queue for background sync
+                queue_data = {
+                    "contact_id": contact_id,
+                    "operation": "update_contact" if existing_contact else "create_contact",
+                    "data": {
+                        "name": form_data.authorized_representative,
+                        "company_name": form_data.station_name,
+                        "address": f"{form_data.station_address}, {form_data.station_city}, {form_data.station_state} {form_data.station_zip}",
+                        "notes": p66_loi_crm_notes if not existing_contact else f"{existing_contact[1] or ''}\n\n{p66_loi_crm_notes}".strip()
+                    },
+                    "app_source": "Phillips 66 LOI Form",
+                    "transaction_id": str(loi_transaction.id),
+                    "document_url": document_url,
+                    "loi_type": "Phillips 66"
+                }
+                
+                crm_cur.execute("""
+                    INSERT INTO crm_write_queue 
+                    (operation, data, status, created_at, max_attempts)
+                    VALUES (%s, %s, 'pending', %s, %s)
+                """, (
+                    queue_data["operation"],
+                    json.dumps(queue_data),
+                    datetime.utcnow(),
+                    5
+                ))
+                
+                crm_conn.commit()
+                crm_cur.close()
+                crm_conn.close()
+                
+                logger.info(f"✅ P66 LOI data queued for CRM sync: {form_data.station_name}")
+                
+            except Exception as crm_error:
+                logger.error(f"❌ Error updating CRM cache with P66 LOI: {crm_error}")
+                # Continue execution - don't fail form submission for CRM sync issues
+                
+        except Exception as e:
+            logger.error(f"❌ Error in P66 LOI CRM update process: {e}")
+            # Continue execution - don't fail form submission for CRM sync issues
+        
         logger.info(f"P66 LOI form submitted successfully: {p66_loi_form.id}")
         
         return {
@@ -1817,7 +1971,9 @@ async def submit_p66_loi_form(
             "id": str(p66_loi_form.id),
             "transaction_id": str(loi_transaction.id),
             "message": "Phillips 66 Letter of Intent submitted successfully",
-            "form_type": "p66_loi"
+            "form_type": "p66_loi",
+            "document_url": f"{os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')}/api/v1/documents/p66-loi/{loi_transaction.id}",
+            "crm_updated": True
         }
         
     except Exception as e:

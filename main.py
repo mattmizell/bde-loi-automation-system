@@ -1555,6 +1555,65 @@ async def get_eft_document(transaction_id: str):
         logger.error(f"❌ Error retrieving EFT document: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve EFT document")
 
+@app.get("/api/v1/documents/p66-loi/{transaction_id}")
+async def get_p66_loi_document(transaction_id: str):
+    """Get P66 LOI document details and status"""
+    try:
+        from database.connection import DatabaseManager
+        from database.models import P66LOIFormData, LOITransaction
+        
+        db_manager = DatabaseManager()
+        
+        with db_manager.get_session() as session:
+            # Get P66 LOI form data
+            p66_data = session.query(P66LOIFormData).filter(
+                P66LOIFormData.transaction_id == transaction_id
+            ).first()
+            
+            if not p66_data:
+                raise HTTPException(status_code=404, detail="P66 LOI document not found")
+            
+            return {
+                "success": True,
+                "transaction_id": transaction_id,
+                "document_type": "Phillips 66 Letter of Intent",
+                "station_name": p66_data.station_name,
+                "station_address": f"{p66_data.station_address}, {p66_data.station_city}, {p66_data.station_state} {p66_data.station_zip}",
+                "current_brand": p66_data.current_brand,
+                "brand_expiration": p66_data.brand_expiration_date.isoformat() if p66_data.brand_expiration_date else None,
+                "fuel_volumes": {
+                    "monthly_gasoline": p66_data.monthly_gasoline_gallons,
+                    "monthly_diesel": p66_data.monthly_diesel_gallons,
+                    "total_monthly": p66_data.total_monthly_gallons
+                },
+                "contract_details": {
+                    "start_date": p66_data.contract_start_date.isoformat() if p66_data.contract_start_date else None,
+                    "term_years": p66_data.contract_term_years
+                },
+                "incentives": {
+                    "volume_incentive": p66_data.volume_incentive_requested,
+                    "image_funding": p66_data.image_funding_requested,
+                    "equipment_funding": p66_data.equipment_funding_requested,
+                    "total_incentives": p66_data.total_incentives_requested
+                },
+                "equipment_upgrades": {
+                    "canopy_replacement": p66_data.canopy_replacement,
+                    "dispenser_replacement": p66_data.dispenser_replacement,
+                    "tank_replacement": p66_data.tank_replacement,
+                    "pos_upgrade": p66_data.pos_upgrade
+                },
+                "special_requirements": p66_data.special_requirements,
+                "authorized_representative": f"{p66_data.authorized_representative} ({p66_data.representative_title})",
+                "signature_verification_code": p66_data.signature_data,
+                "status": p66_data.form_status,
+                "created_at": p66_data.created_at.isoformat() if p66_data.created_at else None,
+                "submitted_at": p66_data.submitted_at.isoformat() if p66_data.submitted_at else None
+            }
+        
+    except Exception as e:
+        logger.error(f"❌ Error retrieving P66 LOI document: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve P66 LOI document")
+
 @app.get("/api/v1/health")
 async def health_check():
     """Health check endpoint"""
