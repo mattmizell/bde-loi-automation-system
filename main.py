@@ -926,20 +926,41 @@ async def submit_loi_request(request: dict):
                 ))
                 logger.info(f"✅ Created new customer: {customer_id}")
             
-            # Insert P66 LOI data
+            # Create transaction record first (required by foreign key)
+            import uuid
+            tx_uuid = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO loi_transactions (id, document_id, signature_request_id, status, created_at, processing_context, customer_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                tx_uuid,
+                transaction_id,  # Use string transaction_id as document_id
+                transaction_id,
+                'pending_signature',
+                datetime.now(),
+                json.dumps({'loi_type': 'phillips_66', 'original_transaction_id': transaction_id}),
+                customer_id
+            ))
+            logger.info(f"✅ Created transaction record: {tx_uuid}")
+            
+            # Generate UUID for P66 form record
+            p66_form_id = str(uuid.uuid4())
+            
+            # Insert P66 LOI data with proper UUIDs
             cur.execute("""
                 INSERT INTO p66_loi_form_data (
-                    id, customer_id, station_name, station_address, station_city, station_state, station_zip,
+                    id, customer_id, transaction_id, station_name, station_address, station_city, station_state, station_zip,
                     current_brand, brand_expiration_date, monthly_gasoline_gallons, monthly_diesel_gallons, 
                     total_monthly_gallons, contract_start_date, contract_term_years,
                     volume_incentive_requested, image_funding_requested, equipment_funding_requested, 
                     total_incentives_requested, canopy_replacement, dispenser_replacement, 
                     tank_replacement, pos_upgrade, special_requirements,
                     authorized_representative, representative_title, form_status, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
-                transaction_id,  # Use transaction_id as the primary key
-                customer_id,
+                p66_form_id,  # UUID for form record
+                customer_id,  # UUID for customer
+                tx_uuid,      # UUID for transaction
                 request.get('station_name', ''),
                 request.get('station_address', ''),
                 request.get('station_city', ''),
@@ -966,6 +987,7 @@ async def submit_loi_request(request: dict):
                 'pending_signature',
                 datetime.now()
             ))
+            logger.info(f"✅ Created P66 form record: {p66_form_id}")
         else:
             # For VP Racing and other LOI types, use simple storage for now
             logger.info(f"💾 Storing {loi_type} LOI data: {transaction_id}")
@@ -1063,7 +1085,7 @@ async def get_signature_page(transaction_id: str):
         
         cur = conn.cursor()
         
-        # First try P66 LOI table
+        # First try P66 LOI table via transaction lookup
         cur.execute("""
             SELECT c.company_name, c.contact_name, 
                    json_build_object(
@@ -1092,8 +1114,9 @@ async def get_signature_page(transaction_id: str):
                    ) as loi_data
             FROM p66_loi_form_data p 
             JOIN customers c ON p.customer_id = c.id 
-            WHERE p.id = %s
-        """, (transaction_id,))
+            JOIN loi_transactions t ON p.transaction_id = t.id
+            WHERE t.document_id = %s OR t.signature_request_id = %s
+        """, (transaction_id, transaction_id))
         result = cur.fetchone()
         
         if not result:
