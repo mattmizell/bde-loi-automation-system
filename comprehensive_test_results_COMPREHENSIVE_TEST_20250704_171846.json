@@ -1,0 +1,804 @@
+{
+  "test_run_id": "COMPREHENSIVE_TEST_20250704_171846",
+  "timestamp": "2025-07-04T17:20:10.509029",
+  "test_results": {
+    "Dashboard_Grid_Capabilities": "PASSED",
+    "CRM_Search_Functionality": "PARTIAL - Search present, no auto-fill",
+    "Customer_Setup_Sales_Initiation": "PARTIAL - Success but no transaction ID",
+    "Customer_Setup_Completion": "FAILED - Step transition",
+    "EFT_Sales_Initiation": "PARTIAL - Form submitted but verification failed",
+    "EFT_Customer_Completion": "FAILED - Form filling",
+    "P66_LOI_Submission": "FAILED - No response",
+    "VP_Racing_LOI_Submission": "FAILED - Backend error"
+  },
+  "transaction_ids": {
+    "EFT_Sales_Initiation": "c3c9d976-6f38-4073-9641-51ab68d8bb43"
+  },
+  "issues": [
+    {
+      "test_name": "Console",
+      "category": "JavaScript",
+      "description": "Console error: Failed to load resource: the server responded with a status of 404 ()",
+      "error": "Location: {'url': 'https://loi-automation-api.onrender.com/favicon.ico', 'lineNumber': 0, 'columnNumber': 0}",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:18:51.221357"
+    },
+    {
+      "test_name": "Console",
+      "category": "JavaScript",
+      "description": "Console warning: CRMSearchComponent not available, CRM search disabled",
+      "error": "Location: {'url': 'https://loi-automation-api.onrender.com/customer_setup_form.html', 'lineNumber': 878, 'columnNumber': 24}",
+      "severity": "MEDIUM",
+      "timestamp": "2025-07-04T17:19:03.328954"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Step 2 transition failed: Page.wait_for_function: Timeout 10000ms exceeded.",
+      "error": "Page.wait_for_function: Timeout 10000ms exceeded.",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:14.624340"
+    },
+    {
+      "test_name": "EFT_Sales_Initiation",
+      "category": "Database",
+      "description": "Incomplete database storage: 2/3 tables verified",
+      "error": "",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:23.213303"
+    },
+    {
+      "test_name": "EFT_Sales_Initiation",
+      "category": "CRM",
+      "description": "CRM bridge not responding properly",
+      "error": "",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:25.027669"
+    },
+    {
+      "test_name": "Console",
+      "category": "JavaScript",
+      "description": "Console warning: CRMSearchComponent not available, CRM search disabled",
+      "error": "Location: {'url': 'https://loi-automation-api.onrender.com/eft_form.html', 'lineNumber': 593, 'columnNumber': 24}",
+      "severity": "MEDIUM",
+      "timestamp": "2025-07-04T17:19:26.182555"
+    },
+    {
+      "test_name": "EFT_Customer_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #customer-email: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#customer-email\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#customer-email\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:31.981436"
+    },
+    {
+      "test_name": "EFT_Customer_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #account-holder-name: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#account-holder-name\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#account-holder-name\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:38.029942"
+    },
+    {
+      "test_name": "EFT_Customer_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #authorization-amount: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#authorization-amount\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#authorization-amount\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:43.910905"
+    },
+    {
+      "test_name": "EFT_Customer_Completion",
+      "category": "Frontend",
+      "description": "Failed to select #frequency: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#frequency\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#frequency\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:19:49.618491"
+    },
+    {
+      "test_name": "P66_LOI_Submission",
+      "category": "Frontend",
+      "description": "No response message displayed after submission",
+      "error": "",
+      "severity": "CRITICAL",
+      "timestamp": "2025-07-04T17:19:57.767818"
+    },
+    {
+      "test_name": "Page",
+      "category": "Runtime",
+      "description": "Page error: Cannot read properties of null (reading 'getContext')",
+      "error": "Cannot read properties of null (reading 'getContext')",
+      "severity": "CRITICAL",
+      "timestamp": "2025-07-04T17:19:59.867342"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Backend",
+      "description": "VP Racing submission failed: \n                \u2139\ufe0f\n                This Letter of Intent begins the process for establishing a VP Racing unbranded fuel supply agreement with Better Day Energy.\n            ",
+      "error": "\n                \u2139\ufe0f\n                This Letter of Intent begins the process for establishing a VP Racing unbranded fuel supply agreement with Better Day Energy.\n            ",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T17:20:08.177126"
+    }
+  ],
+  "console_logs": [
+    {
+      "timestamp": "2025-07-04T17:18:51.221314",
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 ()",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/favicon.ico",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.195591",
+      "type": "log",
+      "text": "DOM loaded, initializing application...",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 774,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.195804",
+      "type": "log",
+      "text": "Updating progress indicator for step: 1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1187,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.195953",
+      "type": "log",
+      "text": "showStep called with step: 1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1152,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.196262",
+      "type": "log",
+      "text": "Hiding section: step-1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.196407",
+      "type": "log",
+      "text": "Hiding section: step-2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.196535",
+      "type": "log",
+      "text": "Hiding section: step-3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.196678",
+      "type": "log",
+      "text": "Hiding section: step-4",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.196830",
+      "type": "log",
+      "text": "Hiding section: step-5",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197070",
+      "type": "log",
+      "text": "Showing step section: step-1 with 6 form fields",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1174,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197212",
+      "type": "log",
+      "text": "Updating progress indicator for step: 1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1187,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197326",
+      "type": "log",
+      "text": "Navigation event listeners setup complete",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 834,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197439",
+      "type": "log",
+      "text": "=== FORM DEBUG INFO ===",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1095,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197565",
+      "type": "log",
+      "text": "Current step: 1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1096,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197718",
+      "type": "log",
+      "text": "Total steps: 5",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1097,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.197931",
+      "type": "log",
+      "text": "Section: step-1 Active: true Display: block",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1102,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.198135",
+      "type": "log",
+      "text": "Section: step-2 Active: false Display: none",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1102,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.198254",
+      "type": "log",
+      "text": "Step 2 fields:",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1105,
+        "columnNumber": 28
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.198560",
+      "type": "log",
+      "text": "- Field: primary-contact-name Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.198840",
+      "type": "log",
+      "text": "- Field: primary-contact-title Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.199101",
+      "type": "log",
+      "text": "- Field: primary-contact-phone Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.199318",
+      "type": "log",
+      "text": "- Field: primary-contact-email Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.199524",
+      "type": "log",
+      "text": "- Field: ap-contact-name Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.199757",
+      "type": "log",
+      "text": "- Field: ap-contact-email Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.200016",
+      "type": "log",
+      "text": "- Field: ap-contact-phone Display: block Visibility: visible",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1108,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.200230",
+      "type": "log",
+      "text": "Section: step-3 Active: false Display: none",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1102,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.200448",
+      "type": "log",
+      "text": "Section: step-4 Active: false Display: none",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1102,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.268142",
+      "type": "log",
+      "text": "Section: step-5 Active: false Display: none",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1102,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.268353",
+      "type": "log",
+      "text": "Navigation buttons:",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1113,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.268620",
+      "type": "log",
+      "text": "- Button: Next: Contact Details \u2192 ID: next-to-step-2 OnClick: function onclick(event) {\nnextStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.270452",
+      "type": "log",
+      "text": "- Button: \u2190 Previous ID:  OnClick: function onclick(event) {\npreviousStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.270713",
+      "type": "log",
+      "text": "- Button: Next: Location & Equipment \u2192 ID: next-to-step-3 OnClick: function onclick(event) {\nnextStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.270946",
+      "type": "log",
+      "text": "- Button: \u2190 Previous ID:  OnClick: function onclick(event) {\npreviousStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.271234",
+      "type": "log",
+      "text": "- Button: Next: Financial & References \u2192 ID: next-to-step-4 OnClick: function onclick(event) {\nnextStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.271471",
+      "type": "log",
+      "text": "- Button: \u2190 Previous ID:  OnClick: function onclick(event) {\npreviousStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.271723",
+      "type": "log",
+      "text": "- Button: Next: Authorization \u2192 ID: next-to-step-5 OnClick: function onclick(event) {\nnextStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.271957",
+      "type": "log",
+      "text": "- Button: \u2190 Previous ID:  OnClick: function onclick(event) {\npreviousStep()\n}",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1115,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.272069",
+      "type": "log",
+      "text": "Application initialized successfully",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 791,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.272214",
+      "type": "log",
+      "text": "Form sections found:",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 794,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.272418",
+      "type": "log",
+      "text": "- Section: step-1 Display: block Active: true",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 796,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.272627",
+      "type": "log",
+      "text": "- Section: step-2 Display: none Active: false",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 796,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.272836",
+      "type": "log",
+      "text": "- Section: step-3 Display: none Active: false",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 796,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.273040",
+      "type": "log",
+      "text": "- Section: step-4 Display: none Active: false",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 796,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.273311",
+      "type": "log",
+      "text": "- Section: step-5 Display: none Active: false",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 796,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:03.328918",
+      "type": "warning",
+      "text": "CRMSearchComponent not available, CRM search disabled",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 878,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.556856",
+      "type": "log",
+      "text": "nextStep called, current step: 1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1122,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.557207",
+      "type": "log",
+      "text": "showStep called with step: 2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1152,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.557392",
+      "type": "log",
+      "text": "Hiding section: step-1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.557774",
+      "type": "log",
+      "text": "Hiding section: step-2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.557933",
+      "type": "log",
+      "text": "Hiding section: step-3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.558068",
+      "type": "log",
+      "text": "Hiding section: step-4",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.558191",
+      "type": "log",
+      "text": "Hiding section: step-5",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.558380",
+      "type": "log",
+      "text": "Showing step section: step-2 with 7 form fields",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1174,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.558598",
+      "type": "log",
+      "text": "Updating progress indicator for step: 2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1187,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.602639",
+      "type": "log",
+      "text": "Advanced to step: 2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1131,
+        "columnNumber": 28
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.602803",
+      "type": "log",
+      "text": "Next button clicked via event listener",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 810,
+        "columnNumber": 32
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.602951",
+      "type": "log",
+      "text": "nextStep called, current step: 2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1122,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603179",
+      "type": "log",
+      "text": "showStep called with step: 3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1152,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603322",
+      "type": "log",
+      "text": "Hiding section: step-1",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603451",
+      "type": "log",
+      "text": "Hiding section: step-2",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603597",
+      "type": "log",
+      "text": "Hiding section: step-3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603792",
+      "type": "log",
+      "text": "Hiding section: step-4",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.603929",
+      "type": "log",
+      "text": "Hiding section: step-5",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1158,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.604195",
+      "type": "log",
+      "text": "Showing step section: step-3 with 14 form fields",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1174,
+        "columnNumber": 24
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.604342",
+      "type": "log",
+      "text": "Updating progress indicator for step: 3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1187,
+        "columnNumber": 20
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:04.604478",
+      "type": "log",
+      "text": "Advanced to step: 3",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/customer_setup_form.html",
+        "lineNumber": 1131,
+        "columnNumber": 28
+      }
+    },
+    {
+      "timestamp": "2025-07-04T17:19:26.182519",
+      "type": "warning",
+      "text": "CRMSearchComponent not available, CRM search disabled",
+      "location": {
+        "url": "https://loi-automation-api.onrender.com/eft_form.html",
+        "lineNumber": 593,
+        "columnNumber": 24
+      }
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "passed": 1,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0,
+    "partial": 3,
+    "success_rate": 12.5
+  }
+}

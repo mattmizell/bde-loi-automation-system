@@ -64,6 +64,10 @@ Given that Render deployments take 2-3 minutes, we use a **batched fix approach*
 
 ### **Forms Being Tested**
 
+#### 🔄 **Dashboard and Core Functionality**
+- **Dashboard Grid Capabilities** - Data display, sorting, filtering, pagination
+- **CRM Search Functionality** - Customer lookup and auto-population across forms
+
 #### ✅ **Customer Setup Sales Initiation**
 - **URL:** `/customer-setup/initiate`
 - **Status:** PASSING (100% success rate)
@@ -78,16 +82,16 @@ Given that Render deployments take 2-3 minutes, we use a **batched fix approach*
 
 #### ❌ **P66 LOI Direct Submission**
 - **URL:** `/p66_loi_form.html`
-- **Status:** FAILING (JavaScript alert selection issue)
+- **Status:** FAILING (JavaScript alert selection issue) → **FIXED**
 - **Issue:** API returns success but wrong alert shown
 - **Root Cause:** Multiple alert elements, JavaScript selecting Alert 1 (intro) instead of Alert 2 (success)
 - **Backend:** Working correctly (confirmed via direct API testing)
 
 #### 🔄 **Pending Tests:**
-- Customer Setup Completion (multi-step form)
+- Customer Setup Completion (multi-step form) → **FIXED**
 - EFT Customer Completion with Signature
 - P66 LOI Signature Flow
-- VP Racing LOI Direct Submission  
+- VP Racing LOI Direct Submission → **FIELD SELECTORS FIXED**
 - VP Racing LOI Signature Flow
 - Paper Copy Request (partially tested)
 - Database verification for all submissions

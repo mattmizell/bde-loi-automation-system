@@ -484,7 +484,7 @@
                         <span></span>
                         <div>
                             <button type="button" class="btn save-progress" onclick="saveProgress()">💾 Save Progress</button>
-                            <button type="button" class="btn btn-primary" id="next-to-step-2" onclick="nextStep()">Next: Contact Details →</button>
+                            <button type="button" class="btn btn-primary" id="next-to-step-2">Next: Contact Details →</button>
                         </div>
                     </div>
                 </div>
@@ -537,10 +537,10 @@
                     </div>
                     
                     <div class="form-navigation">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">← Previous</button>
+                        <button type="button" class="btn btn-secondary">← Previous</button>
                         <div>
                             <button type="button" class="btn save-progress" onclick="saveProgress()">💾 Save Progress</button>
-                            <button type="button" class="btn btn-primary" id="next-to-step-3" onclick="nextStep()">Next: Location & Equipment →</button>
+                            <button type="button" class="btn btn-primary" id="next-to-step-3">Next: Location & Equipment →</button>
                         </div>
                     </div>
                 </div>
@@ -639,10 +639,10 @@
                     </div>
                     
                     <div class="form-navigation">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">← Previous</button>
+                        <button type="button" class="btn btn-secondary">← Previous</button>
                         <div>
                             <button type="button" class="btn save-progress" onclick="saveProgress()">💾 Save Progress</button>
-                            <button type="button" class="btn btn-primary" id="next-to-step-4" onclick="nextStep()">Next: Financial & References →</button>
+                            <button type="button" class="btn btn-primary" id="next-to-step-4">Next: Financial & References →</button>
                         </div>
                     </div>
                 </div>
@@ -708,10 +708,10 @@
                     <button type="button" class="add-reference-btn" onclick="addReference('trade')">+ Add Another Trade Reference</button>
                     
                     <div class="form-navigation">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">← Previous</button>
+                        <button type="button" class="btn btn-secondary">← Previous</button>
                         <div>
                             <button type="button" class="btn save-progress" onclick="saveProgress()">💾 Save Progress</button>
-                            <button type="button" class="btn btn-primary" id="next-to-step-5" onclick="nextStep()">Next: Authorization →</button>
+                            <button type="button" class="btn btn-primary" id="next-to-step-5">Next: Authorization →</button>
                         </div>
                     </div>
                 </div>
@@ -749,7 +749,7 @@
                     </div>
                     
                     <div class="form-navigation">
-                        <button type="button" class="btn btn-secondary" onclick="previousStep()">← Previous</button>
+                        <button type="button" class="btn btn-secondary">← Previous</button>
                         <div>
                             <button type="button" class="btn save-progress" onclick="saveProgress()">💾 Save Progress</button>
                             <button type="submit" class="btn btn-success" id="submit-btn">✅ Submit Application</button>
@@ -1118,9 +1118,17 @@
         };
         
         
-        // Step navigation
+        // Step navigation with debounce
+        let nextStepInProgress = false;
         function nextStep() {
             console.log('nextStep called, current step:', currentStep);
+            
+            // Prevent double-clicks
+            if (nextStepInProgress) {
+                console.log('nextStep already in progress, ignoring');
+                return;
+            }
+            nextStepInProgress = true;
             
             // Skip validation for steps 1 and 2 during testing
             const skipValidation = currentStep === 1 || currentStep === 2;
@@ -1136,6 +1144,11 @@
             } else {
                 console.log('Validation failed for step:', currentStep);
             }
+            
+            // Reset debounce after a delay
+            setTimeout(() => {
+                nextStepInProgress = false;
+            }, 1000);
         }
         
         function previousStep() {
