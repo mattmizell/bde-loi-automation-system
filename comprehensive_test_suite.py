@@ -858,8 +858,8 @@ class ComprehensiveTestSuite:
                 self.safe_fill('#physical-state', TEST_DATA["state"], test_name),
                 self.safe_fill('#physical-zip', TEST_DATA["zip"], test_name),
                 self.safe_fill('#annual-fuel-volume', "600000", test_name),
-                self.safe_fill('#number-dispensers', "8", test_name),
-                self.safe_fill('#number-tanks', "3", test_name)
+                self.safe_fill('#number-of-locations', "1", test_name),
+                self.safe_fill('#dispenser-count', "8", test_name)
             ])
             
             # Check "same as physical address"
@@ -879,12 +879,12 @@ class ComprehensiveTestSuite:
             # Step 4: Financial References
             print("📝 Step 4: Financial References")
             step4_success = all([
-                self.safe_fill('#bank-name', TEST_DATA["bank_name"], test_name),
-                self.safe_fill('#bank-contact', "John Banker", test_name),
-                self.safe_fill('#bank-phone', "(555) 123-BANK", test_name),
-                self.safe_fill('#trade-company', "Test Fuel Distributors", test_name),
-                self.safe_fill('#trade-contact', "Jane Supplier", test_name),
-                self.safe_fill('#trade-phone', "(555) 123-FUEL", test_name)
+                self.safe_fill('[name="bank_ref_0_name"]', TEST_DATA["bank_name"], test_name),
+                self.safe_fill('[name="bank_ref_0_contact"]', "John Banker", test_name),
+                self.safe_fill('[name="bank_ref_0_phone"]', "(555) 123-BANK", test_name),
+                self.safe_fill('[name="trade_ref_0_company"]', "Test Fuel Distributors", test_name),
+                self.safe_fill('[name="trade_ref_0_contact"]', "Jane Supplier", test_name),
+                self.safe_fill('[name="trade_ref_0_phone"]', "(555) 123-FUEL", test_name)
             ])
             
             if step4_success:
