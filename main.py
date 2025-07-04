@@ -1115,8 +1115,8 @@ async def get_signature_page(transaction_id: str):
             FROM p66_loi_form_data p 
             JOIN customers c ON p.customer_id = c.id 
             JOIN loi_transactions t ON p.transaction_id = t.id
-            WHERE t.document_id = %s OR t.signature_request_id = %s
-        """, (transaction_id, transaction_id))
+            WHERE t.id = %s
+        """, (transaction_id,))
         result = cur.fetchone()
         
         if not result:
@@ -1125,8 +1125,8 @@ async def get_signature_page(transaction_id: str):
             cur.execute("""
                 SELECT '', '', processing_context
                 FROM loi_transactions 
-                WHERE document_id = %s OR signature_request_id = %s
-            """, (transaction_id, transaction_id))
+                WHERE id = %s
+            """, (transaction_id,))
             result = cur.fetchone()
         
         conn.close()
