@@ -224,8 +224,13 @@ class DatabaseManager:
                         return req
         return None
 
-# Initialize database manager
-db_manager = DatabaseManager()
+# Initialize database manager - use global to prevent connection storm
+try:
+    from main import get_global_db_manager
+    db_manager = get_global_db_manager()
+except ImportError:
+    # Fallback if main not available
+    db_manager = DatabaseManager()
 
 class SecureSignatureHandler(BaseHTTPRequestHandler):
     """Production-ready signature request handler"""

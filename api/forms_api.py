@@ -58,12 +58,19 @@ try:
     def get_db():
         global db_manager
         if db_manager is None:
-            db_manager = DatabaseManager()
-            # Skip full initialization for now to avoid timeout
-            db_manager.engine = engine
-            from sqlalchemy.orm import sessionmaker
-            db_manager.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-            db_manager._initialized = True
+            # Use global database manager to prevent connection storm
+            try:
+                # Import the global manager from main
+                from main import get_global_db_manager
+                db_manager = get_global_db_manager()
+            except ImportError:
+                # Fallback if main not available
+                db_manager = DatabaseManager()
+                # Skip full initialization for now to avoid timeout
+                db_manager.engine = engine
+                from sqlalchemy.orm import sessionmaker
+                db_manager.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+                db_manager._initialized = True
         
         session = db_manager.SessionLocal()
         try:
