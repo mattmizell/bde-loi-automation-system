@@ -81,8 +81,8 @@ class DatabaseManager:
         """Initialize database connection and create tables"""
         
         try:
-            # First, ensure database exists
-            self._ensure_database_exists()
+            # DISABLED: Database already exists in production
+            # self._ensure_database_exists()
             
             # Create engine with connection pooling
             self.engine = create_engine(
@@ -102,8 +102,8 @@ class DatabaseManager:
                 bind=self.engine
             )
             
-            # Create all tables
-            self._create_tables()
+            # DISABLED: Tables already exist in production
+            # self._create_tables()
             
             # Create database views
             self._create_views()
