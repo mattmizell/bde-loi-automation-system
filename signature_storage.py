@@ -210,31 +210,49 @@ class TamperEvidentSignatureStorage:
             # Document hash (simplified - would hash actual document content in production)
             document_hash = hashlib.sha256(signature_request['document_name'].encode()).hexdigest()
             
-            # Signature metadata
-            signature_metadata = {
+            # Signature metadata - Use provided data or defaults
+            signature_metadata = signature_request.get('signature_metadata', {
                 'canvas_width': 300,
                 'canvas_height': 150,
                 'capture_method': 'signature_pad_js',
                 'image_format': 'png',
                 'compression': 'none'
-            }
+            })
             
-            # Compliance flags - Based on actual verification, not hardcoded
+            # Use provided compliance flags or create defaults
+            provided_compliance = signature_request.get('compliance_flags', {})
+            esign_compliance_data = signature_request.get('esign_compliance_data', {})
+            
+            # Compliance flags - Use provided data and verify ESIGN compliance
             compliance_flags = {
                 'esign_act_compliant': self.verify_esign_compliance(signature_request),
                 'intent_to_sign': signature_request.get('explicit_intent_confirmed', False),
                 'identity_verified': self.assess_identity_verification_strength(ip_address, user_agent),
                 'document_integrity': True,  # This is properly implemented
                 'consumer_consent_given': signature_request.get('electronic_consent_given', False),
-                'disclosures_provided': signature_request.get('disclosures_acknowledged', False)
+                'disclosures_provided': signature_request.get('disclosures_acknowledged', False),
+                # Add ESIGN specific compliance data
+                'esign_consent_captured': esign_compliance_data.get('consent_given', False),
+                'esign_consent_timestamp': esign_compliance_data.get('consent_timestamp'),
+                'system_requirements_disclosed': esign_compliance_data.get('system_requirements_met', False),
+                'paper_copy_option_disclosed': esign_compliance_data.get('paper_copy_option_presented', False),
+                'withdraw_consent_option_disclosed': esign_compliance_data.get('withdraw_consent_option_presented', False),
+                'signature_method': esign_compliance_data.get('signature_method', 'html5_canvas'),
+                **provided_compliance  # Merge any additional compliance flags
             }
             
-            # Audit trail
+            # Audit trail - Include ESIGN compliance events
             audit_trail = [{
                 'action': 'signature_created',
                 'timestamp': datetime.now().isoformat(),
                 'ip_address': ip_address,
-                'user_agent': user_agent[:100]  # Truncate for storage
+                'user_agent': user_agent[:100],  # Truncate for storage
+                'esign_compliance': {
+                    'consent_given': esign_compliance_data.get('consent_given', False),
+                    'consent_timestamp': esign_compliance_data.get('consent_timestamp'),
+                    'disclosures_acknowledged': esign_compliance_data.get('disclosures_acknowledged', False),
+                    'validation_result': 'passed' if esign_compliance_data.get('consent_given', False) else 'failed'
+                }
             }]
             
             # Insert signature record

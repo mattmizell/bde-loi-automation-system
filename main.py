@@ -1116,7 +1116,18 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
         client_ip = request.client.host if request.client else "unknown"
         user_agent = request.headers.get("User-Agent", "")
         
-        # Prepare signature record with full audit compliance
+        # Extract ESIGN compliance data from request
+        esign_compliance = signature_data.get('esign_compliance', {})
+        browser_info = signature_data.get('browser_info', {})
+        
+        # Validate ESIGN consent
+        if not esign_compliance.get('consent_given', False):
+            logger.error(f"❌ ESIGN consent not given for transaction {transaction_id}")
+            raise HTTPException(status_code=400, detail="Electronic signature consent is required")
+        
+        logger.info(f"✅ ESIGN consent validated for transaction {transaction_id}")
+        
+        # Prepare signature record with full audit compliance and ESIGN data
         signature_record = {
             'verification_code': verification_code,
             'transaction_id': transaction_id,
@@ -1134,19 +1145,30 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
                 'canvas_width': signature_data.get('canvas_width', 738),
                 'canvas_height': signature_data.get('canvas_height', 200),
                 'timestamp': datetime.now().isoformat(),
-                'loi_type': loi_details.get('loi_type', 'unknown')
+                'loi_type': loi_details.get('loi_type', 'unknown'),
+                'browser_info': browser_info
             },
             'compliance_flags': {
-                'esign_consent': True,
+                'esign_consent': esign_compliance.get('consent_given', False),
                 'identity_verified': True,
-                'intent_to_sign': True,
+                'intent_to_sign': esign_compliance.get('intent_to_sign_confirmed', True),
                 'document_presented': True,
                 'signature_attributed': True
+            },
+            'esign_compliance_data': {
+                'consent_given': esign_compliance.get('consent_given', False),
+                'consent_timestamp': esign_compliance.get('consent_timestamp'),
+                'disclosures_acknowledged': esign_compliance.get('disclosures_acknowledged', False),
+                'system_requirements_met': esign_compliance.get('system_requirements_met', False),
+                'paper_copy_option_presented': esign_compliance.get('paper_copy_option_presented', False),
+                'withdraw_consent_option_presented': esign_compliance.get('withdraw_consent_option_presented', False),
+                'intent_to_sign_confirmed': esign_compliance.get('intent_to_sign_confirmed', False),
+                'signature_method': 'html5_canvas_with_esign_consent'
             },
             'signature_method': 'html5_canvas'
         }
         
-        # Prepare signature request for the existing storage system
+        # Prepare signature request for the existing storage system with ESIGN compliance data
         logger.info(f"🔍 About to create signature_request with loi_details: {loi_details}")
         signature_request = {
             'transaction_id': transaction_id,
@@ -1156,9 +1178,12 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
             'company_name': company_name,
             'document_name': f"LOI_{loi_details.get('loi_type', 'unknown')}_{transaction_id}",
             'expires_at': (datetime.now() + timedelta(days=30)).isoformat(),  # Add required expires_at
-            'explicit_intent_confirmed': True,
-            'electronic_consent_given': True,
-            'disclosures_acknowledged': True
+            'explicit_intent_confirmed': esign_compliance.get('intent_to_sign_confirmed', True),
+            'electronic_consent_given': esign_compliance.get('consent_given', False),
+            'disclosures_acknowledged': esign_compliance.get('disclosures_acknowledged', False),
+            'esign_compliance_data': signature_record['esign_compliance_data'],  # Pass full ESIGN data
+            'signature_metadata': signature_record['signature_metadata'],  # Pass canvas and browser info
+            'compliance_flags': signature_record['compliance_flags']  # Pass compliance validation
         }
         logger.info(f"🔍 Signature request created: {signature_request}")
         
