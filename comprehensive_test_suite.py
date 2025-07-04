@@ -899,7 +899,7 @@ class ComprehensiveTestSuite:
             print("📝 Step 5: Authorization")
             
             # Submit final form
-            self.safe_click('#submit-customer-setup', test_name)
+            self.safe_click('#submit-btn', test_name)
             time.sleep(5)
             
             # Check for success response
