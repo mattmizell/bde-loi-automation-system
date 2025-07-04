@@ -1219,7 +1219,19 @@ class ComprehensiveTestSuite:
             fields_success = all([
                 # Company information
                 self.safe_fill('#company-name', TEST_DATA["company"], test_name),
+                self.safe_fill('#federal-tax-id', TEST_DATA["tax_id"], test_name),
                 # Skip #customer-id as it's readonly
+                
+                # Business address
+                self.safe_fill('#company-address', TEST_DATA["address"], test_name),
+                self.safe_fill('#company-city', TEST_DATA["city"], test_name),
+                self.safe_fill('#company-state', TEST_DATA["state"], test_name),
+                self.safe_fill('#company-zip', TEST_DATA["zip"], test_name),
+                
+                # Primary contact
+                self.safe_fill('#contact-name', TEST_DATA["contact"], test_name),
+                self.safe_fill('#contact-email', TEST_DATA["email"], test_name),
+                self.safe_fill('#contact-phone', TEST_DATA["phone"], test_name),
                 
                 # Bank information
                 self.safe_fill('#bank-name', TEST_DATA["bank_name"], test_name),
