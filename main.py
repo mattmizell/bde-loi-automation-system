@@ -936,7 +936,7 @@ async def submit_loi_request(request: dict):
                 tx_uuid,
                 transaction_id,  # Use string transaction_id as document_id
                 transaction_id,
-                'pending_signature',
+                'WAITING_SIGNATURE',
                 datetime.now(),
                 json.dumps({'loi_type': 'phillips_66', 'original_transaction_id': transaction_id}),
                 customer_id
@@ -984,7 +984,7 @@ async def submit_loi_request(request: dict):
                 request.get('special_requirements', ''),
                 request.get('authorized_representative', ''),
                 request.get('representative_title', ''),
-                'pending_signature',
+                'WAITING_SIGNATURE',
                 datetime.now()
             ))
             logger.info(f"✅ Created P66 form record: {p66_form_id}")
@@ -1001,7 +1001,7 @@ async def submit_loi_request(request: dict):
                 tx_uuid,
                 transaction_id,
                 transaction_id,
-                'pending_signature',
+                'WAITING_SIGNATURE',
                 datetime.now(),
                 json.dumps(request)
             ))
