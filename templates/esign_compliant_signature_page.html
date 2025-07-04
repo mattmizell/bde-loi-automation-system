@@ -27,6 +27,64 @@
             padding: 0 20px;
         }
         
+        .esign-disclosure {
+            background: #fff3cd;
+            border: 2px solid #ffeeba;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        
+        .esign-disclosure h3 {
+            color: #856404;
+            margin-top: 0;
+            font-size: 24px;
+        }
+        
+        .esign-disclosure ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        
+        .esign-disclosure li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        .consent-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e1e5e9;
+        }
+        
+        .consent-checkbox {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .consent-checkbox input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+        
+        .consent-checkbox label {
+            flex: 1;
+            cursor: pointer;
+            line-height: 1.6;
+        }
+        
         .document-preview {
             background: white;
             border-radius: 12px;
@@ -150,6 +208,22 @@
             border: 1px solid #bbdefb;
         }
         
+        .hardware-requirements {
+            background: #f0f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #d0d8e0;
+        }
+        
+        .paper-copy-section {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+        
         .progress-bar {
             width: 100%;
             height: 8px;
@@ -162,7 +236,7 @@
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #28a745, #20c997);
-            width: 75%;
+            width: 0%;
             transition: width 0.3s ease;
         }
         
@@ -231,6 +305,19 @@
             font-size: 1em;
         }
         
+        .intent-to-sign {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 2px solid #f44336;
+        }
+        
+        .intent-to-sign h4 {
+            color: #c62828;
+            margin-top: 0;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 0 15px;
@@ -263,7 +350,77 @@
     <div class="container">
         <!-- Progress Bar -->
         <div class="progress-bar">
-            <div class="progress-fill"></div>
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        
+        <!-- ESIGN Act Disclosure -->
+        <div class="esign-disclosure">
+            <h3>📋 Electronic Signatures in Global and National Commerce Act (ESIGN) Disclosure</h3>
+            <p><strong>IMPORTANT:</strong> Please read this disclosure carefully before proceeding. Federal law requires that we provide you with certain information about electronic signatures and records.</p>
+            
+            <h4>Your Rights Regarding Electronic Records:</h4>
+            <ul>
+                <li><strong>Right to Paper Copies:</strong> You have the right to receive a paper copy of this Letter of Intent and any related documents. To request a paper copy, please contact us at (888) 555-0123 or documents@betterdayenergy.com. There is no charge for paper copies.</li>
+                
+                <li><strong>Right to Withdraw Consent:</strong> You may withdraw your consent to use electronic signatures at any time before signing. To withdraw consent, close this browser window or contact us. If you withdraw consent after signing, it will not affect the legal validity of the document you already signed.</li>
+                
+                <li><strong>Scope of Consent:</strong> Your consent applies only to this specific Letter of Intent transaction. You will be asked to consent separately for any future electronic transactions.</li>
+                
+                <li><strong>Updating Contact Information:</strong> You must promptly notify us of any changes to your email address or other contact information to ensure you can access electronic records.</li>
+            </ul>
+            
+            <div class="hardware-requirements">
+                <h4>💻 Hardware and Software Requirements:</h4>
+                <p>To access and retain electronic records, you will need:</p>
+                <ul>
+                    <li>A device with internet access (computer, tablet, or smartphone)</li>
+                    <li>A modern web browser (Chrome, Firefox, Safari, or Edge)</li>
+                    <li>JavaScript enabled in your browser</li>
+                    <li>Ability to download and save PDF files</li>
+                    <li>PDF reader software (such as Adobe Acrobat Reader)</li>
+                    <li>A valid email address</li>
+                    <li>Sufficient storage space to save documents</li>
+                </ul>
+                <p><strong>Note:</strong> If these requirements change in a way that creates a material risk you cannot access records, we will notify you and obtain new consent.</p>
+            </div>
+            
+            <div class="paper-copy-section">
+                <h4>📄 How to Obtain Paper Copies:</h4>
+                <p>You may request paper copies of your signed documents at any time by:</p>
+                <ul>
+                    <li>Email: documents@betterdayenergy.com</li>
+                    <li>Phone: (888) 555-0123</li>
+                    <li>Mail: Better Day Energy, 123 Energy Way, Houston, TX 77001</li>
+                </ul>
+                <p>Paper copies will be mailed to you within 5 business days at no charge.</p>
+            </div>
+        </div>
+        
+        <!-- Consent Section -->
+        <div class="consent-section">
+            <h3>✅ Consent to Use Electronic Records and Signatures</h3>
+            <p>By checking the boxes below, you demonstrate that you can access information electronically and agree to use electronic signatures for this transaction.</p>
+            
+            <div class="consent-checkbox">
+                <input type="checkbox" id="consent-electronic" required>
+                <label for="consent-electronic">
+                    <strong>I consent to use electronic records and signatures</strong> for this Letter of Intent transaction. I understand that I am not required to use electronic signatures and may request paper documents instead.
+                </label>
+            </div>
+            
+            <div class="consent-checkbox">
+                <input type="checkbox" id="consent-access" required>
+                <label for="consent-access">
+                    <strong>I confirm that I can access electronic records</strong> using the hardware and software described above, and I have verified my email address is correct: <strong>{{CONTACT_EMAIL}}</strong>
+                </label>
+            </div>
+            
+            <div class="consent-checkbox">
+                <input type="checkbox" id="consent-legal" required>
+                <label for="consent-legal">
+                    <strong>I understand the legal effect of electronic signatures</strong> and agree that my electronic signature will have the same legal force and effect as a handwritten signature.
+                </label>
+            </div>
         </div>
         
         <!-- Document Preview Section -->
@@ -340,8 +497,8 @@
                 </div>
             </div>
             
-            <!-- Phillips 66 Specific Section -->
-            <div id="p66-section" style="display: {{LOI_TYPE}} === 'phillips_66' ? 'block' : 'none';">
+            <!-- Contract Terms and Incentives (P66 specific) -->
+            <div id="p66-contract-details" style="display: none;">
                 <!-- Contract Terms -->
                 <div class="document-summary" style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                     <h5 style="margin-top: 0; color: #856404;">📅 Contract Terms</h5>
@@ -382,10 +539,6 @@
                             <div class="summary-value" style="font-size: 1.3em; color: #1565c0;"><strong>{{TOTAL_INCENTIVES}}</strong></div>
                         </div>
                     </div>
-                    <div style="margin-top: 15px;">
-                        <div class="summary-label">Special Requirements</div>
-                        <div class="summary-value" style="margin-top: 5px; padding: 10px; background: white; border-radius: 4px;">{{SPECIAL_REQUIREMENTS}}</div>
-                    </div>
                 </div>
             </div>
             
@@ -399,62 +552,34 @@
                     <li>This LOI is subject to credit approval and final contract negotiation</li>
                     <li>By signing, you represent that you have authority to bind your organization</li>
                 </ul>
-                <p style="margin-top: 20px; padding: 15px; background: #ffebee; border-left: 4px solid #f44336; border-radius: 4px;">
-                    <strong>⚠️ IMPORTANT:</strong> By providing your electronic signature below, you acknowledge that you have carefully reviewed all terms and conditions stated above and agree to be bound by this Letter of Intent.
-                </p>
             </div>
         </div>
         
-        <!-- ESIGN Act Compliance Section -->
-        <div class="signature-section">
-            <div class="esign-disclosure" style="background: #fff3cd; border: 2px solid #ffeeba; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-                <h3 style="color: #856404; margin-top: 0; font-size: 24px;">📋 Important Legal Notice - Electronic Signatures</h3>
-                <p style="color: #856404; font-weight: 600; margin: 15px 0;">Federal law (ESIGN Act) requires we inform you about electronic signatures:</p>
-                
-                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h4 style="color: #856404; margin-top: 0;">Your Electronic Signature Rights:</h4>
-                    <ul style="color: #856404; line-height: 1.6;">
-                        <li><strong>Right to Paper Copy:</strong> You have the right to receive this document in paper form instead of signing electronically</li>
-                        <li><strong>Right to Withdraw Consent:</strong> You may withdraw consent to use electronic signatures at any time by contacting us</li>
-                        <li><strong>Legal Effect:</strong> Your electronic signature will have the same legal effect as a handwritten signature</li>
-                        <li><strong>Record Retention:</strong> We will maintain copies of your signed documents for your records</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h4 style="color: #1976d2; margin-top: 0;">💻 System Requirements:</h4>
-                    <p style="color: #1976d2; margin: 10px 0;">To sign electronically, you must have:</p>
-                    <ul style="color: #1976d2; line-height: 1.6;">
-                        <li>Internet access and a modern web browser (Chrome, Firefox, Safari, or Edge)</li>
-                        <li>Ability to view and download PDF documents</li>
-                        <li>Valid email address to receive document copies</li>
-                        <li>Mouse, trackpad, or touch screen to create your signature</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #f3e5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h4 style="color: #7b1fa2; margin-top: 0;">📞 Contact Information:</h4>
-                    <p style="color: #7b1fa2; margin: 10px 0;">For paper copies or to withdraw consent to electronic signatures:</p>
-                    <ul style="color: #7b1fa2; line-height: 1.6;">
-                        <li><strong>Email:</strong> documents@betterdayenergy.com</li>
-                        <li><strong>Phone:</strong> (888) 555-0123</li>
-                        <li><strong>Mail:</strong> Better Day Energy, 123 Energy Way, Houston, TX 77001</li>
-                    </ul>
-                </div>
-                
-                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #ffc107;">
-                    <h4 style="color: #856404; margin-top: 0;">✅ Electronic Signature Consent</h4>
-                    <label style="display: flex; align-items: center; color: #856404; font-weight: 600; cursor: pointer;">
-                        <input type="checkbox" id="esign-consent" style="margin-right: 10px; transform: scale(1.2);" required>
-                        I consent to use electronic signatures for this transaction and acknowledge that I have read and understand the above disclosures.
-                    </label>
-                </div>
+        <!-- Intent to Sign Declaration -->
+        <div class="intent-to-sign">
+            <h4>🖊️ Declaration of Intent to Sign Electronically</h4>
+            <p><strong>By proceeding with your electronic signature below, you affirm that:</strong></p>
+            <ul>
+                <li>You intend to sign this Letter of Intent electronically</li>
+                <li>You have reviewed and understand all terms and conditions</li>
+                <li>You agree to be legally bound by this agreement</li>
+                <li>You have the authority to enter into this agreement on behalf of your organization</li>
+                <li>You understand that your electronic signature is legally binding and enforceable</li>
+            </ul>
+            <div class="consent-checkbox" style="background: white; margin-top: 20px;">
+                <input type="checkbox" id="intent-to-sign-checkbox" required>
+                <label for="intent-to-sign-checkbox">
+                    <strong>I intend to electronically sign this Letter of Intent</strong> and understand that my electronic signature will be legally binding.
+                </label>
             </div>
-            
+        </div>
+        
+        <!-- Signature Section -->
+        <div class="signature-section">
             <h3>✍️ Electronic Signature</h3>
             
             <div id="signature-form">
-                <p>Please provide your electronic signature in the box below:</p>
+                <p>After confirming your intent above, please provide your electronic signature in the box below:</p>
                 
                 <div class="signature-pad-container">
                     <canvas id="signature-pad" class="signature-pad" width="738" height="200"></canvas>
@@ -477,20 +602,29 @@
                 </div>
                 
                 <div class="legal-notice">
-                    <h5>🔒 Legal Agreement</h5>
-                    <p>By clicking "Complete Signature" below, you agree that:</p>
+                    <h5>🔒 Legal Signature Acknowledgment</h5>
+                    <p>By clicking "Complete Electronic Signature" below, I acknowledge that:</p>
                     <ul>
-                        <li>Your electronic signature has the same legal effect as a handwritten signature</li>
-                        <li>You are authorized to sign this document on behalf of your organization</li>
-                        <li>You have reviewed and agree to all terms in the Letter of Intent</li>
-                        <li>This signature will be legally binding and enforceable</li>
+                        <li>I have read and consent to the ESIGN Act disclosure above</li>
+                        <li>I intend my electronic signature to have the same legal effect as my handwritten signature</li>
+                        <li>I am authorized to sign this document on behalf of my organization</li>
+                        <li>I have reviewed and agree to all terms in the Letter of Intent</li>
+                        <li>I understand this creates a legally binding agreement</li>
+                        <li>I have been offered the option to receive paper copies of all documents</li>
+                        <li>A copy of this signed document will be sent to: <strong>{{CONTACT_EMAIL}}</strong></li>
                     </ul>
                 </div>
                 
                 <div style="text-align: center; margin-top: 30px;">
                     <button type="button" id="submit-signature" class="btn btn-success" disabled>
-                        ✍️ Complete Signature
+                        ✍️ Complete Electronic Signature
                     </button>
+                    
+                    <div style="margin-top: 20px;">
+                        <a href="javascript:void(0);" onclick="requestPaperCopy()" style="color: #6c757d; text-decoration: underline;">
+                            📄 Request Paper Copy Instead
+                        </a>
+                    </div>
                 </div>
             </div>
             
@@ -498,6 +632,7 @@
             <div id="loading" class="loading">
                 <div class="spinner"></div>
                 <p>Processing your signature...</p>
+                <p style="font-size: 14px; color: #6c757d;">Creating audit trail and securing your document...</p>
             </div>
             
             <!-- Success/Error Messages -->
@@ -506,10 +641,66 @@
     </div>
     
     <script>
+        // Track consent status
+        let consentStatus = {
+            electronic: false,
+            access: false,
+            legal: false,
+            intent: false
+        };
+        
+        // Update progress bar based on consent
+        function updateProgress() {
+            const checkboxes = ['electronic', 'access', 'legal', 'intent'];
+            let completed = 0;
+            
+            checkboxes.forEach(type => {
+                if (consentStatus[type]) completed++;
+            });
+            
+            const progress = (completed / 4) * 80; // 80% for consents, 20% for signature
+            document.getElementById('progress-fill').style.width = progress + '%';
+            
+            // Enable signature only when all consents are given
+            const allConsents = checkboxes.every(type => consentStatus[type]);
+            updateSignatureAvailability(allConsents && hasSignature);
+        }
+        
+        // Consent checkbox handlers
+        document.getElementById('consent-electronic').addEventListener('change', function(e) {
+            consentStatus.electronic = e.target.checked;
+            updateProgress();
+        });
+        
+        document.getElementById('consent-access').addEventListener('change', function(e) {
+            consentStatus.access = e.target.checked;
+            updateProgress();
+        });
+        
+        document.getElementById('consent-legal').addEventListener('change', function(e) {
+            consentStatus.legal = e.target.checked;
+            updateProgress();
+        });
+        
+        document.getElementById('intent-to-sign-checkbox').addEventListener('change', function(e) {
+            consentStatus.intent = e.target.checked;
+            updateProgress();
+            
+            // Enable/disable signature pad
+            const signaturePad = document.getElementById('signature-pad');
+            if (e.target.checked) {
+                signaturePad.style.opacity = '1';
+                signaturePad.style.pointerEvents = 'auto';
+            } else {
+                signaturePad.style.opacity = '0.5';
+                signaturePad.style.pointerEvents = 'none';
+            }
+        });
+        
         // Show/hide P66 section based on LOI type
         document.addEventListener('DOMContentLoaded', function() {
             const loiType = '{{LOI_TYPE}}';
-            const p66Section = document.getElementById('p66-section');
+            const p66Section = document.getElementById('p66-contract-details');
             if (p66Section) {
                 p66Section.style.display = loiType === 'phillips_66' ? 'block' : 'none';
             }
@@ -529,28 +720,9 @@
         let isDrawing = false;
         let hasSignature = false;
         
-        // Get signature request ID from URL
+        // Get transaction ID from URL
         const pathParts = window.location.pathname.split('/');
-        const signatureRequestId = pathParts[pathParts.length - 1];
-        
-        // Load signature request data
-        async function loadSignatureData() {
-            try {
-                const response = await fetch(`/api/v1/signature/${signatureRequestId}/data`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('customer-name').textContent = data.customer_name || 'Not specified';
-                    document.getElementById('company-name').textContent = data.company_name || 'Not specified';
-                    document.getElementById('document-date').textContent = new Date(data.created_at).toLocaleDateString();
-                    document.getElementById('expires-date').textContent = new Date(data.expires_at).toLocaleDateString();
-                } else {
-                    showAlert('Error loading signature data: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showAlert('Failed to load signature data', 'error');
-            }
-        }
+        const transactionId = pathParts[pathParts.length - 1];
         
         // Canvas setup
         function setupCanvas() {
@@ -580,6 +752,8 @@
         canvas.addEventListener('touchend', stopDrawing);
         
         function startDrawing(e) {
+            if (!consentStatus.intent) return;
+            
             isDrawing = true;
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * scaleX;
@@ -595,7 +769,7 @@
         }
         
         function draw(e) {
-            if (!isDrawing) return;
+            if (!isDrawing || !consentStatus.intent) return;
             
             const rect = canvas.getBoundingClientRect();
             const x = (e.clientX - rect.left) * scaleX;
@@ -613,6 +787,8 @@
         }
         
         function handleTouch(e) {
+            if (!consentStatus.intent) return;
+            
             e.preventDefault();
             const touch = e.touches[0];
             const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
@@ -631,26 +807,18 @@
         }
         
         function updateSignatureStatus() {
-            const consentCheckbox = document.getElementById('esign-consent');
-            const hasConsent = consentCheckbox && consentCheckbox.checked;
-            
-            if (hasSignature && hasConsent) {
+            if (hasSignature) {
                 signatureStatus.textContent = 'Signature provided ✓';
                 signatureStatus.style.color = '#28a745';
-                submitButton.disabled = false;
-            } else if (!hasSignature && !hasConsent) {
-                signatureStatus.textContent = 'Please consent to electronic signatures and provide your signature';
-                signatureStatus.style.color = '#6c757d';
-                submitButton.disabled = true;
-            } else if (!hasSignature) {
+            } else {
                 signatureStatus.textContent = 'Please provide your signature above';
                 signatureStatus.style.color = '#6c757d';
-                submitButton.disabled = true;
-            } else if (!hasConsent) {
-                signatureStatus.textContent = 'Please consent to electronic signatures before submitting';
-                signatureStatus.style.color = '#6c757d';
-                submitButton.disabled = true;
             }
+            updateSignatureAvailability(hasSignature && Object.values(consentStatus).every(v => v));
+        }
+        
+        function updateSignatureAvailability(enabled) {
+            submitButton.disabled = !enabled;
         }
         
         function showAlert(message, type) {
@@ -663,11 +831,9 @@
         }
         
         async function submitSignature() {
-            const consentCheckbox = document.getElementById('esign-consent');
-            const hasConsent = consentCheckbox && consentCheckbox.checked;
-            
-            if (!hasConsent) {
-                showAlert('Please consent to electronic signatures before submitting', 'error');
+            // Verify all consents
+            if (!Object.values(consentStatus).every(v => v)) {
+                showAlert('Please provide all required consents before signing', 'error');
                 return;
             }
             
@@ -684,16 +850,32 @@
                 // Get signature data as base64
                 const signatureData = canvas.toDataURL('image/png');
                 
-                // Submit signature
-                const response = await fetch(`/api/v1/signature/${signatureRequestId}/submit`, {
+                // Collect audit trail data
+                const auditData = {
+                    consent_electronic: consentStatus.electronic,
+                    consent_access: consentStatus.access,
+                    consent_legal: consentStatus.legal,
+                    consent_intent: consentStatus.intent,
+                    timestamp: new Date().toISOString(),
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    browser: navigator.userAgent,
+                    screen_resolution: `${screen.width}x${screen.height}`,
+                    color_depth: screen.colorDepth,
+                    platform: navigator.platform,
+                    language: navigator.language
+                };
+                
+                // Submit signature with ESIGN compliance data
+                const response = await fetch(`/api/v1/loi/sign/${transactionId}/submit`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         signature_data: signatureData,
-                        ip_address: await getClientIP(),
-                        user_agent: navigator.userAgent
+                        esign_consent: auditData,
+                        intent_to_sign: true,
+                        consent_provided: true
                     })
                 });
                 
@@ -701,23 +883,33 @@
                 
                 if (result.success) {
                     // Update progress bar
-                    document.querySelector('.progress-fill').style.width = '100%';
+                    document.getElementById('progress-fill').style.width = '100%';
                     
                     // Show success message
                     loading.style.display = 'none';
                     alertContainer.innerHTML = `
                         <div class="alert alert-success">
-                            <h4>✅ Signature Complete!</h4>
-                            <p>Your Letter of Intent has been successfully signed and processed.</p>
-                            <p>You will receive a copy of the signed document via email shortly.</p>
+                            <h4>✅ Electronic Signature Complete!</h4>
+                            <p>Your Letter of Intent has been successfully signed and is legally binding.</p>
+                            <p>A copy of the signed document has been sent to: <strong>${result.customer_email}</strong></p>
                             <p><strong>Transaction ID:</strong> ${result.transaction_id}</p>
+                            <p><strong>Verification Code:</strong> ${result.verification_code}</p>
+                            <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 6px;">
+                                <p style="margin: 0;"><strong>📄 Paper Copy Option:</strong> You may request a paper copy of this signed document at any time by contacting us at (888) 555-0123 or documents@betterdayenergy.com</p>
+                            </div>
                         </div>
                     `;
                     
-                    // Redirect after delay
-                    setTimeout(() => {
-                        window.location.href = '/signature/complete';
-                    }, 3000);
+                    // Show download link if available
+                    if (result.document_url) {
+                        alertContainer.innerHTML += `
+                            <div style="text-align: center; margin-top: 20px;">
+                                <a href="${result.document_url}" class="btn btn-primary" download>
+                                    📥 Download Signed Document
+                                </a>
+                            </div>
+                        `;
+                    }
                     
                 } else {
                     throw new Error(result.error || 'Signature submission failed');
@@ -730,13 +922,9 @@
             }
         }
         
-        async function getClientIP() {
-            try {
-                const response = await fetch('/api/v1/client-ip');
-                const data = await response.json();
-                return data.ip;
-            } catch (error) {
-                return 'unknown';
+        function requestPaperCopy() {
+            if (confirm('Would you like to exit this electronic signature process and request paper documents instead?\n\nYou can contact us at:\nPhone: (888) 555-0123\nEmail: documents@betterdayenergy.com')) {
+                window.location.href = '/paper-copy-request?transaction_id=' + transactionId;
             }
         }
         
@@ -744,15 +932,13 @@
         clearButton.addEventListener('click', clearSignature);
         submitButton.addEventListener('click', submitSignature);
         
-        // Add consent checkbox event listener
-        const consentCheckbox = document.getElementById('esign-consent');
-        if (consentCheckbox) {
-            consentCheckbox.addEventListener('change', updateSignatureStatus);
-        }
-        
         // Initialize
-        loadSignatureData();
         updateSignatureStatus();
+        updateProgress();
+        
+        // Disable signature pad initially
+        canvas.style.opacity = '0.5';
+        canvas.style.pointerEvents = 'none';
         
         // Handle window resize
         window.addEventListener('resize', setupCanvas);

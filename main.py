@@ -46,94 +46,28 @@ EMAIL_CONFIG = {
 }
 
 def send_loi_signature_email(customer_email: str, customer_name: str, company_name: str, transaction_id: str, loi_type: str):
-    """Send email to customer with LOI signature link"""
+    """Send ESIGN Act compliant email to customer with LOI signature link"""
     
     try:
+        # Import ESIGN compliant email template
+        from templates.esign_compliant_email import get_esign_compliant_email_template
+        
         # Create signature URL (environment-aware)
         base_url = os.environ.get('BASE_URL', 'https://loi-automation-api.onrender.com')
         signature_url = f"{base_url}/api/v1/loi/sign/{transaction_id}"
         
+        # Get ESIGN compliant email templates
+        html_body, text_body = get_esign_compliant_email_template(
+            customer_name=customer_name,
+            company_name=company_name,
+            transaction_id=transaction_id,
+            loi_type=loi_type,
+            signature_url=signature_url
+        )
+        
         # Create email content
-        subject = f"LOI Signature Required - {company_name} - {loi_type}"
+        subject = f"LOI Electronic Signature Required - {company_name} - {loi_type}"
         
-        # Create HTML email body
-        html_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: #1f4e79; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                    <h1>🏢 Better Day Energy</h1>
-                    <h2>Letter of Intent Signature Required</h2>
-                </div>
-                
-                <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #dee2e6;">
-                    <p>Dear {customer_name},</p>
-                    
-                    <p>Your <strong>{loi_type}</strong> Letter of Intent for <strong>{company_name}</strong> has been prepared and is ready for your signature.</p>
-                    
-                    <div style="background: #e8f5e9; border: 1px solid #4caf50; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                        <h3 style="color: #2e7d32; margin-top: 0;">📋 Next Steps:</h3>
-                        <ol>
-                            <li>Click the signature link below</li>
-                            <li>Review your LOI details</li>
-                            <li>Sign electronically using your mouse or touch screen</li>
-                            <li>Submit your signature to complete the process</li>
-                        </ol>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{signature_url}" 
-                           style="background: #28a745; color: white; padding: 15px 30px; 
-                                  text-decoration: none; border-radius: 6px; font-weight: bold; 
-                                  display: inline-block; font-size: 16px;">
-                            ✍️ Sign Your LOI Now
-                        </a>
-                    </div>
-                    
-                    <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 6px; margin: 20px 0;">
-                        <p style="margin: 0;"><strong>⚠️ Important:</strong> This signature link will expire in 30 days. 
-                        Please complete your signature as soon as possible to avoid delays in processing.</p>
-                    </div>
-                    
-                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                        <p><strong>Transaction ID:</strong> {transaction_id}</p>
-                        <p><strong>Company:</strong> {company_name}</p>
-                        <p><strong>LOI Type:</strong> {loi_type}</p>
-                    </div>
-                    
-                    <p>If you have any questions or need assistance, please contact our team.</p>
-                    
-                    <p>Thank you for choosing Better Day Energy!</p>
-                    
-                    <div style="margin-top: 30px; text-align: center; color: #666; font-size: 14px;">
-                        <p>Better Day Energy LOI Automation System<br>
-                        This is an automated message - please do not reply to this email.</p>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        # Create plain text version
-        text_body = f"""
-        Better Day Energy - LOI Signature Required
-        
-        Dear {customer_name},
-        
-        Your {loi_type} Letter of Intent for {company_name} has been prepared and is ready for your signature.
-        
-        Please visit the following link to review and sign your LOI:
-        {signature_url}
-        
-        Transaction ID: {transaction_id}
-        Company: {company_name}
-        LOI Type: {loi_type}
-        
-        If you have any questions, please contact our team.
-        
-        Thank you for choosing Better Day Energy!
-        """
         
         # Create message
         msg = MIMEMultipart('alternative')
@@ -3567,6 +3501,214 @@ def main():
         log_level="info",
         access_log=True
     )
+
+# Paper Copy Request Endpoint (ESIGN Act Compliance)
+@app.post("/api/v1/paper-copy/request")
+async def request_paper_copy(request_data: dict):
+    """Handle paper copy requests as required by ESIGN Act"""
+    
+    try:
+        transaction_id = request_data.get('transaction_id')
+        customer_email = request_data.get('customer_email')
+        customer_name = request_data.get('customer_name', 'Customer')
+        document_type = request_data.get('document_type', 'LOI')
+        reason = request_data.get('reason', 'Requested paper copy instead of electronic signature')
+        
+        if not transaction_id or not customer_email:
+            raise HTTPException(status_code=400, detail="Transaction ID and customer email are required")
+        
+        # Log the paper copy request
+        logger.info(f"📄 Paper copy requested for transaction {transaction_id} by {customer_email}")
+        
+        # Send notification email to admin
+        admin_subject = f"Paper Copy Request - {document_type} - {transaction_id}"
+        admin_body = f"""
+        A customer has requested a paper copy instead of electronic signature.
+        
+        Transaction ID: {transaction_id}
+        Customer: {customer_name}
+        Email: {customer_email}
+        Document Type: {document_type}
+        Reason: {reason}
+        Request Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        
+        Please prepare and mail the paper document to the customer.
+        """
+        
+        # Send admin notification
+        try:
+            admin_msg = MIMEText(admin_body)
+            admin_msg['Subject'] = admin_subject
+            admin_msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+            admin_msg['To'] = "documents@betterdayenergy.com"
+            
+            server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+            server.starttls()
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+            server.send_message(admin_msg)
+            server.quit()
+            
+            logger.info(f"✅ Paper copy request notification sent to admin for {transaction_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send admin notification: {e}")
+        
+        # Send confirmation email to customer
+        customer_subject = f"Paper Copy Request Confirmed - {document_type}"
+        customer_body = f"""
+        Dear {customer_name},
+        
+        We have received your request for a paper copy of your {document_type} document instead of electronic signature.
+        
+        Transaction ID: {transaction_id}
+        Request Date: {datetime.now().strftime('%Y-%m-%d')}
+        
+        Your paper document will be prepared and mailed to you within 3-5 business days.
+        
+        If you have any questions or need to update your mailing address, please contact us at:
+        Email: documents@betterdayenergy.com
+        Phone: (888) 555-0123
+        
+        Thank you for choosing Better Day Energy!
+        
+        Better Day Energy Document Services
+        """
+        
+        try:
+            customer_msg = MIMEText(customer_body)
+            customer_msg['Subject'] = customer_subject
+            customer_msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+            customer_msg['To'] = customer_email
+            
+            server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+            server.starttls()
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+            server.send_message(customer_msg)
+            server.quit()
+            
+            logger.info(f"✅ Paper copy confirmation sent to customer {customer_email}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send customer confirmation: {e}")
+        
+        return {
+            "success": True,
+            "message": "Paper copy request submitted successfully",
+            "transaction_id": transaction_id,
+            "estimated_delivery": "3-5 business days"
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error processing paper copy request: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process paper copy request: {str(e)}")
+
+@app.get("/api/v1/paper-copy/form")
+async def get_paper_copy_form():
+    """Serve paper copy request form"""
+    
+    paper_copy_form = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Request Paper Copy - Better Day Energy</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            .form-group { margin-bottom: 20px; }
+            label { display: block; margin-bottom: 5px; font-weight: bold; }
+            input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+            button { background: #1f4e79; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #2563eb; }
+            .header { background: #1f4e79; color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 30px; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>📄 Request Paper Copy</h1>
+            <p>Better Day Energy Document Services</p>
+        </div>
+        
+        <p><strong>Note:</strong> You have the right to receive paper copies of documents instead of signing electronically. Use this form to request a paper copy.</p>
+        
+        <form id="paperCopyForm">
+            <div class="form-group">
+                <label for="transaction_id">Transaction ID:</label>
+                <input type="text" id="transaction_id" name="transaction_id" required placeholder="Enter your transaction ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="customer_name">Your Name:</label>
+                <input type="text" id="customer_name" name="customer_name" required placeholder="Enter your full name">
+            </div>
+            
+            <div class="form-group">
+                <label for="customer_email">Email Address:</label>
+                <input type="email" id="customer_email" name="customer_email" required placeholder="Enter your email address">
+            </div>
+            
+            <div class="form-group">
+                <label for="document_type">Document Type:</label>
+                <select id="document_type" name="document_type" required>
+                    <option value="">Select document type</option>
+                    <option value="P66 LOI">Phillips 66 Letter of Intent</option>
+                    <option value="VP Racing LOI">VP Racing Letter of Intent</option>
+                    <option value="EFT Authorization">EFT Authorization Form</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="reason">Reason for Paper Copy (Optional):</label>
+                <textarea id="reason" name="reason" rows="3" placeholder="Optional: Tell us why you prefer a paper copy"></textarea>
+            </div>
+            
+            <button type="submit">Request Paper Copy</button>
+        </form>
+        
+        <div id="result" style="margin-top: 20px;"></div>
+        
+        <script>
+            document.getElementById('paperCopyForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const requestData = Object.fromEntries(formData.entries());
+                
+                try {
+                    const response = await fetch('/api/v1/paper-copy/request', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        document.getElementById('result').innerHTML = `
+                            <div style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 4px;">
+                                <h3>✅ Request Submitted Successfully!</h3>
+                                <p>Your paper copy request has been submitted. You will receive your document by mail within ${result.estimated_delivery}.</p>
+                                <p><strong>Transaction ID:</strong> ${result.transaction_id}</p>
+                            </div>
+                        `;
+                        e.target.reset();
+                    } else {
+                        throw new Error(result.message || 'Request failed');
+                    }
+                } catch (error) {
+                    document.getElementById('result').innerHTML = `
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px;">
+                            <h3>❌ Error</h3>
+                            <p>Failed to submit request: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(content=paper_copy_form)
 
 if __name__ == "__main__":
     main()
