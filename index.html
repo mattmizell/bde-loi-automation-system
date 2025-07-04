@@ -330,8 +330,10 @@
                                     📄 View
                                 </a>
                                 ${transaction.status !== 'COMPLETED' && transaction.status !== 'CANCELLED' ? `
-                                    <button onclick="cancelTransaction('${transaction.transaction_id}', ${JSON.stringify(transaction.customer_company)})" 
-                                       style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">
+                                    <button data-transaction-id="${transaction.transaction_id}" 
+                                            data-company-name="${(transaction.customer_company || '').replace(/"/g, '&quot;')}"
+                                            onclick="cancelTransactionFromButton(this)" 
+                                            style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">
                                         ❌ Cancel
                                     </button>
                                 ` : ''}
@@ -377,6 +379,13 @@
         function refreshTransactions() {
             document.getElementById('transaction-stats').textContent = 'Refreshing...';
             loadTransactions();
+        }
+        
+        // Wrapper function to get data from button attributes
+        function cancelTransactionFromButton(button) {
+            const transactionId = button.getAttribute('data-transaction-id');
+            const companyName = button.getAttribute('data-company-name');
+            cancelTransaction(transactionId, companyName);
         }
         
         async function cancelTransaction(transactionId, companyName) {
