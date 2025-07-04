@@ -1444,7 +1444,7 @@ async def list_all_transactions():
             with conn.cursor() as cur:
                 # Get all transactions with customer info, ordered by most recent first
                 cur.execute("""
-                    SELECT 
+                    SELECT DISTINCT
                         lt.id,
                         lt.transaction_type,
                         lt.status,
