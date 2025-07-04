@@ -765,9 +765,7 @@ async def get_system_status():
     """Get system status"""
     
     try:
-        from database.connection import DatabaseManager
-        
-        db_manager = DatabaseManager()
+        db_manager = get_global_db_manager()
         db_healthy = db_manager.health_check()
         
         return {
@@ -1474,11 +1472,10 @@ async def list_loi_transactions():
     """List LOI transactions from database"""
     
     try:
-        from database.connection import DatabaseManager
         from database.models import LOITransaction, Customer
         from sqlalchemy.orm import sessionmaker
         
-        db_manager = DatabaseManager()
+        db_manager = get_global_db_manager()
         
         with db_manager.get_session() as session:
             # Get transactions with customer info
