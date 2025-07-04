@@ -323,6 +323,18 @@
             100% { transform: rotate(360deg); }
         }
         
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
         .highlight-box {
             background: #fffde7;
             border: 2px solid #f9a825;
@@ -447,7 +459,7 @@
             </div>
             
             <!-- Success/Error Messages -->
-            <div id="success-message" class="alert alert-success" style="display: none;">
+            <div id="success-message" class="alert alert-success" style="display: none; position: relative; z-index: 1000; border: 3px solid #28a745; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);">
                 <span class="alert-icon">✅</span>
                 <div class="alert-content">
                     <strong>Success!</strong>
@@ -455,7 +467,7 @@
                 </div>
             </div>
             
-            <div id="error-message" class="alert alert-error" style="display: none;">
+            <div id="error-message" class="alert alert-error" style="display: none; position: relative; z-index: 1000; border: 3px solid #dc3545; box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);">
                 <span class="alert-icon">❌</span>
                 <div class="alert-content">
                     <strong>Error:</strong>
@@ -930,14 +942,25 @@
                     
                     // Show success message with next steps
                     loading.style.display = 'none';
-                    showSuccessMessage(`Phillips 66 LOI routed successfully! Transaction ID: ${result.transaction_id}. Customer ${result.customer_email} will receive signature link.`);
+                    form.style.display = 'none'; // Keep form hidden to show success message clearly
                     
-                    // Reset form for next use after delay
+                    // Build success message with available data
+                    let successMessage = `Phillips 66 LOI routed successfully! Transaction ID: ${result.transaction_id}`;
+                    if (result.message) {
+                        successMessage += `. ${result.message}`;
+                    }
+                    if (result.signature_url) {
+                        successMessage += ` Customer will receive signature link via email.`;
+                    }
+                    
+                    showSuccessMessage(successMessage);
+                    
+                    // Reset form for next use after longer delay to let user see success message
                     setTimeout(() => {
                         form.reset();
                         form.style.display = 'block';
                         checkFormValidity();
-                    }, 3000);
+                    }, 8000); // Increased delay to 8 seconds
                     
                 } else {
                     // Parse error details
@@ -1015,18 +1038,32 @@
             const successDiv = document.getElementById('success-message');
             const successText = document.getElementById('success-text');
             const errorDiv = document.getElementById('error-message');
+            const introAlert = document.querySelector('.alert-info');
             
-            // Hide error message
+            // Hide all other alerts to make success message prominent
             errorDiv.style.display = 'none';
+            if (introAlert) {
+                introAlert.style.display = 'none';
+            }
             
-            // Show success message
+            // Show success message with enhanced visibility
             successText.textContent = message;
             successDiv.style.display = 'flex';
             
-            // Auto-hide after 5 seconds
+            // Add pulsing animation to draw attention
+            successDiv.style.animation = 'pulse 2s ease-in-out 3';
+            
+            // Scroll to top to ensure success message is visible
+            document.querySelector('.form-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Auto-hide after 12 seconds (longer than form reset delay)
             setTimeout(() => {
                 successDiv.style.display = 'none';
-            }, 5000);
+                // Restore intro alert
+                if (introAlert) {
+                    introAlert.style.display = 'flex';
+                }
+            }, 12000);
         }
         
         function showErrorMessage(message) {
@@ -1037,14 +1074,27 @@
             // Hide success message
             successDiv.style.display = 'none';
             
-            // Show error message
+            // Show error message with enhanced visibility
             errorText.textContent = message;
             errorDiv.style.display = 'flex';
+            
+            // Add shake animation to draw attention to error
+            errorDiv.style.animation = 'shake 0.5s ease-in-out 2';
         }
         
         function hideMessages() {
-            document.getElementById('success-message').style.display = 'none';
-            document.getElementById('error-message').style.display = 'none';
+            const successDiv = document.getElementById('success-message');
+            const errorDiv = document.getElementById('error-message');
+            const introAlert = document.querySelector('.alert-info');
+            
+            // Hide success and error messages
+            successDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            
+            // Ensure intro alert is visible
+            if (introAlert) {
+                introAlert.style.display = 'flex';
+            }
         }
     </script>
 </body>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Setup Form Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .test-button { padding: 10px 15px; margin: 5px; }
+        .test-result { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Customer Setup Form Test</h1>
+    
+    <div class="test-section">
+        <h2>Form Navigation Test</h2>
+        <button class="test-button" onclick="testFormNavigation()">Test Form Navigation</button>
+        <div id="navigation-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Form Fields Test</h2>
+        <button class="test-button" onclick="testFormFields()">Test Form Fields</button>
+        <div id="fields-result" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Open Form</h2>
+        <button class="test-button" onclick="openForm()">Open Customer Setup Form</button>
+    </div>
+    
+    <script>
+        function testFormNavigation() {
+            const result = document.getElementById('navigation-result');
+            result.innerHTML = '<p>Testing form navigation...</p>';
+            
+            // Open the form in a new window
+            const formWindow = window.open('customer_setup_form.html', 'form_test', 'width=1200,height=800');
+            
+            // Wait for form to load then test navigation
+            setTimeout(() => {
+                if (formWindow && formWindow.debugForm) {
+                    formWindow.debugForm();
+                    
+                    // Test next step navigation
+                    console.log('Testing next step navigation...');
+                    formWindow.nextStep();
+                    
+                    setTimeout(() => {
+                        formWindow.debugForm();
+                        result.innerHTML = '<p>✅ Navigation test completed - check console for details</p>';
+                    }, 1000);
+                } else {
+                    result.innerHTML = '<p>❌ Could not access form window or debug function</p>';
+                }
+            }, 2000);
+        }
+        
+        function testFormFields() {
+            const result = document.getElementById('fields-result');
+            result.innerHTML = '<p>Testing form fields...</p>';
+            
+            // Open the form in a new window
+            const formWindow = window.open('customer_setup_form.html', 'form_test', 'width=1200,height=800');
+            
+            // Wait for form to load then test fields
+            setTimeout(() => {
+                if (formWindow && formWindow.document) {
+                    const step2Fields = formWindow.document.querySelectorAll('#step-2 input, #step-2 select, #step-2 textarea');
+                    const visibleFields = Array.from(step2Fields).filter(field => {
+                        const style = formWindow.getComputedStyle(field);
+                        return style.display !== 'none' && style.visibility !== 'hidden';
+                    });
+                    
+                    result.innerHTML = `
+                        <p>Step 2 fields found: ${step2Fields.length}</p>
+                        <p>Visible fields: ${visibleFields.length}</p>
+                        <p>Primary contact name field: ${formWindow.document.getElementById('primary-contact-name') ? '✅ Found' : '❌ Missing'}</p>
+                        <p>Next to step 2 button: ${formWindow.document.getElementById('next-to-step-2') ? '✅ Found' : '❌ Missing'}</p>
+                    `;
+                } else {
+                    result.innerHTML = '<p>❌ Could not access form window</p>';
+                }
+            }, 2000);
+        }
+        
+        function openForm() {
+            window.open('customer_setup_form.html', 'form', 'width=1200,height=800');
+        }
+    </script>
+</body>
+</html>

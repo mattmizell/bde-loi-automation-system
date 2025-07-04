@@ -1,0 +1,34 @@
+[
+  {
+    "test_id": "TC-001",
+    "name": "Customer Setup Sales Initiation",
+    "status": "PASSED",
+    "transaction_id": "edec9a9b-ef78-4fa1-b3ed-aac9412d6c37",
+    "error": null,
+    "issues": []
+  },
+  {
+    "test_id": "TC-003",
+    "name": "EFT Sales Initiation",
+    "status": "PASSED",
+    "transaction_id": null,
+    "error": null,
+    "issues": []
+  },
+  {
+    "test_id": "TC-005",
+    "name": "P66 LOI Direct Submission",
+    "status": "FAILED",
+    "transaction_id": null,
+    "error": "\n                \u2139\ufe0f\n                This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.\n            ",
+    "issues": []
+  },
+  {
+    "test_id": "TC-009",
+    "name": "Paper Copy Request",
+    "status": "PASSED",
+    "transaction_id": null,
+    "error": null,
+    "issues": []
+  }
+]

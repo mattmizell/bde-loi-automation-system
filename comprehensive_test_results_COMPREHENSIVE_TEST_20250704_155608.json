@@ -1,0 +1,32 @@
+{
+  "test_run_id": "COMPREHENSIVE_TEST_20250704_155608",
+  "timestamp": "2025-07-04T15:56:35.236912",
+  "test_results": {
+    "Customer_Setup_Sales_Initiation": "PASSED",
+    "EFT_Sales_Initiation": "PASSED",
+    "P66_LOI_Submission": "FAILED - Backend not processing"
+  },
+  "transaction_ids": {
+    "Customer_Setup_Sales_Initiation": "11fa04df-0f8c-47e0-a1b3-dcd3ec3d2b7c",
+    "EFT_Sales_Initiation": "417dc473-de52-4508-9b45-b553adb33eb5"
+  },
+  "issues": [
+    {
+      "test_name": "P66_LOI_Submission",
+      "category": "Backend",
+      "description": "Form submission returned intro message instead of processing response",
+      "error": "\u2139\ufe0f\n                This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.",
+      "severity": "CRITICAL",
+      "timestamp": "2025-07-04T15:56:33.775556"
+    }
+  ],
+  "summary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "partial": 0,
+    "success_rate": 66.66666666666666
+  }
+}

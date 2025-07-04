@@ -1,0 +1,138 @@
+{
+  "test_run_id": "COMPREHENSIVE_TEST_20250704_160453",
+  "timestamp": "2025-07-04T16:06:47.658862",
+  "test_results": {
+    "Customer_Setup_Sales_Initiation": "PASSED",
+    "Customer_Setup_Completion": "FAILED - Step 2",
+    "EFT_Sales_Initiation": "PASSED",
+    "P66_LOI_Submission": "FAILED - Backend not processing",
+    "VP_Racing_LOI_Submission": "FAILED - Form filling"
+  },
+  "transaction_ids": {
+    "Customer_Setup_Sales_Initiation": "34d4d58f-4ff8-4547-9e7a-82ec2909636e",
+    "EFT_Sales_Initiation": "ff659ed1-ba2f-492f-8e68-dc0c0f3401be"
+  },
+  "issues": [
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to click #next-to-step-2: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#next-to-step-2\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#next-to-step-2\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:10.646191"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #primary-contact-name: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-name\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"primary-contact-name\" name=\"primary_contact_name\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-name\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"primary-contact-name\" name=\"primary_contact_name\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:18.369285"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #primary-contact-title: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-title\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"primary-contact-title\" name=\"primary_contact_title\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-title\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"primary-contact-title\" name=\"primary_contact_title\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:24.571137"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #primary-contact-phone: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-phone\") to be visible\n    14 \u00d7 locator resolved to hidden <input type=\"tel\" required=\"\" id=\"primary-contact-phone\" name=\"primary_contact_phone\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-phone\") to be visible\n    14 \u00d7 locator resolved to hidden <input type=\"tel\" required=\"\" id=\"primary-contact-phone\" name=\"primary_contact_phone\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:30.297861"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #primary-contact-email: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-email\") to be visible\n    15 \u00d7 locator resolved to hidden <input required=\"\" type=\"email\" id=\"primary-contact-email\" name=\"primary_contact_email\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#primary-contact-email\") to be visible\n    15 \u00d7 locator resolved to hidden <input required=\"\" type=\"email\" id=\"primary-contact-email\" name=\"primary_contact_email\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:36.037648"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #ap-contact-name: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-name\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"ap-contact-name\" name=\"accounts_payable_contact\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-name\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"text\" required=\"\" id=\"ap-contact-name\" name=\"accounts_payable_contact\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:41.815062"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #ap-contact-phone: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-phone\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"tel\" required=\"\" id=\"ap-contact-phone\" name=\"accounts_payable_phone\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-phone\") to be visible\n    15 \u00d7 locator resolved to hidden <input type=\"tel\" required=\"\" id=\"ap-contact-phone\" name=\"accounts_payable_phone\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:47.590459"
+    },
+    {
+      "test_name": "Customer_Setup_Completion",
+      "category": "Frontend",
+      "description": "Failed to fill #ap-contact-email: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-email\") to be visible\n    15 \u00d7 locator resolved to hidden <input required=\"\" type=\"email\" id=\"ap-contact-email\" name=\"accounts_payable_email\"/>\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#ap-contact-email\") to be visible\n    15 \u00d7 locator resolved to hidden <input required=\"\" type=\"email\" id=\"ap-contact-email\" name=\"accounts_payable_email\"/>\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:05:53.388089"
+    },
+    {
+      "test_name": "P66_LOI_Submission",
+      "category": "Backend",
+      "description": "Form submission returned intro message instead of processing response",
+      "error": "\u2139\ufe0f\n                This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.",
+      "severity": "CRITICAL",
+      "timestamp": "2025-07-04T16:06:14.606300"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Frontend",
+      "description": "Failed to fill #monthly-gasoline: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#monthly-gasoline\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#monthly-gasoline\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:06:23.527682"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Frontend",
+      "description": "Failed to fill #monthly-diesel: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#monthly-diesel\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#monthly-diesel\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:06:29.266166"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Frontend",
+      "description": "Failed to fill #contact-name: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#contact-name\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#contact-name\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:06:35.007204"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Frontend",
+      "description": "Failed to fill #contact-title: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#contact-title\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#contact-title\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:06:40.721321"
+    },
+    {
+      "test_name": "VP_Racing_LOI_Submission",
+      "category": "Frontend",
+      "description": "Failed to fill #comments: Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#comments\") to be visible\n",
+      "error": "Page.wait_for_selector: Timeout 5000ms exceeded.\nCall log:\n  - waiting for locator(\"#comments\") to be visible\n",
+      "severity": "HIGH",
+      "timestamp": "2025-07-04T16:06:46.456340"
+    }
+  ],
+  "summary": {
+    "total": 5,
+    "passed": 2,
+    "failed": 3,
+    "errors": 0,
+    "skipped": 0,
+    "partial": 0,
+    "success_rate": 40.0
+  }
+}
