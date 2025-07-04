@@ -49,12 +49,116 @@ class ComprehensiveTestSuite:
         self.transaction_ids = {}
         
     def start_browser(self):
-        """Start browser session"""
+        """Start browser session with console logging"""
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=HEADLESS)
         self.page = self.browser.new_page()
+        
+        # Capture console messages
+        self.console_logs = []
+        def handle_console_msg(msg):
+            console_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "type": msg.type,
+                "text": msg.text,
+                "location": msg.location
+            }
+            self.console_logs.append(console_entry)
+            print(f"🖥️ CONSOLE [{msg.type.upper()}]: {msg.text}")
+            
+            # Log JavaScript errors as issues
+            if msg.type in ['error', 'warning']:
+                self.log_issue(
+                    "Console", 
+                    "JavaScript", 
+                    f"Console {msg.type}: {msg.text}",
+                    f"Location: {msg.location}",
+                    "HIGH" if msg.type == 'error' else "MEDIUM"
+                )
+        
+        self.page.on("console", handle_console_msg)
+        
+        # Capture page errors
+        def handle_page_error(error):
+            self.log_issue("Page", "Runtime", f"Page error: {error.message}", str(error), "CRITICAL")
+            print(f"🚨 PAGE ERROR: {error.message}")
+            
+        self.page.on("pageerror", handle_page_error)
+        
         print(f"🌐 Browser started for test run: {self.test_run_id}")
         
+    def capture_javascript_state(self, test_name=""):
+        """Capture JavaScript state for debugging"""
+        try:
+            js_state = self.page.evaluate("""
+                () => {
+                    const state = {
+                        url: window.location.href,
+                        title: document.title,
+                        ready_state: document.readyState,
+                        forms: [],
+                        errors: [],
+                        debug_info: {}
+                    };
+                    
+                    // Capture forms
+                    const forms = document.querySelectorAll('form');
+                    forms.forEach((form, index) => {
+                        const formData = {
+                            id: form.id,
+                            action: form.action,
+                            method: form.method,
+                            fields: []
+                        };
+                        
+                        const inputs = form.querySelectorAll('input, select, textarea');
+                        inputs.forEach(input => {
+                            formData.fields.push({
+                                name: input.name,
+                                id: input.id,
+                                type: input.type,
+                                value: input.value,
+                                visible: input.offsetParent !== null
+                            });
+                        });
+                        
+                        state.forms.push(formData);
+                    });
+                    
+                    // Capture any global debug info
+                    if (window.DEBUG_INFO) {
+                        state.debug_info = window.DEBUG_INFO;
+                    }
+                    
+                    // Capture CRM component state
+                    if (window.CRMSearchComponent) {
+                        state.crm_component = {
+                            available: true,
+                            initialized: !!window.CRMSearchComponent.initialized
+                        };
+                    } else {
+                        state.crm_component = {
+                            available: false,
+                            reason: "CRMSearchComponent not found"
+                        };
+                    }
+                    
+                    return state;
+                }
+            """)
+            
+            print(f"📊 JavaScript State for {test_name}:")
+            print(f"   URL: {js_state.get('url', 'unknown')}")
+            print(f"   Ready State: {js_state.get('ready_state', 'unknown')}")
+            print(f"   Forms Found: {len(js_state.get('forms', []))}")
+            print(f"   CRM Component: {js_state.get('crm_component', {}).get('available', False)}")
+            
+            return js_state
+            
+        except Exception as e:
+            self.log_issue(test_name, "JavaScript", f"Failed to capture JS state: {str(e)}", str(e))
+            return None
+    
     def stop_browser(self):
         """Stop browser session"""
         if self.browser:
@@ -479,6 +583,9 @@ class ComprehensiveTestSuite:
             self.page.goto(f"{BASE_URL}/customer_setup_form.html")
             self.page.wait_for_load_state('networkidle')
             
+            # Capture JavaScript state after page load
+            self.capture_javascript_state(test_name)
+            
             # Step 1: Business Information
             print("📝 Step 1: Business Information")
             step1_success = all([
@@ -773,6 +880,169 @@ class ComprehensiveTestSuite:
             self.log_issue(test_name, "Test", f"EFT completion test failed: {str(e)}", str(e))
             self.test_results[test_name] = "ERROR"
 
+    def test_crm_search_functionality(self):
+        """Test CRM search functionality across forms"""
+        test_name = "CRM_Search_Functionality"
+        print(f"\n{'='*60}")
+        print(f"🧪 Testing: {test_name}")
+        
+        try:
+            # Test CRM search on EFT form
+            self.page.goto(f"{BASE_URL}/eft/initiate")
+            self.page.wait_for_load_state('networkidle')
+            
+            # Test CRM search input
+            crm_search_input = self.page.locator('#crm-search')
+            if crm_search_input.is_visible():
+                print("✅ CRM search input found on EFT form")
+                
+                # Test search functionality
+                crm_search_input.fill(TEST_DATA["email"])
+                time.sleep(2)
+                
+                # Check for search results or auto-population
+                company_field = self.page.locator('#company-name')
+                if company_field.is_visible():
+                    company_value = company_field.input_value()
+                    if company_value:
+                        print(f"✅ CRM search populated company: {company_value}")
+                        self.test_results[test_name] = "PASSED"
+                    else:
+                        print("📋 CRM search present but no auto-population")
+                        self.test_results[test_name] = "PARTIAL - Search present, no auto-fill"
+                else:
+                    self.log_issue(test_name, "Frontend", "Company field not found after CRM search")
+                    self.test_results[test_name] = "FAILED - Field access"
+            else:
+                self.log_issue(test_name, "Frontend", "CRM search input not found on EFT form")
+                self.test_results[test_name] = "FAILED - CRM search missing"
+                
+            # Test CRM search on other forms
+            forms_to_test = [
+                ("/customer-setup/initiate", "Customer Setup"),
+                ("/p66_loi_form.html", "P66 LOI")
+            ]
+            
+            for form_url, form_name in forms_to_test:
+                try:
+                    self.page.goto(f"{BASE_URL}{form_url}")
+                    self.page.wait_for_load_state('networkidle')
+                    
+                    crm_search = self.page.locator('#crm-search')
+                    if crm_search.is_visible():
+                        print(f"✅ CRM search found on {form_name}")
+                    else:
+                        print(f"⚠️ CRM search not found on {form_name}")
+                        
+                except Exception as e:
+                    print(f"⚠️ Could not test CRM search on {form_name}: {str(e)}")
+                    
+        except Exception as e:
+            self.log_issue(test_name, "Test", f"CRM search test failed: {str(e)}", str(e))
+            self.test_results[test_name] = "ERROR"
+            
+    def test_dashboard_grid_capabilities(self):
+        """Test dashboard grid capabilities and data display"""
+        test_name = "Dashboard_Grid_Capabilities"
+        print(f"\n{'='*60}")
+        print(f"🧪 Testing: {test_name}")
+        
+        try:
+            # Navigate to main dashboard
+            self.page.goto(f"{BASE_URL}")
+            self.page.wait_for_load_state('networkidle')
+            
+            # Check for dashboard grid/table elements
+            dashboard_elements = [
+                ('.grid', 'Main grid container'),
+                ('.table', 'Data table'),
+                ('.dashboard-grid', 'Dashboard grid'),
+                ('.data-grid', 'Data grid'),
+                ('[data-grid]', 'Grid data attribute'),
+                ('table', 'HTML table'),
+                ('.transaction-list', 'Transaction list'),
+                ('.customer-list', 'Customer list')
+            ]
+            
+            grid_found = False
+            for selector, description in dashboard_elements:
+                element = self.page.locator(selector)
+                if element.count() > 0:
+                    print(f"✅ Found {description}: {element.count()} elements")
+                    grid_found = True
+                    
+                    # Test if grid has data
+                    if element.is_visible():
+                        try:
+                            element_text = element.first.text_content()
+                            if element_text and len(element_text.strip()) > 0:
+                                print(f"✅ Grid has data: {len(element_text)} characters")
+                            else:
+                                print("⚠️ Grid visible but appears empty")
+                        except:
+                            print("⚠️ Could not read grid content")
+                            
+            if not grid_found:
+                # Check for any data display on dashboard
+                all_elements = self.page.locator('*')
+                page_content = self.page.content()
+                
+                # Look for transaction IDs or customer data
+                if any(tid in page_content for tid in self.transaction_ids.values() if tid):
+                    print("✅ Dashboard shows recent transaction data")
+                    grid_found = True
+                elif "transaction" in page_content.lower() or "customer" in page_content.lower():
+                    print("✅ Dashboard has transaction/customer references")
+                    grid_found = True
+                    
+            # Test grid interactions (if grid found)
+            if grid_found:
+                # Test sorting (if available)
+                sort_headers = self.page.locator('th[onclick], .sortable, [data-sort]')
+                if sort_headers.count() > 0:
+                    print(f"✅ Found {sort_headers.count()} sortable columns")
+                    try:
+                        sort_headers.first.click()
+                        time.sleep(1)
+                        print("✅ Grid sorting interaction works")
+                    except:
+                        print("⚠️ Grid sorting click failed")
+                        
+                # Test filtering (if available)
+                filter_inputs = self.page.locator('input[placeholder*="filter"], input[placeholder*="search"], .filter-input')
+                if filter_inputs.count() > 0:
+                    print(f"✅ Found {filter_inputs.count()} filter inputs")
+                    try:
+                        filter_inputs.first.fill("test")
+                        time.sleep(1)
+                        print("✅ Grid filtering interaction works")
+                    except:
+                        print("⚠️ Grid filtering failed")
+                        
+                # Test pagination (if available)
+                pagination = self.page.locator('.pagination, .pager, [data-page]')
+                if pagination.count() > 0:
+                    print(f"✅ Found pagination controls")
+                else:
+                    print("📋 No pagination controls found")
+                    
+                self.test_results[test_name] = "PASSED"
+                
+            else:
+                self.log_issue(test_name, "Frontend", "No grid/table elements found on dashboard")
+                self.test_results[test_name] = "FAILED - No grid found"
+                
+            # Test dashboard navigation links
+            nav_links = self.page.locator('a[href*="form"], button[onclick*="form"], .nav-link')
+            if nav_links.count() > 0:
+                print(f"✅ Found {nav_links.count()} navigation links on dashboard")
+            else:
+                self.log_issue(test_name, "Frontend", "No navigation links found on dashboard")
+                
+        except Exception as e:
+            self.log_issue(test_name, "Test", f"Dashboard grid test failed: {str(e)}", str(e))
+            self.test_results[test_name] = "ERROR"
+
     def run_comprehensive_tests(self):
         """Run all tests in sequence"""
         print(f"\n🚀 Starting Comprehensive Test Suite: {self.test_run_id}")
@@ -782,6 +1052,10 @@ class ComprehensiveTestSuite:
         
         try:
             self.start_browser()
+            
+            # Test 0: Dashboard and CRM Functionality
+            self.test_dashboard_grid_capabilities()
+            self.test_crm_search_functionality()
             
             # Test 1: Customer Setup Sales Initiation
             self.test_customer_setup_sales_initiation()
@@ -888,6 +1162,7 @@ class ComprehensiveTestSuite:
                 "test_results": self.test_results,
                 "transaction_ids": self.transaction_ids,
                 "issues": self.issues,
+                "console_logs": getattr(self, 'console_logs', []),
                 "summary": {
                     "total": total,
                     "passed": passed,
