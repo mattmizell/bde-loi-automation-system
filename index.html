@@ -330,7 +330,7 @@
                                     📄 View
                                 </a>
                                 ${transaction.status !== 'COMPLETED' && transaction.status !== 'CANCELLED' ? `
-                                    <button onclick="cancelTransaction('${transaction.transaction_id}', '${transaction.customer_company}')" 
+                                    <button onclick="cancelTransaction('${transaction.transaction_id}', ${JSON.stringify(transaction.customer_company)})" 
                                        style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">
                                         ❌ Cancel
                                     </button>
