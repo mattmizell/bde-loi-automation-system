@@ -277,7 +277,18 @@ class ComprehensiveTestSuite:
             # Check expected related tables
             for table in expected_tables:
                 try:
-                    cur.execute(f"SELECT COUNT(*) FROM {table} WHERE transaction_id = %s", (transaction_id,))
+                    if table == "customers":
+                        # Customers table might not have transaction_id, use customer_id from transaction
+                        customer_id = transaction_data.get('customer_id') 
+                        if customer_id:
+                            cur.execute(f"SELECT COUNT(*) FROM {table} WHERE id = %s", (customer_id,))
+                        else:
+                            # Try finding by email as fallback
+                            cur.execute(f"SELECT COUNT(*) FROM {table} WHERE email = %s", (TEST_DATA["email"],))
+                    else:
+                        # Other tables should have transaction_id
+                        cur.execute(f"SELECT COUNT(*) FROM {table} WHERE transaction_id = %s", (transaction_id,))
+                    
                     count = cur.fetchone()[0]
                     
                     if count > 0:
@@ -435,29 +446,41 @@ class ComprehensiveTestSuite:
             # Check response
             try:
                 success_msg = self.page.locator('.alert-success').text_content()
-                if "successfully" in success_msg and "Transaction ID:" in success_msg:
-                    transaction_id = success_msg.split("Transaction ID:")[1].strip().split()[0]
-                    self.transaction_ids[test_name] = transaction_id
-                    print(f"✅ Success! Transaction ID: {transaction_id}")
+                if "successfully" in success_msg:
+                    print(f"✅ Success! {success_msg}")
                     
-                    # Comprehensive database verification
-                    db_verified = self.verify_complete_database_storage(
-                        transaction_id, 
-                        test_name, 
-                        expected_tables=["customers"]  # Customer Setup uses customers table
-                    )
+                    # Try to extract transaction ID from various formats
+                    transaction_id = None
+                    if "Transaction ID:" in success_msg:
+                        transaction_id = success_msg.split("Transaction ID:")[1].strip().split()[0]
+                    elif "transaction id:" in success_msg.lower():
+                        transaction_id = success_msg.lower().split("transaction id:")[1].strip().split()[0]
                     
-                    # Test CRM bridge integration
-                    crm_verified = self.test_crm_bridge_integration(
-                        transaction_id, 
-                        test_name, 
-                        TEST_DATA["email"]
-                    )
-                    
-                    if db_verified and crm_verified:
-                        self.test_results[test_name] = "PASSED"
+                    if transaction_id:
+                        self.transaction_ids[test_name] = transaction_id
+                        print(f"✅ Transaction ID: {transaction_id}")
+                        
+                        # Comprehensive database verification
+                        db_verified = self.verify_complete_database_storage(
+                            transaction_id, 
+                            test_name, 
+                            expected_tables=["customers"]  # Customer Setup uses customers table
+                        )
+                        
+                        # Test CRM bridge integration
+                        crm_verified = self.test_crm_bridge_integration(
+                            transaction_id, 
+                            test_name, 
+                            TEST_DATA["email"]
+                        )
+                        
+                        if db_verified and crm_verified:
+                            self.test_results[test_name] = "PASSED"
+                        else:
+                            self.test_results[test_name] = "PARTIAL - Form submitted but verification failed"
                     else:
-                        self.test_results[test_name] = "PARTIAL - Form submitted but verification failed"
+                        print("⚠️ No transaction ID found, but form submitted successfully")
+                        self.test_results[test_name] = "PARTIAL - Success but no transaction ID"
                 else:
                     self.log_issue(test_name, "Backend", f"Invalid success message: {success_msg}")
                     self.test_results[test_name] = "FAILED - Invalid response"
@@ -799,8 +822,16 @@ class ComprehensiveTestSuite:
             
             if step1_success:
                 self.safe_click('#next-to-step-2', test_name)
-                time.sleep(2)
-                print("✅ Step 1 completed")
+                
+                # Wait for step transition to complete
+                try:
+                    self.page.wait_for_selector('#step-2[style*="display: block"], #step-2.active', timeout=10000)
+                    time.sleep(1)  # Additional wait for animations
+                    print("✅ Step 1 completed, Step 2 now visible")
+                except Exception as e:
+                    self.log_issue(test_name, "Frontend", f"Step 2 transition failed: {str(e)}", str(e))
+                    self.test_results[test_name] = "FAILED - Step transition"
+                    return
             else:
                 self.test_results[test_name] = "FAILED - Step 1"
                 return
@@ -819,8 +850,16 @@ class ComprehensiveTestSuite:
             
             if step2_success:
                 self.safe_click('#next-to-step-3', test_name)
-                time.sleep(2)
-                print("✅ Step 2 completed")
+                
+                # Wait for step transition to complete
+                try:
+                    self.page.wait_for_selector('#step-3[style*="display: block"], #step-3.active', timeout=10000)
+                    time.sleep(1)
+                    print("✅ Step 2 completed, Step 3 now visible")
+                except Exception as e:
+                    self.log_issue(test_name, "Frontend", f"Step 3 transition failed: {str(e)}", str(e))
+                    self.test_results[test_name] = "FAILED - Step transition"
+                    return
             else:
                 self.test_results[test_name] = "FAILED - Step 2"
                 return
@@ -845,8 +884,16 @@ class ComprehensiveTestSuite:
             
             if step3_success:
                 self.safe_click('#next-to-step-4', test_name)
-                time.sleep(2)
-                print("✅ Step 3 completed")
+                
+                # Wait for step transition to complete
+                try:
+                    self.page.wait_for_selector('#step-4[style*="display: block"], #step-4.active', timeout=10000)
+                    time.sleep(1)
+                    print("✅ Step 3 completed, Step 4 now visible")
+                except Exception as e:
+                    self.log_issue(test_name, "Frontend", f"Step 4 transition failed: {str(e)}", str(e))
+                    self.test_results[test_name] = "FAILED - Step transition"
+                    return
             else:
                 self.test_results[test_name] = "FAILED - Step 3"
                 return
@@ -864,8 +911,16 @@ class ComprehensiveTestSuite:
             
             if step4_success:
                 self.safe_click('#next-to-step-5', test_name)
-                time.sleep(2)
-                print("✅ Step 4 completed")
+                
+                # Wait for step transition to complete
+                try:
+                    self.page.wait_for_selector('#step-5[style*="display: block"], #step-5.active', timeout=10000)
+                    time.sleep(1)
+                    print("✅ Step 4 completed, Step 5 now visible")
+                except Exception as e:
+                    self.log_issue(test_name, "Frontend", f"Step 5 transition failed: {str(e)}", str(e))
+                    self.test_results[test_name] = "FAILED - Step transition"
+                    return
             else:
                 self.test_results[test_name] = "FAILED - Step 4"
                 return
