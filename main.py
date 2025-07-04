@@ -1661,7 +1661,7 @@ async def cancel_transaction(transaction_id: str):
                     SELECT lt.status, c.company_name, c.contact_name, c.email, lt.transaction_type
                     FROM loi_transactions lt
                     JOIN customers c ON lt.customer_id = c.id
-                    WHERE lt.id = %s
+                    WHERE lt.transaction_id = %s
                 """, (transaction_id,))
                 
                 result = cur.fetchone()
@@ -1686,7 +1686,7 @@ async def cancel_transaction(transaction_id: str):
                 cur.execute("""
                     UPDATE loi_transactions 
                     SET status = 'CANCELLED', completed_at = %s
-                    WHERE id = %s
+                    WHERE transaction_id = %s
                 """, (datetime.now(), transaction_id))
                 
                 conn.commit()
