@@ -825,7 +825,17 @@ class ComprehensiveTestSuite:
                 
                 # Wait for step transition to complete
                 try:
-                    self.page.wait_for_selector('#step-2[style*="display: block"], #step-2.active', timeout=10000)
+                    # Wait for step 2 to become visible (check multiple possible states)
+                    self.page.wait_for_function("""
+                        () => {
+                            const step2 = document.getElementById('step-2');
+                            return step2 && (
+                                getComputedStyle(step2).display !== 'none' ||
+                                step2.classList.contains('active') ||
+                                step2.style.display === 'block'
+                            );
+                        }
+                    """, timeout=10000)
                     time.sleep(1)  # Additional wait for animations
                     print("✅ Step 1 completed, Step 2 now visible")
                 except Exception as e:
@@ -853,7 +863,16 @@ class ComprehensiveTestSuite:
                 
                 # Wait for step transition to complete
                 try:
-                    self.page.wait_for_selector('#step-3[style*="display: block"], #step-3.active', timeout=10000)
+                    self.page.wait_for_function("""
+                        () => {
+                            const step3 = document.getElementById('step-3');
+                            return step3 && (
+                                getComputedStyle(step3).display !== 'none' ||
+                                step3.classList.contains('active') ||
+                                step3.style.display === 'block'
+                            );
+                        }
+                    """, timeout=10000)
                     time.sleep(1)
                     print("✅ Step 2 completed, Step 3 now visible")
                 except Exception as e:
@@ -887,7 +906,16 @@ class ComprehensiveTestSuite:
                 
                 # Wait for step transition to complete
                 try:
-                    self.page.wait_for_selector('#step-4[style*="display: block"], #step-4.active', timeout=10000)
+                    self.page.wait_for_function("""
+                        () => {
+                            const step4 = document.getElementById('step-4');
+                            return step4 && (
+                                getComputedStyle(step4).display !== 'none' ||
+                                step4.classList.contains('active') ||
+                                step4.style.display === 'block'
+                            );
+                        }
+                    """, timeout=10000)
                     time.sleep(1)
                     print("✅ Step 3 completed, Step 4 now visible")
                 except Exception as e:
@@ -914,7 +942,16 @@ class ComprehensiveTestSuite:
                 
                 # Wait for step transition to complete
                 try:
-                    self.page.wait_for_selector('#step-5[style*="display: block"], #step-5.active', timeout=10000)
+                    self.page.wait_for_function("""
+                        () => {
+                            const step5 = document.getElementById('step-5');
+                            return step5 && (
+                                getComputedStyle(step5).display !== 'none' ||
+                                step5.classList.contains('active') ||
+                                step5.style.display === 'block'
+                            );
+                        }
+                    """, timeout=10000)
                     time.sleep(1)
                     print("✅ Step 4 completed, Step 5 now visible")
                 except Exception as e:
