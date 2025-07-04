@@ -1057,22 +1057,18 @@ async def submit_loi_request(request: dict):
             logger.info(f"📧 Sending signature email to: {customer_email}")
             logger.info(f"🔗 Signature URL: {signature_url}")
             
-            # Only send to safe test email for now
-            if customer_email == 'matt.mizell@gmail.com':
-                email_sent = send_loi_signature_email(
-                    customer_email=customer_email,
-                    customer_name=customer_name,
-                    company_name=company_name,
-                    transaction_id=transaction_id,
-                    loi_type=loi_display_name
-                )
-                if email_sent:
-                    logger.info(f"✅ Email successfully sent to {customer_email}")
-                else:
-                    logger.error(f"❌ Failed to send email to {customer_email}")
+            # Send email to any provided address
+            email_sent = send_loi_signature_email(
+                customer_email=customer_email,
+                customer_name=customer_name,
+                company_name=company_name,
+                transaction_id=transaction_id,
+                loi_type=loi_display_name
+            )
+            if email_sent:
+                logger.info(f"✅ Email successfully sent to {customer_email}")
             else:
-                logger.warning(f"⚠️ Email sending restricted to test address only. Provided: {customer_email}")
-                logger.info("🛡️ For safety, only matt.mizell@gmail.com (Gas O' Matt) is allowed for testing")
+                logger.error(f"❌ Failed to send email to {customer_email}")
         else:
             logger.warning("⚠️ No customer email provided in LOI request")
         
@@ -1083,7 +1079,7 @@ async def submit_loi_request(request: dict):
             'signature_url': signature_url,
             'customer_email': customer_email,
             'email_sent': email_sent,
-            'email_status': 'sent' if email_sent else ('restricted' if customer_email and customer_email != 'matt.mizell@gmail.com' else 'failed'),
+            'email_status': 'sent' if email_sent else 'failed',
             'estimated_completion_time': '24-48 hours',
             'submitted_at': datetime.now().isoformat(),
             'next_step': 'customer_signature_email_sent' if email_sent else 'email_sending_failed'
