@@ -1214,23 +1214,32 @@ class ComprehensiveTestSuite:
             self.page.goto(f"{BASE_URL}/eft_form.html")
             self.page.wait_for_load_state('networkidle')
             
-            # Fill EFT customer completion form
+            # Fill ALL EFT customer form fields based on actual form IDs and database schema
+            print("📝 Filling all EFT form fields...")
             fields_success = all([
-                # Company information (may be pre-filled)
+                # Company information
                 self.safe_fill('#company-name', TEST_DATA["company"], test_name),
-                self.safe_fill('#customer-email', TEST_DATA["email"], test_name),
+                # Skip #customer-id as it's readonly
                 
-                # Bank account details  
+                # Bank information
                 self.safe_fill('#bank-name', TEST_DATA["bank_name"], test_name),
-                self.safe_fill('#account-holder-name', TEST_DATA["contact"], test_name),
                 self.safe_select('#account-type', "checking", test_name),
+                self.safe_fill('#bank-address', TEST_DATA["address"], test_name),
+                self.safe_fill('#bank-city', TEST_DATA["city"], test_name),
+                self.safe_fill('#bank-state', TEST_DATA["state"], test_name),
+                self.safe_fill('#bank-zip', TEST_DATA["zip"], test_name),
+                
+                # Account details
+                self.safe_fill('#account-holder', TEST_DATA["contact"], test_name),  # Correct ID
                 self.safe_fill('#routing-number', TEST_DATA["routing"], test_name),
                 self.safe_fill('#account-number', TEST_DATA["account"], test_name),
                 
                 # Authorization details
-                self.safe_fill('#authorization-amount', "50000", test_name),
-                self.safe_select('#frequency', "Monthly", test_name)
+                self.safe_fill('#authorized-name', TEST_DATA["contact"], test_name),
+                self.safe_fill('#authorized-title', "General Manager", test_name)
             ])
+            
+            print(f"📋 Form fields filled: {'✅' if fields_success else '❌'}")
             
             if not fields_success:
                 self.test_results[test_name] = "FAILED - Form filling"
@@ -1269,11 +1278,29 @@ class ComprehensiveTestSuite:
                 self.log_issue(test_name, "Frontend", "Signature pad not visible")
                 
             # Submit EFT form
-            self.safe_click('#submit-eft', test_name)
+            self.safe_click('#submit-btn', test_name)
             time.sleep(5)
             
-            # Check for success
+            # Check for success - check URL redirect like Customer Setup Completion
             try:
+                print("🔍 Looking for EFT success response...")
+                
+                # Wait a moment for potential redirect
+                time.sleep(2)
+                current_url = self.page.url
+                print(f"Current URL: {current_url}")
+                
+                # Check if redirected to completion page
+                if "/forms/eft/complete/" in current_url:
+                    print(f"✅ EFT Customer Completion successful via URL redirect!")
+                    self.test_results[test_name] = "PASSED"
+                    
+                    # Verify in database
+                    self.check_database_record("eft_form_data", {"customer_email": TEST_DATA["email"]}, test_name)
+                    self.check_database_record("electronic_signatures", {"transaction_id": eft_transaction_id}, test_name)
+                    return
+                
+                # Otherwise check for DOM success elements
                 success_alert = self.page.locator('.alert-success')
                 if success_alert.is_visible():
                     success_text = success_alert.text_content()
@@ -1283,7 +1310,6 @@ class ComprehensiveTestSuite:
                     # Verify in database
                     self.check_database_record("eft_form_data", {"customer_email": TEST_DATA["email"]}, test_name)
                     self.check_database_record("electronic_signatures", {"transaction_id": eft_transaction_id}, test_name)
-                    
                 else:
                     self.log_issue(test_name, "Frontend", "No success message after EFT completion")
                     self.test_results[test_name] = "FAILED - No success response"
