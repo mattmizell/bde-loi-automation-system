@@ -1055,7 +1055,7 @@ async def get_signature_page(transaction_id: str):
             logger.info("✅ Connected to local database for signature page")
         
         cur = conn.cursor()
-        cur.execute("SELECT company_name, contact_name, loi_data FROM loi_transactions WHERE transaction_id = %s", (transaction_id,))
+        cur.execute("SELECT company_name, contact_name, loi_data FROM loi_transactions WHERE id = %s", (transaction_id,))
         result = cur.fetchone()
         conn.close()
         
@@ -1149,7 +1149,7 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
         conn = psycopg2.connect(database_url)
         
         cur = conn.cursor()
-        cur.execute("SELECT company_name, contact_name, email, loi_data FROM loi_transactions WHERE transaction_id = %s", (transaction_id,))
+        cur.execute("SELECT company_name, contact_name, email, loi_data FROM loi_transactions WHERE id = %s", (transaction_id,))
         result = cur.fetchone()
         
         if not result:
@@ -1246,7 +1246,7 @@ async def submit_signature(transaction_id: str, signature_data: dict, request: R
         cur.execute("""
             UPDATE loi_transactions 
             SET signature_data = %s, signed_at = %s, status = %s
-            WHERE transaction_id = %s
+            WHERE id = %s
         """, (
             verification_code,  # Store verification code instead of raw image
             datetime.now(),
@@ -1673,7 +1673,7 @@ async def cancel_transaction(transaction_id: str):
                     SELECT lt.status, c.company_name, c.contact_name, c.email, lt.transaction_type
                     FROM loi_transactions lt
                     JOIN customers c ON lt.customer_id = c.id
-                    WHERE lt.transaction_id = %s
+                    WHERE lt.id = %s
                 """, (transaction_id,))
                 
                 result = cur.fetchone()
@@ -1698,7 +1698,7 @@ async def cancel_transaction(transaction_id: str):
                 cur.execute("""
                     UPDATE loi_transactions 
                     SET status = 'CANCELLED', completed_at = %s
-                    WHERE transaction_id = %s
+                    WHERE id = %s
                 """, (datetime.now(), transaction_id))
                 
                 conn.commit()
@@ -1814,7 +1814,7 @@ async def get_loi_document(transaction_id: str):
         cur.execute("""
             SELECT company_name, contact_name, email, loi_data, signature_data, signed_at, status, created_at
             FROM loi_transactions 
-            WHERE transaction_id = %s
+            WHERE id = %s
         """, (transaction_id,))
         
         result = cur.fetchone()
