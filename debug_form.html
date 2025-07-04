@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Form Submission</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .debug { background: #f8f9fa; padding: 15px; margin: 20px 0; border: 1px solid #dee2e6; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Debug Customer Setup Form</h1>
+    
+    <div class="debug">
+        <h3>Debug Output</h3>
+        <div id="debug-output"></div>
+    </div>
+    
+    <form id="debug-form">
+        <div class="form-group">
+            <label for="legal_business_name">Legal Business Name *</label>
+            <input type="text" id="legal_business_name" name="legal_business_name" value="Test Company LLC" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="business_type">Business Type *</label>
+            <select id="business_type" name="business_type" required>
+                <option value="">Select Business Type</option>
+                <option value="corporation">Corporation</option>
+                <option value="llc" selected>LLC</option>
+                <option value="partnership">Partnership</option>
+                <option value="sole_proprietor">Sole Proprietor</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="years_in_business">Years in Business</label>
+            <input type="number" id="years_in_business" name="years_in_business" value="5" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="federal_tax_id">Federal Tax ID (EIN) *</label>
+            <input type="text" id="federal_tax_id" name="federal_tax_id" value="12-3456789" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="physical_address">Physical Address *</label>
+            <input type="text" id="physical_address" name="physical_address" value="123 Main Street" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="physical_city">City</label>
+            <input type="text" id="physical_city" name="physical_city" value="Anytown">
+        </div>
+        
+        <div class="form-group">
+            <label for="physical_state">State</label>
+            <input type="text" id="physical_state" name="physical_state" value="NY">
+        </div>
+        
+        <div class="form-group">
+            <label for="physical_zip">ZIP Code</label>
+            <input type="text" id="physical_zip" name="physical_zip" value="12345">
+        </div>
+        
+        <div class="form-group">
+            <label for="primary_contact_name">Primary Contact Name *</label>
+            <input type="text" id="primary_contact_name" name="primary_contact_name" value="John Doe" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="primary_contact_title">Primary Contact Title</label>
+            <input type="text" id="primary_contact_title" name="primary_contact_title" value="Manager">
+        </div>
+        
+        <div class="form-group">
+            <label for="primary_contact_phone">Primary Contact Phone *</label>
+            <input type="tel" id="primary_contact_phone" name="primary_contact_phone" value="555-123-4567" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="primary_contact_email">Primary Contact Email *</label>
+            <input type="email" id="primary_contact_email" name="primary_contact_email" value="john@testcompany.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="annual_fuel_volume">Annual Fuel Volume (gallons)</label>
+            <input type="number" id="annual_fuel_volume" name="annual_fuel_volume" value="100000" min="0">
+        </div>
+        
+        <div class="form-group">
+            <label for="number_of_locations">Number of Locations</label>
+            <input type="number" id="number_of_locations" name="number_of_locations" value="1" min="1">
+        </div>
+        
+        <button type="submit">Submit Form</button>
+    </form>
+    
+    <script>
+        const form = document.getElementById('debug-form');
+        const debugOutput = document.getElementById('debug-output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            debugOutput.appendChild(div);
+            console.log(message);
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Clear previous debug output
+            debugOutput.innerHTML = '';
+            
+            log('Form submission started...');
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+            
+            log('Form data collected:');
+            log(JSON.stringify(data, null, 2));
+            
+            try {
+                log('Submitting to API...');
+                const response = await fetch('/api/v1/forms/customer-setup/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                log(`Response status: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    log('SUCCESS: ' + JSON.stringify(result, null, 2), 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`ERROR: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log('NETWORK ERROR: ' + error.message, 'error');
+            }
+        });
+        
+        log('Debug form loaded. Fill out the form and click submit to test the API.');
+    </script>
+</body>
+</html>

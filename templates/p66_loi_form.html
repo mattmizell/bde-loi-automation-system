@@ -173,54 +173,6 @@
             border-top: 2px solid #4caf50;
         }
         
-        .signature-section {
-            margin-top: 40px;
-            padding: 30px;
-            background: #fee;
-            border-radius: 8px;
-            border: 1px solid #fcc;
-        }
-        
-        .signature-pad-container {
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            margin: 20px 0;
-            background: white;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .signature-pad {
-            display: block;
-            width: 100%;
-            height: 200px;
-            cursor: crosshair;
-            touch-action: none;
-        }
-        
-        .signature-placeholder {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #adb5bd;
-            font-style: italic;
-            pointer-events: none;
-            font-size: 18px;
-        }
-        
-        .signature-placeholder.hidden {
-            display: none;
-        }
-        
-        .signature-controls {
-            padding: 15px;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
         
         .btn {
             padding: 12px 24px;
@@ -681,9 +633,11 @@
                     </div>
                 </div>
                 
-                <!-- Authorization -->
+                <!-- Customer Contact Information -->
                 <div class="form-section">
-                    <h3>✍️ Authorization</h3>
+                    <h3>📧 Customer Contact Information</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Enter the customer's contact information for LOI signature routing:</p>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label for="representative-name">Authorized Representative Name <span class="required">*</span></label>
@@ -697,34 +651,39 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="contact-email">Email Address <span class="required">*</span></label>
-                            <input type="email" id="contact-email" name="email" required placeholder="Enter email address for signature link">
+                            <label for="contact-email">Customer Email Address <span class="required">*</span></label>
+                            <input type="email" id="contact-email" name="email" required placeholder="Customer will receive signature link at this email">
                         </div>
                         <div class="form-group">
-                            <label for="contact-phone">Phone Number</label>
+                            <label for="contact-phone">Customer Phone Number</label>
                             <input type="tel" id="contact-phone" name="phone" placeholder="(555) 123-4567">
                         </div>
                     </div>
                     
-                    <div class="legal-notice">
-                        <h4>Letter of Intent Agreement</h4>
-                        <p>By signing below, I certify that:</p>
-                        <ul style="margin-top: 10px; margin-left: 20px;">
-                            <li>I have the authority to enter into this Letter of Intent on behalf of the station</li>
-                            <li>All information provided is accurate and complete</li>
-                            <li>I understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
-                            <li>I agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
-                            <li>I understand that final terms and incentives are subject to Phillips 66 approval</li>
-                        </ul>
+                    <!-- Customer Signature Process Info -->
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <span class="alert-icon">📧</span>
+                        <div class="alert-content">
+                            <strong>Customer Signature Process</strong>
+                            Upon submission, the customer will receive an email with:
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>A secure link to review the Phillips 66 LOI details</li>
+                                <li>Electronic signature capability</li>
+                                <li>30-day expiration for completion</li>
+                            </ul>
+                        </div>
                     </div>
                     
-                    <!-- Customer Information -->
-                    <div style="background: #ffebee; padding: 20px; border-radius: 8px; border: 1px solid #f44336;">
-                        <h4 style="color: #d32f2f;">📧 Customer Signature Process</h4>
-                        <p style="color: #d32f2f; margin-top: 10px;">
-                            After submitting this LOI, the customer will receive an email with a secure signature link. 
-                            No signature required from sales rep.
-                        </p>
+                    <div class="legal-notice">
+                        <h4>Letter of Intent Terms</h4>
+                        <p>The customer's electronic signature will certify that:</p>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>They have the authority to enter into this Letter of Intent on behalf of the station</li>
+                            <li>All information provided is accurate and complete</li>
+                            <li>They understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
+                            <li>They agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
+                            <li>They understand that final terms and incentives are subject to Phillips 66 approval</li>
+                        </ul>
                     </div>
                 </div>
                 
@@ -898,108 +857,10 @@
             document.getElementById('total-incentives-requested').value = total;
         }
         
-        // Signature pad functionality
-        const canvas = document.getElementById('signature-pad');
-        const ctx = canvas.getContext('2d');
-        const placeholder = document.getElementById('signature-placeholder');
-        const clearButton = document.getElementById('clear-signature');
+        // Form references
         const submitButton = document.getElementById('submit-btn');
-        const signatureStatus = document.getElementById('signature-status');
         const form = document.getElementById('p66-loi-form');
         const loading = document.getElementById('loading');
-        
-        let isDrawing = false;
-        let hasSignature = false;
-        
-        // Canvas setup
-        function setupCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            return { scaleX, scaleY };
-        }
-        
-        const { scaleX, scaleY } = setupCanvas();
-        
-        // Mouse events
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        
-        // Touch events for mobile
-        canvas.addEventListener('touchstart', handleTouch);
-        canvas.addEventListener('touchmove', handleTouch);
-        canvas.addEventListener('touchend', stopDrawing);
-        
-        function startDrawing(e) {
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            
-            if (!hasSignature) {
-                placeholder.classList.add('hidden');
-                hasSignature = true;
-                updateSignatureStatus();
-            }
-        }
-        
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-        
-        function stopDrawing() {
-            if (isDrawing) {
-                isDrawing = false;
-                ctx.beginPath();
-            }
-        }
-        
-        function handleTouch(e) {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
-                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        }
-        
-        function clearSignature() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            hasSignature = false;
-            placeholder.classList.remove('hidden');
-            updateSignatureStatus();
-        }
-        
-        function updateSignatureStatus() {
-            if (hasSignature) {
-                signatureStatus.textContent = 'Signature captured ✓';
-                signatureStatus.style.color = '#28a745';
-                checkFormValidity();
-            } else {
-                signatureStatus.textContent = 'Signature required';
-                signatureStatus.style.color = '#6c757d';
-                submitButton.disabled = true;
-            }
-        }
         
         function checkFormValidity() {
             const requiredFields = form.querySelectorAll('[required]');
@@ -1015,17 +876,12 @@
         }
         
         // Event listeners
-        clearButton.addEventListener('click', clearSignature);
         form.addEventListener('input', checkFormValidity);
         
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!hasSignature) {
-                alert('Please provide your signature before submitting.');
-                return;
-            }
             
             // Hide any previous messages and show loading
             hideMessages();
@@ -1042,9 +898,7 @@
             data.tank_replacement = formData.get('tank_replacement') === 'true';
             data.pos_upgrade = formData.get('pos_upgrade') === 'true';
             
-            // Add signature data
-            data.signature_data = canvas.toDataURL('image/png');
-            data.signature_date = new Date().toISOString();
+            // No signature data needed - customer will sign via email link
             
             // Calculate totals
             calculateTotal();
@@ -1057,7 +911,12 @@
                 data.loi_type = 'phillips_66';
                 data.fuel_brand = 'Phillips 66';
                 
-                // Submit to sophisticated LOI workflow
+                // Add company name from station name if not set
+                if (!data.company_name) {
+                    data.company_name = data.station_name;
+                }
+                
+                // Submit to sophisticated LOI workflow (routes for customer signature)
                 const response = await fetch('/api/v1/loi/submit', {
                     method: 'POST',
                     headers: {
@@ -1077,7 +936,7 @@
                     setTimeout(() => {
                         form.reset();
                         form.style.display = 'block';
-                        clearSignature();
+                        checkFormValidity();
                     }, 3000);
                     
                 } else {
@@ -1119,10 +978,6 @@
                 data[key] = value;
             }
             
-            if (hasSignature) {
-                data.signature_data = canvas.toDataURL('image/png');
-            }
-            
             localStorage.setItem('p66_loi_draft', JSON.stringify(data));
             alert('Draft saved successfully!');
         }
@@ -1143,17 +998,6 @@
                     }
                 });
                 
-                if (data.signature_data) {
-                    // Load signature from draft
-                    const img = new Image();
-                    img.onload = function() {
-                        ctx.drawImage(img, 0, 0);
-                        hasSignature = true;
-                        placeholder.classList.add('hidden');
-                        updateSignatureStatus();
-                    };
-                    img.src = data.signature_data;
-                }
                 
                 // Recalculate totals
                 calculateTotal();
