@@ -859,7 +859,8 @@ class ComprehensiveTestSuite:
                 self.safe_fill('#physical-zip', TEST_DATA["zip"], test_name),
                 self.safe_fill('#annual-fuel-volume', "600000", test_name),
                 self.safe_fill('#number-of-locations', "1", test_name),
-                self.safe_fill('#dispenser-count', "8", test_name)
+                self.safe_fill('#dispenser-count', "8", test_name),
+                self.safe_fill('#current-fuel-brands', "Shell, Mobil, Unbranded", test_name)
             ])
             
             # Check "same as physical address"
@@ -895,8 +896,137 @@ class ComprehensiveTestSuite:
                 self.test_results[test_name] = "FAILED - Step 4"
                 return
                 
-            # Step 5: Authorization (no signature required)
+            # Step 5: Authorization 
             print("📝 Step 5: Authorization")
+            
+            # Fill authorization fields
+            try:
+                self.page.fill('#authorized-signer-name', TEST_DATA["contact"])
+                self.page.fill('#authorized-signer-title', "General Manager")
+                print("✅ Authorization fields filled")
+            except Exception as e:
+                self.log_issue(test_name, "Frontend", f"Failed to fill authorization fields: {str(e)}")
+            
+            # Draw signature on canvas using JavaScript
+            try:
+                print("🖊️ Drawing signature...")
+                
+                # Wait for canvas to be visible
+                self.page.wait_for_selector('#signature-canvas', state='visible', timeout=5000)
+                
+                # Use JavaScript to draw on the canvas directly
+                signature_script = """
+                () => {
+                    const canvas = document.getElementById('signature-canvas');
+                    if (!canvas) return {error: 'Canvas not found'};
+                    
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return {error: 'Context not available'};
+                    
+                    // Clear any existing drawing
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Set up drawing style
+                    ctx.strokeStyle = '#000066';
+                    ctx.lineWidth = 3;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    // Draw a more complex signature "Claude Test Manager"
+                    ctx.beginPath();
+                    
+                    // Draw "C" 
+                    ctx.moveTo(50, 120);
+                    ctx.quadraticCurveTo(30, 100, 50, 80);
+                    ctx.quadraticCurveTo(70, 90, 60, 100);
+                    
+                    // Draw "l"
+                    ctx.moveTo(80, 75);
+                    ctx.lineTo(85, 120);
+                    
+                    // Draw "a"
+                    ctx.moveTo(95, 105);
+                    ctx.quadraticCurveTo(105, 95, 115, 105);
+                    ctx.quadraticCurveTo(110, 115, 95, 115);
+                    ctx.lineTo(115, 115);
+                    
+                    // Draw "u"
+                    ctx.moveTo(125, 95);
+                    ctx.lineTo(125, 110);
+                    ctx.quadraticCurveTo(130, 120, 140, 110);
+                    ctx.lineTo(140, 95);
+                    
+                    // Draw "d"
+                    ctx.moveTo(150, 75);
+                    ctx.lineTo(150, 120);
+                    ctx.moveTo(150, 100);
+                    ctx.quadraticCurveTo(165, 95, 165, 110);
+                    ctx.quadraticCurveTo(165, 120, 150, 115);
+                    
+                    // Draw "e" 
+                    ctx.moveTo(175, 105);
+                    ctx.quadraticCurveTo(185, 95, 195, 105);
+                    ctx.quadraticCurveTo(190, 115, 175, 115);
+                    ctx.lineTo(190, 100);
+                    
+                    // Space and "Test"
+                    // Draw "T"
+                    ctx.moveTo(210, 80);
+                    ctx.lineTo(240, 80);
+                    ctx.moveTo(225, 80);
+                    ctx.lineTo(225, 115);
+                    
+                    // Draw "e"
+                    ctx.moveTo(250, 105);
+                    ctx.quadraticCurveTo(260, 95, 270, 105);
+                    ctx.quadraticCurveTo(265, 115, 250, 115);
+                    ctx.lineTo(265, 100);
+                    
+                    // Draw "s"
+                    ctx.moveTo(280, 110);
+                    ctx.quadraticCurveTo(275, 100, 285, 95);
+                    ctx.quadraticCurveTo(295, 100, 290, 110);
+                    ctx.quadraticCurveTo(295, 120, 285, 115);
+                    
+                    // Draw "t"
+                    ctx.moveTo(305, 85);
+                    ctx.lineTo(305, 115);
+                    ctx.moveTo(300, 95);
+                    ctx.lineTo(310, 95);
+                    
+                    ctx.stroke();
+                    
+                    // Add a small flourish
+                    ctx.beginPath();
+                    ctx.moveTo(320, 115);
+                    ctx.quadraticCurveTo(340, 105, 360, 120);
+                    ctx.quadraticCurveTo(350, 130, 330, 125);
+                    ctx.stroke();
+                    
+                    // Update the signature data fields
+                    const dataURL = canvas.toDataURL('image/png');
+                    document.getElementById('signature-data').value = dataURL;
+                    document.getElementById('signature-date').value = new Date().toISOString();
+                    
+                    return {
+                        dataLength: dataURL.length,
+                        hasData: dataURL.length > 1000,
+                        canvasSize: {width: canvas.width, height: canvas.height}
+                    };
+                }
+                """
+                
+                result = self.page.evaluate(signature_script)
+                print(f"✅ Signature drawn successfully (data length: {result['dataLength']})")
+                
+                if result['hasData']:
+                    print("✅ Signature data captured")
+                else:
+                    print("⚠️ Signature data not captured properly")
+                    
+            except Exception as e:
+                self.log_issue(test_name, "Frontend", f"Failed to draw signature: {str(e)}")
+                print(f"❌ Signature error: {str(e)}")
             
             # Submit final form
             self.safe_click('#submit-btn', test_name)
