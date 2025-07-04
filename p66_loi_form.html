@@ -173,54 +173,6 @@
             border-top: 2px solid #4caf50;
         }
         
-        .signature-section {
-            margin-top: 40px;
-            padding: 30px;
-            background: #fee;
-            border-radius: 8px;
-            border: 1px solid #fcc;
-        }
-        
-        .signature-pad-container {
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            margin: 20px 0;
-            background: white;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .signature-pad {
-            display: block;
-            width: 100%;
-            height: 200px;
-            cursor: crosshair;
-            touch-action: none;
-        }
-        
-        .signature-placeholder {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #adb5bd;
-            font-style: italic;
-            pointer-events: none;
-            font-size: 18px;
-        }
-        
-        .signature-placeholder.hidden {
-            display: none;
-        }
-        
-        .signature-controls {
-            padding: 15px;
-            background: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
         
         .btn {
             padding: 12px 24px;
@@ -282,23 +234,64 @@
         
         .alert {
             padding: 15px 20px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
         }
         
         .alert-info {
             background: #cfe2ff;
-            border: 1px solid #b6d4fe;
+            border-color: #b6d4fe;
             color: #084298;
         }
         
         .alert-warning {
             background: #fff3cd;
-            border: 1px solid #ffecb5;
+            border-color: #ffecb5;
             color: #664d03;
+        }
+        
+        .alert-success {
+            background: #d1edcc;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+        
+        .alert-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        
+        .alert-content {
+            flex: 1;
+        }
+        
+        .alert-content strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 16px;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .legal-notice {
@@ -343,107 +336,71 @@
             margin-bottom: 10px;
         }
         
-        .crm-search-section {
-            background: #f8f9fa;
+        .crm-search {
+            background: #ffebee;
             padding: 25px;
+            border-bottom: 1px solid #e9ecef;
             border-radius: 8px;
-            margin-bottom: 25px;
-            border: 2px solid #28a745;
+            margin-bottom: 20px;
+            border: 1px solid #f44336;
         }
         
         .search-box {
-            position: relative;
+            display: flex;
+            gap: 10px;
             margin-bottom: 15px;
         }
         
-        .search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ced4da;
-            border-top: none;
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-        
-        .search-result {
+        .search-input {
+            flex: 1;
             padding: 12px;
-            border-bottom: 1px solid #e9ecef;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
         }
         
-        .search-result:hover {
-            background: #f8f9fa;
+        .search-input:focus {
+            outline: none;
+            border-color: #cc0000;
         }
         
-        .search-result:last-child {
-            border-bottom: none;
-        }
-        
-        .search-result-name {
-            font-weight: 600;
-            color: #1f4e79;
-        }
-        
-        .search-result-company {
-            color: #495057;
-            font-size: 14px;
-        }
-        
-        .search-result-email {
-            color: #6c757d;
-            font-size: 13px;
-        }
-        
-        .crm-status {
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .crm-status.found {
-            background: #d1e7dd;
-            color: #0f5132;
-            border: 1px solid #badbcc;
-            display: block;
-        }
-        
-        .crm-status.loading {
-            background: #fff3cd;
-            color: #664d03;
-            border: 1px solid #ffecb5;
-            display: block;
-        }
-        
-        .crm-status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-        
-        .clear-crm-btn {
-            background: #6c757d;
+        .search-btn {
+            padding: 12px 24px;
+            background: #cc0000;
             color: white;
             border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
+            border-radius: 6px;
             cursor: pointer;
-            margin-left: 10px;
+            font-weight: bold;
+            transition: background 0.3s ease;
         }
         
-        .clear-crm-btn:hover {
-            background: #5a6268;
+        .search-btn:hover {
+            background: #990000;
         }
-
+        
+        .search-results {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .customer-result {
+            background: white;
+            padding: 15px;
+            margin: 5px 0;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .customer-result:hover {
+            background: #f8f9fa;
+            border-color: #cc0000;
+            transform: translateY(-1px);
+        }
+        
         @media (max-width: 768px) {
             .form-content {
                 padding: 20px;
@@ -467,29 +424,46 @@
         </div>
         
         <div class="form-content">
+            <!-- CRM Customer Search -->
+            <div class="crm-search">
+                <h3 style="color: #cc0000; margin-bottom: 15px;">🔍 Search Existing Customers</h3>
+                <p style="margin-bottom: 15px; color: #666;">Search for existing customers in our CRM to auto-fill information:</p>
+                
+                <div class="search-box">
+                    <input type="text" id="crm-search-input" class="search-input" 
+                           placeholder="Search by company name, contact name, or email..." 
+                           onkeypress="if(event.key==='Enter') searchCRM()">
+                    <button type="button" class="search-btn" onclick="searchCRM()">
+                        🔍 Search CRM
+                    </button>
+                </div>
+                
+                <div id="search-results" class="search-results" style="display: none;"></div>
+            </div>
+            
             <div class="alert alert-info">
                 <span>ℹ️</span>
                 <span>This Letter of Intent begins the process for establishing a Phillips 66 branded fuel supply agreement with Better Day Energy.</span>
             </div>
             
-            <form id="p66-loi-form">
-                <!-- CRM Search Section -->
-                <div class="crm-search-section">
-                    <h3>🔍 Search CRM Database</h3>
-                    <p style="margin-bottom: 15px; color: #495057;">Search our 2,500+ customer database to auto-populate form fields</p>
-                    
-                    <div class="search-box">
-                        <label for="crm-search">Search by Company Name, Contact Name, or Email</label>
-                        <div style="display: flex; gap: 10px; margin-top: 8px;">
-                            <input type="text" id="crm-search" placeholder="Type to search CRM..." autocomplete="off" style="flex: 1;">
-                            <button type="button" class="btn btn-primary" onclick="performManualCRMSearch()" style="padding: 12px 20px;">🔍 Search</button>
-                        </div>
-                        <div class="search-results" id="search-results"></div>
-                    </div>
-                    
-                    <div class="crm-status" id="crm-status"></div>
+            <!-- Success/Error Messages -->
+            <div id="success-message" class="alert alert-success" style="display: none;">
+                <span class="alert-icon">✅</span>
+                <div class="alert-content">
+                    <strong>Success!</strong>
+                    <span id="success-text">Phillips 66 LOI submitted successfully!</span>
                 </div>
-
+            </div>
+            
+            <div id="error-message" class="alert alert-error" style="display: none;">
+                <span class="alert-icon">❌</span>
+                <div class="alert-content">
+                    <strong>Error:</strong>
+                    <span id="error-text">Failed to submit form. Please try again.</span>
+                </div>
+            </div>
+            
+            <form id="p66-loi-form">
                 <!-- Station Information -->
                 <div class="form-section">
                     <h3>⛽ Station Information</h3>
@@ -659,9 +633,11 @@
                     </div>
                 </div>
                 
-                <!-- Authorization -->
+                <!-- Customer Contact Information -->
                 <div class="form-section">
-                    <h3>✍️ Authorization</h3>
+                    <h3>📧 Customer Contact Information</h3>
+                    <p style="margin-bottom: 20px; color: #666;">Enter the customer's contact information for LOI signature routing:</p>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label for="representative-name">Authorized Representative Name <span class="required">*</span></label>
@@ -673,38 +649,41 @@
                         </div>
                     </div>
                     
-                    <div class="legal-notice">
-                        <h4>Letter of Intent Agreement</h4>
-                        <p>By signing below, I certify that:</p>
-                        <ul style="margin-top: 10px; margin-left: 20px;">
-                            <li>I have the authority to enter into this Letter of Intent on behalf of the station</li>
-                            <li>All information provided is accurate and complete</li>
-                            <li>I understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
-                            <li>I agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
-                            <li>I understand that final terms and incentives are subject to Phillips 66 approval</li>
-                        </ul>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="contact-email">Customer Email Address <span class="required">*</span></label>
+                            <input type="email" id="contact-email" name="email" required placeholder="Customer will receive signature link at this email">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-phone">Customer Phone Number</label>
+                            <input type="tel" id="contact-phone" name="phone" placeholder="(555) 123-4567">
+                        </div>
                     </div>
                     
-                    <!-- Signature Section -->
-                    <div class="signature-section">
-                        <h4>Electronic Signature Required</h4>
-                        <p>Please sign below to submit your Letter of Intent:</p>
-                        
-                        <div class="signature-pad-container">
-                            <canvas id="signature-pad" class="signature-pad" width="820" height="200"></canvas>
-                            <div id="signature-placeholder" class="signature-placeholder">
-                                Sign here with your mouse or touch device
-                            </div>
-                            
-                            <div class="signature-controls">
-                                <button type="button" id="clear-signature" class="btn btn-secondary">
-                                    🗑️ Clear Signature
-                                </button>
-                                <span id="signature-status" style="color: #6c757d; font-style: italic;">
-                                    Signature required
-                                </span>
-                            </div>
+                    <!-- Customer Signature Process Info -->
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <span class="alert-icon">📧</span>
+                        <div class="alert-content">
+                            <strong>Customer Signature Process</strong>
+                            Upon submission, the customer will receive an email with:
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>A secure link to review the Phillips 66 LOI details</li>
+                                <li>Electronic signature capability</li>
+                                <li>30-day expiration for completion</li>
+                            </ul>
                         </div>
+                    </div>
+                    
+                    <div class="legal-notice">
+                        <h4>Letter of Intent Terms</h4>
+                        <p>The customer's electronic signature will certify that:</p>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>They have the authority to enter into this Letter of Intent on behalf of the station</li>
+                            <li>All information provided is accurate and complete</li>
+                            <li>They understand this Letter of Intent is non-binding and subject to final contract negotiation</li>
+                            <li>They agree to work in good faith with Better Day Energy toward a Phillips 66 branded fuel supply agreement</li>
+                            <li>They understand that final terms and incentives are subject to Phillips 66 approval</li>
+                        </ul>
                     </div>
                 </div>
                 
@@ -713,8 +692,8 @@
                     <button type="button" class="btn btn-secondary" onclick="saveDraft()">
                         💾 Save Draft
                     </button>
-                    <button type="submit" id="submit-btn" class="btn btn-success" disabled>
-                        ✅ Submit Letter of Intent
+                    <button type="submit" id="submit-btn" class="btn btn-success">
+                        📧 Route for Customer Signature
                     </button>
                 </div>
             </form>
@@ -727,232 +706,124 @@
         </div>
     </div>
     
-    <!-- Include CRM Search Component -->
-    <script src="crm_search_component.js"></script>
-    
     <script>
-        // Initialize CRM Search Component
-        let crmSearch;
-        
-        function initializeCRMSearch() {
-            // Field mappings for P66 LOI form
-            const fieldMappings = {
-                company_name: 'owner-company',
-                email: 'owner-email',
-                phone: 'owner-phone',
-                // Address fields for station location (can use same for business)
-                bank_address: 'station-address',
-                bank_city: 'business-city',
-                bank_state: 'business-state',
-                bank_zip: 'business-zip',
-                // Owner contact info
-                account_holder_name: 'owner-name'
-            };
-            
-            if (typeof CRMSearchComponent !== 'undefined') {
-                crmSearch = new CRMSearchComponent({
-                    searchInputId: 'crm-search',
-                    searchResultsId: 'search-results',
-                    statusId: 'crm-status',
-                    fieldMappings: fieldMappings
-                });
-                
-                crmSearch.onContactSelected = function(contact) {
-                    // For P66 LOI, we might want to populate station name with company name
-                    if (contact.company_name) {
-                        const stationNameField = document.getElementById('station-name');
-                        if (stationNameField && !stationNameField.value) {
-                            stationNameField.value = contact.company_name;
-                        }
-                    }
-                    
-                    console.log('✅ CRM Contact selected for P66 LOI:', contact.company_name);
-                };
-                
-                console.log('✅ CRM Search Component initialized for P66 LOI form');
-            } else {
-                console.warn('CRMSearchComponent not available, CRM search disabled');
-            }
-        }
-        
-        // Manual search function for button click
-        async function performManualCRMSearch() {
-            const searchInput = document.getElementById('crm-search');
-            const query = searchInput ? searchInput.value.trim() : '';
-            
-            if (!query) {
-                alert('Please enter a search term');
-                return;
-            }
+        // CRM Search Functions
+        async function searchCRM() {
+            const query = document.getElementById('crm-search-input').value.trim();
+            if (!query) return;
             
             const resultsDiv = document.getElementById('search-results');
-            const statusDiv = document.getElementById('crm-status');
+            resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">🔍 Searching CRM...</div>';
+            resultsDiv.style.display = 'block';
             
             try {
-                if (statusDiv) {
-                    statusDiv.className = 'crm-status loading';
-                    statusDiv.textContent = 'Searching CRM...';
-                    statusDiv.style.display = 'block';
-                }
-                
                 const response = await fetch('/api/v1/crm-bridge/contacts/search', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': 'Bearer bde_loi_auth_e6db5173a4393421ffadae85f9a3513e'
                     },
-                    body: JSON.stringify({ query: query, limit: 10 })
+                    body: JSON.stringify({
+                        query: query,
+                        limit: 10
+                    })
                 });
                 
-                const data = await response.json();
-                
-                if (response.ok && data.contacts) {
+                if (response.ok) {
+                    const data = await response.json();
                     displayCRMResults(data.contacts);
-                    if (statusDiv) statusDiv.style.display = 'none';
                 } else {
-                    if (resultsDiv) resultsDiv.style.display = 'none';
-                    if (statusDiv) {
-                        statusDiv.className = 'crm-status error';
-                        statusDiv.textContent = 'Search failed. Please try again.';
-                    }
+                    resultsDiv.innerHTML = '<div style="color: #dc3545; padding: 15px;">❌ CRM search unavailable</div>';
                 }
             } catch (error) {
                 console.error('CRM search error:', error);
-                if (resultsDiv) resultsDiv.style.display = 'none';
-                if (statusDiv) {
-                    statusDiv.className = 'crm-status error';
-                    statusDiv.textContent = 'Search error. Please try again.';
-                }
+                resultsDiv.innerHTML = '<div style="color: #dc3545; padding: 15px;">❌ Could not connect to CRM</div>';
             }
         }
-        
-        // Display search results
+
         function displayCRMResults(contacts) {
             const resultsDiv = document.getElementById('search-results');
-            if (!resultsDiv) return;
             
-            if (contacts.length === 0) {
-                resultsDiv.innerHTML = '<div class="search-result">No results found</div>';
-                resultsDiv.style.display = 'block';
+            if (!contacts || contacts.length === 0) {
+                resultsDiv.innerHTML = '<div style="color: #666; padding: 15px;">No existing customers found. Continue with new customer setup.</div>';
                 return;
             }
             
-            const resultsHtml = contacts.map(contact => `
-                <div class="search-result" onclick="selectCRMContact(${JSON.stringify(contact).replace(/"/g, '&quot;')})">
-                    <div class="search-result-name">${contact.name || 'No name'}</div>
-                    <div class="search-result-company">${contact.company_name || 'No company'}</div>
-                    <div class="search-result-email">${contact.email || 'No email'}</div>
-                </div>
-            `).join('');
+            let html = '<h5 style="color: #cc0000; margin-bottom: 10px;">Found Existing Customers:</h5>';
+            contacts.forEach((contact, index) => {
+                html += `
+                    <div class="customer-result" onclick="fillFromCRM(${JSON.stringify(contact).replace(/"/g, '&quot;')})">
+                        <strong>${contact.company_name || contact.name}</strong><br>
+                        <span style="color: #666;">${contact.name} • ${contact.email} • ${contact.phone}</span>
+                        ${contact.address ? '<br><span style="color: #999; font-size: 0.9em;">📍 Address available</span>' : ''}
+                    </div>
+                `;
+            });
             
-            resultsDiv.innerHTML = resultsHtml;
-            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = html;
         }
         
-        // Select contact
-        function selectCRMContact(contact) {
-            // Populate fields for P66 LOI form
-            setFieldValue('owner-company', contact.company_name);
-            setFieldValue('owner-email', contact.email);
-            setFieldValue('owner-phone', contact.phone);
-            setFieldValue('owner-name', contact.name);
+        function fillFromCRM(contact) {
+            // Fill Station Information
+            if (contact.company_name) document.getElementById('station-name').value = contact.company_name;
             
-            // For P66 LOI, we might want to populate station name with company name
-            if (contact.company_name) {
-                const stationNameField = document.getElementById('station-name');
-                if (stationNameField && !stationNameField.value) {
-                    stationNameField.value = contact.company_name;
-                }
-            }
+            // Fill Authorization section
+            if (contact.name) document.getElementById('representative-name').value = contact.name;
+            if (contact.email) document.getElementById('contact-email').value = contact.email;
+            if (contact.phone) document.getElementById('contact-phone').value = contact.phone;
             
-            // Parse and populate address with zip code extraction
+            // Handle address data (JSONB from CRM)
             if (contact.address) {
-                const addressParts = parseAddressWithZip(contact.address);
-                setFieldValue('station-address', addressParts.street);
-                setFieldValue('business-city', addressParts.city);
-                setFieldValue('business-state', addressParts.state);
-                setFieldValue('business-zip', addressParts.zip);
-            }
-            
-            hideSearchResults();
-            
-            const searchInput = document.getElementById('crm-search');
-            if (searchInput) {
-                searchInput.value = `${contact.company_name || 'Unknown'} - ${contact.name || 'No name'}`;
-            }
-            
-            const statusDiv = document.getElementById('crm-status');
-            if (statusDiv) {
-                statusDiv.className = 'crm-status found';
-                statusDiv.innerHTML = `✅ Found: ${contact.company_name} - ${contact.name} <button type="button" class="clear-crm-btn" onclick="clearCRMData()">Clear</button>`;
-                statusDiv.style.display = 'block';
-            }
-        }
-        
-        // Helper functions
-        function parseAddressWithZip(addressString) {
-            if (!addressString) return {};
-            
-            const cleanAddress = addressString.replace(/\n/g, ', ').replace(/\s+/g, ' ');
-            const parts = cleanAddress.split(',').map(part => part.trim());
-            
-            if (parts.length >= 3) {
-                const street = parts[0];
-                const city = parts[1];
-                const lastPart = parts[parts.length - 1];
-                const stateZipMatch = lastPart.match(/^([A-Z]{2})\s*,?\s*(\d{5}(-\d{4})?)$/i);
-                
-                if (stateZipMatch) {
-                    return { street, city, state: stateZipMatch[1], zip: stateZipMatch[2] };
-                } else {
-                    const zipMatch = lastPart.match(/(\d{5}(-\d{4})?)$/);
-                    if (zipMatch) {
-                        const zip = zipMatch[1];
-                        const state = lastPart.replace(zipMatch[0], '').trim().replace(/,$/, '');
-                        return { street, city, state, zip };
+                try {
+                    const addr = typeof contact.address === 'string' ? JSON.parse(contact.address) : contact.address;
+                    
+                    // Handle address fields based on CRM structure
+                    if (addr.street_address || addr.address_line_1) {
+                        document.getElementById('station-address').value = addr.street_address || addr.address_line_1;
+                    }
+                    if (addr.city) {
+                        document.getElementById('station-city').value = addr.city;
+                    }
+                    if (addr.state || addr.region) {
+                        document.getElementById('station-state').value = addr.state || addr.region;
+                    }
+                    if (addr.zip_code || addr.postal_code) {
+                        document.getElementById('station-zip').value = addr.zip_code || addr.postal_code;
+                    }
+                    
+                    console.log('📍 Address auto-filled from CRM:', addr);
+                } catch (e) {
+                    console.warn('⚠️ Could not parse address data:', contact.address);
+                    
+                    // Fallback: try simple string parsing
+                    if (typeof contact.address === 'string') {
+                        const addressParts = contact.address.split(',');
+                        if (addressParts.length >= 1) {
+                            document.getElementById('station-address').value = addressParts[0].trim();
+                        }
+                        if (addressParts.length >= 2) {
+                            document.getElementById('station-city').value = addressParts[1].trim();
+                        }
+                        if (addressParts.length >= 3) {
+                            const stateZip = addressParts[2].trim().split(' ');
+                            if (stateZip.length >= 1) {
+                                document.getElementById('station-state').value = stateZip[0];
+                            }
+                            if (stateZip.length >= 2) {
+                                document.getElementById('station-zip').value = stateZip[1];
+                            }
+                        }
                     }
                 }
             }
             
-            return { street: addressString };
-        }
-        
-        function setFieldValue(fieldId, value) {
-            if (!fieldId || !value) return;
-            const element = document.getElementById(fieldId);
-            if (element) element.value = value;
-        }
-        
-        function hideSearchResults() {
-            const resultsDiv = document.getElementById('search-results');
-            if (resultsDiv) resultsDiv.style.display = 'none';
-        }
-        
-        function clearCRMData() {
-            const searchInput = document.getElementById('crm-search');
-            const statusDiv = document.getElementById('crm-status');
+            // Hide search results
+            document.getElementById('search-results').style.display = 'none';
+            document.getElementById('crm-search-input').value = '';
             
-            if (searchInput) searchInput.value = '';
-            if (statusDiv) statusDiv.style.display = 'none';
-            
-            // Clear CRM-populated fields for P66 LOI
-            const fieldsToClear = ['owner-company', 'owner-email', 'owner-phone', 'owner-name', 'station-name', 'station-address', 'business-city', 'business-state', 'business-zip'];
-            fieldsToClear.forEach(fieldId => {
-                const element = document.getElementById(fieldId);
-                if (element) element.value = '';
-            });
+            alert(`✅ Pre-filled Phillips 66 LOI from CRM for: ${contact.company_name || contact.name}`);
         }
-        
-        // Make functions global
-        window.performManualCRMSearch = performManualCRMSearch;
-        window.selectCRMContact = selectCRMContact;
-        window.clearCRMData = clearCRMData;
-        
-        // Initialize on DOM ready
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initializeCRMSearch, 100);
-        });
-        
+
         // Calculate total fuel volume
         function calculateTotal() {
             const gasoline = parseFloat(document.getElementById('gasoline-volume').value) || 0;
@@ -986,108 +857,10 @@
             document.getElementById('total-incentives-requested').value = total;
         }
         
-        // Signature pad functionality
-        const canvas = document.getElementById('signature-pad');
-        const ctx = canvas.getContext('2d');
-        const placeholder = document.getElementById('signature-placeholder');
-        const clearButton = document.getElementById('clear-signature');
+        // Form references
         const submitButton = document.getElementById('submit-btn');
-        const signatureStatus = document.getElementById('signature-status');
         const form = document.getElementById('p66-loi-form');
         const loading = document.getElementById('loading');
-        
-        let isDrawing = false;
-        let hasSignature = false;
-        
-        // Canvas setup
-        function setupCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            return { scaleX, scaleY };
-        }
-        
-        const { scaleX, scaleY } = setupCanvas();
-        
-        // Mouse events
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        
-        // Touch events for mobile
-        canvas.addEventListener('touchstart', handleTouch);
-        canvas.addEventListener('touchmove', handleTouch);
-        canvas.addEventListener('touchend', stopDrawing);
-        
-        function startDrawing(e) {
-            isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            
-            if (!hasSignature) {
-                placeholder.classList.add('hidden');
-                hasSignature = true;
-                updateSignatureStatus();
-            }
-        }
-        
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-        
-        function stopDrawing() {
-            if (isDrawing) {
-                isDrawing = false;
-                ctx.beginPath();
-            }
-        }
-        
-        function handleTouch(e) {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent(e.type === 'touchstart' ? 'mousedown' : 
-                                            e.type === 'touchmove' ? 'mousemove' : 'mouseup', {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        }
-        
-        function clearSignature() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            hasSignature = false;
-            placeholder.classList.remove('hidden');
-            updateSignatureStatus();
-        }
-        
-        function updateSignatureStatus() {
-            if (hasSignature) {
-                signatureStatus.textContent = 'Signature captured ✓';
-                signatureStatus.style.color = '#28a745';
-                checkFormValidity();
-            } else {
-                signatureStatus.textContent = 'Signature required';
-                signatureStatus.style.color = '#6c757d';
-                submitButton.disabled = true;
-            }
-        }
         
         function checkFormValidity() {
             const requiredFields = form.querySelectorAll('[required]');
@@ -1099,23 +872,19 @@
                 }
             });
             
-            submitButton.disabled = !(allValid && hasSignature);
+            submitButton.disabled = !allValid;
         }
         
         // Event listeners
-        clearButton.addEventListener('click', clearSignature);
         form.addEventListener('input', checkFormValidity);
         
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!hasSignature) {
-                alert('Please provide your signature before submitting.');
-                return;
-            }
             
-            // Show loading
+            // Hide any previous messages and show loading
+            hideMessages();
             form.style.display = 'none';
             loading.style.display = 'block';
             
@@ -1129,9 +898,7 @@
             data.tank_replacement = formData.get('tank_replacement') === 'true';
             data.pos_upgrade = formData.get('pos_upgrade') === 'true';
             
-            // Add signature data
-            data.signature_data = canvas.toDataURL('image/png');
-            data.signature_date = new Date().toISOString();
+            // No signature data needed - customer will sign via email link
             
             // Calculate totals
             calculateTotal();
@@ -1140,8 +907,17 @@
             data.total_incentives_requested = parseFloat(document.getElementById('total-incentives-requested').value);
             
             try {
-                // Submit to API
-                const response = await fetch('/api/v1/forms/p66-loi/submit', {
+                // Add LOI type to data
+                data.loi_type = 'phillips_66';
+                data.fuel_brand = 'Phillips 66';
+                
+                // Add company name from station name if not set
+                if (!data.company_name) {
+                    data.company_name = data.station_name;
+                }
+                
+                // Submit to sophisticated LOI workflow (routes for customer signature)
+                const response = await fetch('/api/v1/loi/submit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1151,14 +927,45 @@
                 
                 if (response.ok) {
                     const result = await response.json();
-                    window.location.href = `/forms/p66-loi/complete/${result.id}`;
+                    
+                    // Show success message with next steps
+                    loading.style.display = 'none';
+                    showSuccessMessage(`Phillips 66 LOI routed successfully! Transaction ID: ${result.transaction_id}. Customer ${result.customer_email} will receive signature link.`);
+                    
+                    // Reset form for next use after delay
+                    setTimeout(() => {
+                        form.reset();
+                        form.style.display = 'block';
+                        checkFormValidity();
+                    }, 3000);
+                    
                 } else {
-                    throw new Error('Failed to submit form');
+                    // Parse error details
+                    let errorMessage = 'Failed to submit LOI. Please check all required fields.';
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.detail) {
+                            if (Array.isArray(errorData.detail)) {
+                                // Pydantic validation errors
+                                const fieldErrors = errorData.detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
+                                errorMessage = `Validation errors: ${fieldErrors}`;
+                            } else {
+                                errorMessage = errorData.detail;
+                            }
+                        }
+                    } catch (e) {
+                        // Use default error message
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
                 loading.style.display = 'none';
                 form.style.display = 'block';
-                alert('Error submitting form. Please try again.');
+                showErrorMessage(error.message);
+                
+                // Scroll to top to show error message
+                document.querySelector('.form-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
         
@@ -1169,10 +976,6 @@
             
             for (let [key, value] of formData.entries()) {
                 data[key] = value;
-            }
-            
-            if (hasSignature) {
-                data.signature_data = canvas.toDataURL('image/png');
             }
             
             localStorage.setItem('p66_loi_draft', JSON.stringify(data));
@@ -1195,17 +998,6 @@
                     }
                 });
                 
-                if (data.signature_data) {
-                    // Load signature from draft
-                    const img = new Image();
-                    img.onload = function() {
-                        ctx.drawImage(img, 0, 0);
-                        hasSignature = true;
-                        placeholder.classList.add('hidden');
-                        updateSignatureStatus();
-                    };
-                    img.src = data.signature_data;
-                }
                 
                 // Recalculate totals
                 calculateTotal();
@@ -1217,6 +1009,43 @@
             document.getElementById('start-date').min = today;
             document.getElementById('brand-expiration').min = today;
         });
+        
+        // Success/Error message functions
+        function showSuccessMessage(message) {
+            const successDiv = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            const errorDiv = document.getElementById('error-message');
+            
+            // Hide error message
+            errorDiv.style.display = 'none';
+            
+            // Show success message
+            successText.textContent = message;
+            successDiv.style.display = 'flex';
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showErrorMessage(message) {
+            const errorDiv = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            const successDiv = document.getElementById('success-message');
+            
+            // Hide success message
+            successDiv.style.display = 'none';
+            
+            // Show error message
+            errorText.textContent = message;
+            errorDiv.style.display = 'flex';
+        }
+        
+        function hideMessages() {
+            document.getElementById('success-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+        }
     </script>
 </body>
 </html>
