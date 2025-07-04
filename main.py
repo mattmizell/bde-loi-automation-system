@@ -1442,9 +1442,9 @@ async def list_all_transactions():
         
         with psycopg2.connect(database_url) as conn:
             with conn.cursor() as cur:
-                # Get all transactions with customer info, ordered by most recent first
+                # Get all transactions with customer info, using subqueries to avoid duplicates
                 cur.execute("""
-                    SELECT DISTINCT
+                    SELECT 
                         lt.id,
                         lt.transaction_type,
                         lt.status,
@@ -1455,36 +1455,48 @@ async def list_all_transactions():
                         c.contact_name,
                         c.email,
                         c.phone,
-                        -- Customer Setup form fields
-                        cs.legal_business_name,
-                        cs.business_type,
-                        cs.federal_tax_id,
-                        cs.physical_address,
-                        cs.physical_city,
-                        cs.physical_state,
-                        cs.physical_zip,
-                        cs.primary_contact_name,
-                        cs.primary_contact_email,
-                        cs.primary_contact_phone,
-                        cs.annual_fuel_volume,
-                        cs.number_of_locations,
-                        -- EFT form fields
-                        eft.bank_name,
-                        eft.account_holder_name,
-                        eft.authorized_by_name,
-                        eft.authorization_date,
-                        -- P66 LOI form fields
-                        p66.station_name,
-                        p66.monthly_gasoline_gallons,
-                        p66.monthly_diesel_gallons,
-                        p66.total_monthly_gallons,
-                        p66.volume_incentive_requested,
-                        p66.image_funding_requested
+                        -- Customer Setup form fields (most recent)
+                        latest_cs.legal_business_name,
+                        latest_cs.business_type,
+                        latest_cs.federal_tax_id,
+                        latest_cs.physical_address,
+                        latest_cs.physical_city,
+                        latest_cs.physical_state,
+                        latest_cs.physical_zip,
+                        latest_cs.primary_contact_name,
+                        latest_cs.primary_contact_email,
+                        latest_cs.primary_contact_phone,
+                        latest_cs.annual_fuel_volume,
+                        latest_cs.number_of_locations,
+                        -- EFT form fields (most recent)
+                        latest_eft.bank_name,
+                        latest_eft.account_holder_name,
+                        latest_eft.authorized_by_name,
+                        latest_eft.authorization_date,
+                        -- P66 LOI form fields (most recent)
+                        latest_p66.station_name,
+                        latest_p66.monthly_gasoline_gallons,
+                        latest_p66.monthly_diesel_gallons,
+                        latest_p66.total_monthly_gallons,
+                        latest_p66.volume_incentive_requested,
+                        latest_p66.image_funding_requested
                     FROM loi_transactions lt
                     JOIN customers c ON lt.customer_id = c.id
-                    LEFT JOIN customer_setup_form_data cs ON lt.customer_id = cs.customer_id
-                    LEFT JOIN eft_form_data eft ON lt.id::text = eft.transaction_id
-                    LEFT JOIN p66_loi_form_data p66 ON lt.customer_id = p66.customer_id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (customer_id) *
+                        FROM customer_setup_form_data
+                        ORDER BY customer_id, created_at DESC
+                    ) latest_cs ON lt.customer_id = latest_cs.customer_id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (transaction_id) *
+                        FROM eft_form_data
+                        ORDER BY transaction_id, created_at DESC
+                    ) latest_eft ON lt.id::text = latest_eft.transaction_id
+                    LEFT JOIN (
+                        SELECT DISTINCT ON (customer_id) *
+                        FROM p66_loi_form_data
+                        ORDER BY customer_id, created_at DESC
+                    ) latest_p66 ON lt.customer_id = latest_p66.customer_id
                     ORDER BY lt.created_at DESC
                     LIMIT 100
                 """)
