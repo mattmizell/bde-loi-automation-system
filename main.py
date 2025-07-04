@@ -930,10 +930,11 @@ async def submit_loi_request(request: dict):
             import uuid
             tx_uuid = str(uuid.uuid4())
             cur.execute("""
-                INSERT INTO loi_transactions (id, document_id, signature_request_id, status, created_at, processing_context, customer_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO loi_transactions (id, transaction_type, document_id, signature_request_id, status, created_at, processing_context, customer_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 tx_uuid,
+                'NEW_LOI_REQUEST',
                 transaction_id,  # Use string transaction_id as document_id
                 transaction_id,
                 'WAITING_SIGNATURE',
@@ -995,10 +996,11 @@ async def submit_loi_request(request: dict):
             import uuid
             tx_uuid = str(uuid.uuid4())
             cur.execute("""
-                INSERT INTO loi_transactions (id, document_id, signature_request_id, status, created_at, processing_context)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO loi_transactions (id, transaction_type, document_id, signature_request_id, status, created_at, processing_context)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
                 tx_uuid,
+                'NEW_LOI_REQUEST',
                 transaction_id,
                 transaction_id,
                 'WAITING_SIGNATURE',
