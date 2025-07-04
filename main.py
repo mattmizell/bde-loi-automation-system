@@ -894,22 +894,95 @@ async def submit_loi_request(request: dict):
         
         cur = conn.cursor()
         
-        # Create LOI record
-        logger.info(f"💾 Storing LOI transaction: {transaction_id}")
-        cur.execute("""
-            INSERT INTO loi_transactions 
-            (transaction_id, company_name, contact_name, email, phone, loi_data, status, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            transaction_id,
-            request.get('company_name', ''),
-            request.get('contact_name', ''),
-            request.get('email', ''),
-            request.get('phone', ''),
-            json.dumps(request),
-            'pending_signature',
-            datetime.now()
-        ))
+        # Determine LOI type and use appropriate table
+        loi_type = request.get('loi_type', 'vp_racing')  # Default to VP Racing
+        
+        if loi_type == 'phillips_66':
+            # Insert into P66 LOI specific table
+            logger.info(f"💾 Storing P66 LOI data: {transaction_id}")
+            
+            # First, we need to create a customer record or get existing one
+            customer_email = request.get('email', '')
+            cur.execute("SELECT id FROM customers WHERE email = %s LIMIT 1", (customer_email,))
+            customer_result = cur.fetchone()
+            
+            if customer_result:
+                customer_id = customer_result[0]
+                logger.info(f"📋 Using existing customer: {customer_id}")
+            else:
+                # Create new customer
+                import uuid
+                customer_id = str(uuid.uuid4())
+                cur.execute("""
+                    INSERT INTO customers (id, company_name, contact_name, email, phone, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    customer_id,
+                    request.get('company_name', ''),
+                    request.get('contact_name', ''),
+                    customer_email,
+                    request.get('phone', ''),
+                    datetime.now()
+                ))
+                logger.info(f"✅ Created new customer: {customer_id}")
+            
+            # Insert P66 LOI data
+            cur.execute("""
+                INSERT INTO p66_loi_form_data (
+                    id, customer_id, station_name, station_address, station_city, station_state, station_zip,
+                    current_brand, brand_expiration_date, monthly_gasoline_gallons, monthly_diesel_gallons, 
+                    total_monthly_gallons, contract_start_date, contract_term_years,
+                    volume_incentive_requested, image_funding_requested, equipment_funding_requested, 
+                    total_incentives_requested, canopy_replacement, dispenser_replacement, 
+                    tank_replacement, pos_upgrade, special_requirements,
+                    authorized_representative, representative_title, form_status, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                transaction_id,  # Use transaction_id as the primary key
+                customer_id,
+                request.get('station_name', ''),
+                request.get('station_address', ''),
+                request.get('station_city', ''),
+                request.get('station_state', ''),
+                request.get('station_zip', ''),
+                request.get('current_brand', ''),
+                request.get('brand_expiration_date'),
+                request.get('monthly_gasoline_gallons', 0),
+                request.get('monthly_diesel_gallons', 0),
+                request.get('total_monthly_gallons', 0),
+                request.get('contract_start_date'),
+                request.get('contract_term_years', 10),
+                request.get('volume_incentive_requested', 0),
+                request.get('image_funding_requested', 0),
+                request.get('equipment_funding_requested', 0),
+                request.get('total_incentives_requested', 0),
+                request.get('canopy_replacement', False),
+                request.get('dispenser_replacement', False),
+                request.get('tank_replacement', False),
+                request.get('pos_upgrade', False),
+                request.get('special_requirements', ''),
+                request.get('authorized_representative', ''),
+                request.get('representative_title', ''),
+                'pending_signature',
+                datetime.now()
+            ))
+        else:
+            # For VP Racing and other LOI types, use simple storage for now
+            logger.info(f"💾 Storing {loi_type} LOI data: {transaction_id}")
+            # Create a simple transaction record
+            import uuid
+            tx_uuid = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO loi_transactions (id, document_id, signature_request_id, status, created_at, processing_context)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                tx_uuid,
+                transaction_id,
+                transaction_id,
+                'pending_signature',
+                datetime.now(),
+                json.dumps(request)
+            ))
         
         conn.commit()
         logger.info(f"✅ LOI transaction saved successfully: {transaction_id}")
@@ -989,8 +1062,50 @@ async def get_signature_page(transaction_id: str):
             logger.info("✅ Connected to local database for signature page")
         
         cur = conn.cursor()
-        cur.execute("SELECT company_name, contact_name, loi_data FROM loi_transactions WHERE id = %s", (transaction_id,))
+        
+        # First try P66 LOI table
+        cur.execute("""
+            SELECT c.company_name, c.contact_name, 
+                   json_build_object(
+                       'loi_type', 'phillips_66',
+                       'station_name', p.station_name,
+                       'station_address', p.station_address,
+                       'station_city', p.station_city,
+                       'station_state', p.station_state,
+                       'station_zip', p.station_zip,
+                       'current_brand', p.current_brand,
+                       'monthly_gasoline_gallons', p.monthly_gasoline_gallons,
+                       'monthly_diesel_gallons', p.monthly_diesel_gallons,
+                       'total_monthly_gallons', p.total_monthly_gallons,
+                       'contract_term_years', p.contract_term_years,
+                       'contract_start_date', p.contract_start_date,
+                       'volume_incentive_requested', p.volume_incentive_requested,
+                       'image_funding_requested', p.image_funding_requested,
+                       'equipment_funding_requested', p.equipment_funding_requested,
+                       'total_incentives_requested', p.total_incentives_requested,
+                       'brand_expiration_date', p.brand_expiration_date,
+                       'special_requirements', p.special_requirements,
+                       'authorized_representative', p.authorized_representative,
+                       'representative_title', p.representative_title,
+                       'email', c.email,
+                       'phone', c.phone
+                   ) as loi_data
+            FROM p66_loi_form_data p 
+            JOIN customers c ON p.customer_id = c.id 
+            WHERE p.id = %s
+        """, (transaction_id,))
         result = cur.fetchone()
+        
+        if not result:
+            # Try general loi_transactions table
+            logger.info(f"🔍 P66 LOI not found, checking general transactions for {transaction_id}")
+            cur.execute("""
+                SELECT '', '', processing_context
+                FROM loi_transactions 
+                WHERE document_id = %s OR signature_request_id = %s
+            """, (transaction_id, transaction_id))
+            result = cur.fetchone()
+        
         conn.close()
         
         logger.info(f"🔍 Database query result for {transaction_id}: {result is not None}")
