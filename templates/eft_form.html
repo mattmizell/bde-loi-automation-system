@@ -660,7 +660,11 @@
                 }
             });
             
-            submitButton.disabled = !(allValid && hasSignature);
+            // Check if canvas has any content (more lenient signature detection)
+            const canvasHasContent = canvas.toDataURL() !== canvas.toDataURL('image/png', 0);
+            const signatureExists = hasSignature || canvasHasContent || canvas.toDataURL().length > 5000;
+            
+            submitButton.disabled = !(allValid && signatureExists);
         }
         
         // Event listeners
@@ -671,7 +675,11 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!hasSignature) {
+            // Check for signature more leniently
+            const canvasHasContent = canvas.toDataURL().length > 5000;
+            const signatureExists = hasSignature || canvasHasContent;
+            
+            if (!signatureExists) {
                 alert('Please provide your signature before submitting.');
                 return;
             }
