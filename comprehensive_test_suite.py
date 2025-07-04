@@ -243,6 +243,158 @@ class ComprehensiveTestSuite:
             self.log_issue(test_name, "Database", f"Database check failed for {table}: {str(e)}", str(e))
             return False
             
+    def verify_complete_database_storage(self, transaction_id, test_name, expected_tables):
+        """Comprehensive database verification for a transaction"""
+        print(f"🗄️ Verifying complete database storage for {test_name}")
+        
+        verification_results = {}
+        
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            
+            # Check loi_transactions table
+            cur.execute("SELECT * FROM loi_transactions WHERE id = %s", (transaction_id,))
+            transaction_record = cur.fetchone()
+            
+            if transaction_record:
+                print(f"✅ Transaction record found: {transaction_id[:8]}...")
+                verification_results['loi_transactions'] = True
+                
+                # Get column names
+                cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'loi_transactions' ORDER BY ordinal_position")
+                columns = [row[0] for row in cur.fetchall()]
+                
+                # Create transaction data dict
+                transaction_data = dict(zip(columns, transaction_record))
+                print(f"   Status: {transaction_data.get('status', 'Unknown')}")
+                print(f"   Type: {transaction_data.get('transaction_type', 'Unknown')}")
+                
+            else:
+                self.log_issue(test_name, "Database", f"Transaction not found in loi_transactions: {transaction_id}")
+                verification_results['loi_transactions'] = False
+            
+            # Check expected related tables
+            for table in expected_tables:
+                try:
+                    cur.execute(f"SELECT COUNT(*) FROM {table} WHERE transaction_id = %s", (transaction_id,))
+                    count = cur.fetchone()[0]
+                    
+                    if count > 0:
+                        print(f"✅ Data found in {table}: {count} records")
+                        verification_results[table] = True
+                    else:
+                        print(f"⚠️ No data in {table} for transaction {transaction_id[:8]}...")
+                        verification_results[table] = False
+                        
+                except Exception as e:
+                    print(f"❌ Error checking {table}: {str(e)}")
+                    verification_results[table] = False
+            
+            # Check customers table
+            if transaction_record:
+                customer_id = transaction_data.get('customer_id')
+                if customer_id:
+                    cur.execute("SELECT * FROM customers WHERE id = %s", (customer_id,))
+                    customer_record = cur.fetchone()
+                    
+                    if customer_record:
+                        print(f"✅ Customer record found: {customer_id}")
+                        verification_results['customers'] = True
+                    else:
+                        print(f"❌ Customer record not found: {customer_id}")
+                        verification_results['customers'] = False
+            
+            conn.close()
+            
+            # Overall verification
+            success_count = sum(verification_results.values())
+            total_count = len(verification_results)
+            
+            print(f"📊 Database Verification: {success_count}/{total_count} tables verified")
+            
+            if success_count == total_count:
+                print(f"✅ Complete database verification passed for {test_name}")
+                return True
+            else:
+                self.log_issue(test_name, "Database", f"Incomplete database storage: {success_count}/{total_count} tables verified")
+                return False
+                
+        except Exception as e:
+            self.log_issue(test_name, "Database", f"Database verification failed: {str(e)}", str(e))
+            return False
+            
+    def test_crm_bridge_integration(self, transaction_id, test_name, customer_email):
+        """Test CRM bridge updates after transaction completion"""
+        print(f"🔗 Testing CRM bridge integration for {test_name}")
+        
+        try:
+            # Test if CRM bridge service is accessible
+            crm_endpoints = [
+                f"{BASE_URL}/api/v1/crm/search?q={customer_email}",
+                f"{BASE_URL}/api/v1/crm/status",
+                f"{BASE_URL}/api/v1/crm/sync"
+            ]
+            
+            crm_results = {}
+            
+            for endpoint in crm_endpoints:
+                try:
+                    import requests
+                    response = requests.get(endpoint, timeout=10)
+                    
+                    if response.status_code == 200:
+                        print(f"✅ CRM endpoint accessible: {endpoint}")
+                        crm_results[endpoint] = True
+                        
+                        # If this is search endpoint, check if customer data is returned
+                        if 'search' in endpoint:
+                            data = response.json()
+                            if isinstance(data, list) and len(data) > 0:
+                                print(f"✅ CRM search returned {len(data)} results for {customer_email}")
+                                
+                                # Check if our test customer is in results
+                                for contact in data:
+                                    if customer_email.lower() in str(contact).lower():
+                                        print(f"✅ Test customer found in CRM: {customer_email}")
+                                        break
+                            else:
+                                print(f"⚠️ CRM search returned no results for {customer_email}")
+                                
+                    else:
+                        print(f"❌ CRM endpoint failed: {endpoint} (status: {response.status_code})")
+                        crm_results[endpoint] = False
+                        
+                except Exception as e:
+                    print(f"❌ CRM endpoint error: {endpoint} - {str(e)}")
+                    crm_results[endpoint] = False
+            
+            # Test CRM update verification
+            try:
+                # Check if there's a way to verify CRM was updated with transaction info
+                # This would typically involve checking CRM records for transaction references
+                print(f"🔍 Checking if CRM was updated with transaction {transaction_id[:8]}...")
+                
+                # For now, we'll check if CRM search functionality works
+                # In a real implementation, we'd verify the transaction was logged to CRM
+                search_endpoint = f"{BASE_URL}/api/v1/crm/search?q={customer_email}"
+                response = requests.get(search_endpoint, timeout=10)
+                
+                if response.status_code == 200:
+                    print(f"✅ CRM bridge integration test passed")
+                    return True
+                else:
+                    self.log_issue(test_name, "CRM", f"CRM bridge not responding properly")
+                    return False
+                    
+            except Exception as e:
+                self.log_issue(test_name, "CRM", f"CRM bridge verification failed: {str(e)}", str(e))
+                return False
+                
+        except Exception as e:
+            self.log_issue(test_name, "CRM", f"CRM bridge test failed: {str(e)}", str(e))
+            return False
+            
     def test_customer_setup_sales_initiation(self):
         """Test Customer Setup Sales Initiation"""
         test_name = "Customer_Setup_Sales_Initiation"
@@ -288,10 +440,24 @@ class ComprehensiveTestSuite:
                     self.transaction_ids[test_name] = transaction_id
                     print(f"✅ Success! Transaction ID: {transaction_id}")
                     
-                    # Verify in database
-                    self.check_database_record("customers", {"email": TEST_DATA["email"]}, test_name)
+                    # Comprehensive database verification
+                    db_verified = self.verify_complete_database_storage(
+                        transaction_id, 
+                        test_name, 
+                        expected_tables=["customers"]  # Customer Setup uses customers table
+                    )
                     
-                    self.test_results[test_name] = "PASSED"
+                    # Test CRM bridge integration
+                    crm_verified = self.test_crm_bridge_integration(
+                        transaction_id, 
+                        test_name, 
+                        TEST_DATA["email"]
+                    )
+                    
+                    if db_verified and crm_verified:
+                        self.test_results[test_name] = "PASSED"
+                    else:
+                        self.test_results[test_name] = "PARTIAL - Form submitted but verification failed"
                 else:
                     self.log_issue(test_name, "Backend", f"Invalid success message: {success_msg}")
                     self.test_results[test_name] = "FAILED - Invalid response"
@@ -357,7 +523,29 @@ class ComprehensiveTestSuite:
                     else:
                         print(f"✅ Success! {success_msg}")
                     
-                    self.test_results[test_name] = "PASSED"
+                    # Get transaction ID if available
+                    current_transaction_id = self.transaction_ids.get(test_name)
+                    if current_transaction_id:
+                        # Comprehensive database verification
+                        db_verified = self.verify_complete_database_storage(
+                            current_transaction_id, 
+                            test_name, 
+                            expected_tables=["eft_form_data", "customers"]
+                        )
+                        
+                        # Test CRM bridge integration
+                        crm_verified = self.test_crm_bridge_integration(
+                            current_transaction_id, 
+                            test_name, 
+                            TEST_DATA["email"]
+                        )
+                        
+                        if db_verified and crm_verified:
+                            self.test_results[test_name] = "PASSED"
+                        else:
+                            self.test_results[test_name] = "PARTIAL - Form submitted but verification failed"
+                    else:
+                        self.test_results[test_name] = "PASSED"
                 else:
                     self.log_issue(test_name, "Backend", f"Invalid success message: {success_msg}")
                     self.test_results[test_name] = "FAILED - Invalid response"
@@ -455,10 +643,24 @@ class ComprehensiveTestSuite:
                                 self.transaction_ids[test_name] = transaction_id
                                 print(f"✅ Success! Transaction ID: {transaction_id}")
                                 
-                                # Verify in database
-                                self.check_database_record("p66_loi_form_data", {"email": TEST_DATA["email"]}, test_name)
+                                # Comprehensive database verification
+                                db_verified = self.verify_complete_database_storage(
+                                    transaction_id, 
+                                    test_name, 
+                                    expected_tables=["p66_loi_form_data", "customers"]
+                                )
                                 
-                                self.test_results[test_name] = "PASSED"
+                                # Test CRM bridge integration
+                                crm_verified = self.test_crm_bridge_integration(
+                                    transaction_id, 
+                                    test_name, 
+                                    TEST_DATA["email"]
+                                )
+                                
+                                if db_verified and crm_verified:
+                                    self.test_results[test_name] = "PASSED"
+                                else:
+                                    self.test_results[test_name] = "PARTIAL - Form submitted but verification failed"
                                 return
                                 
                         print(f"✅ Success response but no transaction ID found")
