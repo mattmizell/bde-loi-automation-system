@@ -988,17 +988,44 @@ async def submit_loi_request(request: dict):
             ))
             logger.info(f"✅ Created P66 form record: {p66_form_id}")
         else:
-            # For VP Racing and other LOI types, use simple storage for now
+            # For VP Racing and other LOI types, handle customer creation and storage
             logger.info(f"💾 Storing {loi_type} LOI data: {transaction_id}")
-            # Create a simple transaction record
+            
+            # First, we need to create a customer record or get existing one
+            customer_email = request.get('email', '')
+            cur.execute("SELECT id FROM customers WHERE email = %s LIMIT 1", (customer_email,))
+            customer_result = cur.fetchone()
+            
+            if customer_result:
+                customer_id = customer_result[0]
+                logger.info(f"📋 Using existing customer: {customer_id}")
+            else:
+                # Create new customer
+                import uuid
+                customer_id = str(uuid.uuid4())
+                cur.execute("""
+                    INSERT INTO customers (id, company_name, contact_name, email, phone, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    customer_id,
+                    request.get('company_name', ''),
+                    request.get('authorized_representative', ''),
+                    customer_email,
+                    request.get('phone', ''),
+                    datetime.now()
+                ))
+                logger.info(f"✅ Created new customer: {customer_id}")
+            
+            # Create transaction record with customer_id
             import uuid
             tx_uuid = str(uuid.uuid4())
             cur.execute("""
-                INSERT INTO loi_transactions (id, transaction_type, document_id, signature_request_id, status, created_at, processing_context)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO loi_transactions (id, transaction_type, customer_id, document_id, signature_request_id, status, created_at, processing_context)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 tx_uuid,
                 'NEW_LOI_REQUEST',
+                customer_id,
                 transaction_id,
                 transaction_id,
                 'WAITING_SIGNATURE',
