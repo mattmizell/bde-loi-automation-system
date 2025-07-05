@@ -3689,9 +3689,9 @@ def main():
 
 # Import EFT models
 try:
-    from api.forms_api import SalesInitiatedEFTRequest
+    from api.forms_api import SalesInitiatedEFTRequest, EFTFormRequest
 except ImportError:
-    # Define minimal model if forms_api not available
+    # Define minimal models if forms_api not available
     from pydantic import BaseModel, EmailStr
     class SalesInitiatedEFTRequest(BaseModel):
         company_name: str
@@ -3710,6 +3710,32 @@ except ImportError:
         federal_tax_id: Optional[str] = None
         initiated_by: Optional[str] = None
         notes: Optional[str] = None
+    
+    class EFTFormRequest(BaseModel):
+        company_name: str
+        federal_tax_id: str
+        customer_id: Optional[str] = None
+        company_address: Optional[str] = None
+        company_city: Optional[str] = None
+        company_state: Optional[str] = None
+        company_zip: Optional[str] = None
+        contact_name: Optional[str] = None
+        contact_email: Optional[str] = None
+        contact_phone: Optional[str] = None
+        bank_name: str
+        bank_address: Optional[str] = None
+        bank_city: Optional[str] = None
+        bank_state: Optional[str] = None
+        bank_zip: Optional[str] = None
+        account_holder_name: str
+        account_type: str
+        routing_number: str
+        account_number: str
+        authorized_by_name: str
+        authorized_by_title: str
+        authorization_date: str
+        signature_data: str
+        signature_timestamp: str
 
 # EFT Form Initiation Endpoint
 @app.post("/api/v1/forms/eft/initiate")
@@ -3864,6 +3890,209 @@ async def eft_form_initiate(request_data: SalesInitiatedEFTRequest):
     except Exception as e:
         logger.error(f"❌ EFT form initiation failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to initiate EFT form")
+
+# EFT Form Submit Endpoint
+@app.post("/api/v1/forms/eft/submit")
+async def eft_form_submit(request_data: EFTFormRequest):
+    """Submit completed EFT authorization form from customer"""
+    
+    try:
+        logger.info(f"🏦 EFT form submission received from {request_data.company_name}")
+        
+        # Generate unique form ID
+        form_id = f"EFT_COMPLETE_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+        
+        # Store form data in database
+        try:
+            from database.connection import get_db_manager
+            from database.models import Customer, LOITransaction, CRMFormData
+            
+            db_manager = get_db_manager()
+            
+            with db_manager.get_session() as session:
+                # Find or create customer
+                customer = session.query(Customer).filter_by(
+                    email=request_data.contact_email or request_data.company_name
+                ).first()
+                
+                if not customer:
+                    customer = Customer(
+                        company_name=request_data.company_name,
+                        email=request_data.contact_email or f"{request_data.company_name.lower().replace(' ', '_')}@customer.com",
+                        phone=request_data.contact_phone,
+                        customer_id=request_data.customer_id,
+                        customer_type="eft_customer",
+                        is_vip_customer=False
+                    )
+                    session.add(customer)
+                    session.commit()
+                
+                # Create transaction record
+                transaction = LOITransaction(
+                    id=form_id,
+                    customer_id=customer.id,
+                    loi_type="eft_authorization",
+                    status="completed",
+                    workflow_stage="completed",
+                    customer_email=customer.email,
+                    company_name=request_data.company_name,
+                    completed_at=datetime.now(),
+                    signature_provider="esign_act_compliant",
+                    signed_document_url=f"/forms/eft/complete/{form_id}"
+                )
+                session.add(transaction)
+                
+                # Store form data
+                form_data = CRMFormData(
+                    transaction_id=transaction.id,
+                    form_type="eft_authorization",
+                    raw_form_data={
+                        "company_info": {
+                            "company_name": request_data.company_name,
+                            "federal_tax_id": request_data.federal_tax_id,
+                            "customer_id": request_data.customer_id,
+                            "company_address": request_data.company_address,
+                            "company_city": request_data.company_city,
+                            "company_state": request_data.company_state,
+                            "company_zip": request_data.company_zip
+                        },
+                        "contact_info": {
+                            "contact_name": request_data.contact_name,
+                            "contact_email": request_data.contact_email,
+                            "contact_phone": request_data.contact_phone
+                        },
+                        "bank_info": {
+                            "bank_name": request_data.bank_name,
+                            "bank_address": request_data.bank_address,
+                            "bank_city": request_data.bank_city,
+                            "bank_state": request_data.bank_state,
+                            "bank_zip": request_data.bank_zip,
+                            "account_holder_name": request_data.account_holder_name,
+                            "account_type": request_data.account_type,
+                            "routing_number": request_data.routing_number,
+                            "account_number": request_data.account_number
+                        },
+                        "authorization": {
+                            "authorized_by_name": request_data.authorized_by_name,
+                            "authorized_by_title": request_data.authorized_by_title,
+                            "authorization_date": request_data.authorization_date,
+                            "signature_timestamp": request_data.signature_timestamp,
+                            "signature_data": request_data.signature_data[:100] + "..." if len(request_data.signature_data) > 100 else request_data.signature_data
+                        }
+                    }
+                )
+                session.add(form_data)
+                session.commit()
+                
+                logger.info(f"✅ EFT form data saved to database: {form_id}")
+                
+        except Exception as db_error:
+            logger.warning(f"Database operation failed (continuing anyway): {db_error}")
+        
+        # Send confirmation emails
+        try:
+            # Email to customer
+            customer_subject = f"EFT Authorization Confirmed - {request_data.company_name}"
+            customer_body = f"""
+            Dear {request_data.authorized_by_name},
+            
+            Thank you for completing your EFT Authorization with Better Day Energy.
+            
+            Confirmation Details:
+            • Company: {request_data.company_name}
+            • Federal Tax ID: {request_data.federal_tax_id}
+            • Bank: {request_data.bank_name}
+            • Account Type: {request_data.account_type.title()}
+            • Routing Number: ***{request_data.routing_number[-4:]}
+            • Account Number: ***{request_data.account_number[-4:]}
+            • Authorized By: {request_data.authorized_by_name} ({request_data.authorized_by_title})
+            • Authorization Date: {request_data.authorization_date}
+            
+            Form ID: {form_id}
+            
+            IMPORTANT: This authorization allows Better Day Energy to initiate ACH debit 
+            transactions from your account for fuel purchases. Please keep this confirmation 
+            for your records.
+            
+            If you have any questions, please contact:
+            Email: billing@betterdayenergy.com
+            Phone: (618) 555-0123
+            
+            Thank you for your business!
+            
+            Better Day Energy Accounts Team
+            """
+            
+            if request_data.contact_email:
+                msg = MIMEText(customer_body)
+                msg['Subject'] = customer_subject
+                msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+                msg['To'] = request_data.contact_email
+                
+                server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+                server.starttls()
+                server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+                server.send_message(msg)
+                server.quit()
+                
+                logger.info(f"✅ Confirmation email sent to customer: {request_data.contact_email}")
+            
+            # Email to admin
+            admin_subject = f"New EFT Authorization - {request_data.company_name}"
+            admin_body = f"""
+            NEW EFT AUTHORIZATION RECEIVED
+            
+            Company: {request_data.company_name}
+            Federal Tax ID: {request_data.federal_tax_id}
+            Contact: {request_data.contact_name or 'Not provided'}
+            Email: {request_data.contact_email or 'Not provided'}
+            Phone: {request_data.contact_phone or 'Not provided'}
+            
+            Bank Information:
+            • Bank Name: {request_data.bank_name}
+            • Account Type: {request_data.account_type}
+            • Routing Number: {request_data.routing_number}
+            • Account Number: {request_data.account_number}
+            • Account Holder: {request_data.account_holder_name}
+            
+            Authorization:
+            • Authorized By: {request_data.authorized_by_name} ({request_data.authorized_by_title})
+            • Date: {request_data.authorization_date}
+            
+            Form ID: {form_id}
+            View Complete Form: https://loi-automation-api.onrender.com/forms/eft/complete/{form_id}
+            
+            Please process this EFT authorization in the accounting system.
+            """
+            
+            admin_msg = MIMEText(admin_body)
+            admin_msg['Subject'] = admin_subject
+            admin_msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+            admin_msg['To'] = "billing@betterdayenergy.com, transaction.coordinator.agent@gmail.com"
+            
+            server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+            server.starttls()
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+            server.send_message(admin_msg)
+            server.quit()
+            
+            logger.info("✅ Admin notification sent")
+            
+        except Exception as email_error:
+            logger.error(f"❌ Failed to send confirmation emails: {email_error}")
+        
+        return {
+            "success": True,
+            "message": "EFT authorization completed successfully",
+            "id": form_id,
+            "confirmation_url": f"/forms/eft/complete/{form_id}",
+            "company_name": request_data.company_name,
+            "submission_time": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ EFT form submission failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process EFT form: {str(e)}")
 
 # Paper Copy Request Endpoint (ESIGN Act Compliance)
 @app.post("/api/v1/paper-copy/request")
