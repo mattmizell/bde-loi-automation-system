@@ -617,6 +617,8 @@
             if (isDrawing) {
                 isDrawing = false;
                 ctx.beginPath();
+                // Check form validity after drawing
+                setTimeout(checkFormValidity, 100);
             }
         }
         
@@ -657,14 +659,38 @@
             requiredFields.forEach(field => {
                 if (!field.value.trim()) {
                     allValid = false;
+                    console.log('Missing required field:', field.name || field.id);
                 }
             });
             
-            // Check if canvas has any content (more lenient signature detection)
-            const canvasHasContent = canvas.toDataURL() !== canvas.toDataURL('image/png', 0);
-            const signatureExists = hasSignature || canvasHasContent || canvas.toDataURL().length > 5000;
+            // Much more lenient signature detection
+            const emptyCanvas = document.createElement('canvas');
+            emptyCanvas.width = canvas.width;
+            emptyCanvas.height = canvas.height;
+            const emptyDataURL = emptyCanvas.toDataURL();
+            const currentDataURL = canvas.toDataURL();
+            
+            const signatureExists = hasSignature || 
+                                  currentDataURL !== emptyDataURL || 
+                                  currentDataURL.length > 5000;
+            
+            console.log('Form validation:', {
+                allValid: allValid,
+                signatureExists: signatureExists,
+                hasSignature: hasSignature,
+                canvasLength: currentDataURL.length
+            });
             
             submitButton.disabled = !(allValid && signatureExists);
+            
+            // Update button text to show status
+            if (!allValid) {
+                submitButton.textContent = '❌ Complete Required Fields';
+            } else if (!signatureExists) {
+                submitButton.textContent = '✍️ Signature Required';
+            } else {
+                submitButton.textContent = '✅ Submit Authorization';
+            }
         }
         
         // Event listeners
@@ -798,6 +824,9 @@
                 document.getElementById('customer-id').value = customerId;
                 // Could load more customer data here
             }
+            
+            // Initial form validation check
+            setTimeout(checkFormValidity, 500);
         });
         
         // Success/Error message functions
