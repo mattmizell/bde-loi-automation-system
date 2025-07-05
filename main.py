@@ -3687,6 +3687,184 @@ def main():
         access_log=True
     )
 
+# Import EFT models
+try:
+    from api.forms_api import SalesInitiatedEFTRequest
+except ImportError:
+    # Define minimal model if forms_api not available
+    from pydantic import BaseModel, EmailStr
+    class SalesInitiatedEFTRequest(BaseModel):
+        company_name: str
+        customer_email: EmailStr
+        customer_phone: Optional[str] = None
+        customer_id: Optional[str] = None
+        bank_name: Optional[str] = None
+        bank_address: Optional[str] = None
+        bank_city: Optional[str] = None
+        bank_state: Optional[str] = None
+        bank_zip: Optional[str] = None
+        account_holder_name: Optional[str] = None
+        account_type: Optional[str] = None
+        authorized_by_name: Optional[str] = None
+        authorized_by_title: Optional[str] = None
+        federal_tax_id: Optional[str] = None
+        initiated_by: Optional[str] = None
+        notes: Optional[str] = None
+
+# EFT Form Initiation Endpoint
+@app.post("/api/v1/forms/eft/initiate")
+async def eft_form_initiate(request_data: SalesInitiatedEFTRequest):
+    """Initiate EFT form process - sales person sends form to customer"""
+    
+    try:
+        logger.info(f"🏦 EFT form initiation requested for {request_data.company_name}")
+        
+        # Generate unique transaction ID
+        transaction_id = f"EFT_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+        
+        # Store basic transaction info in database (if available)
+        try:
+            # Import database manager
+            from database.connection import get_db_manager
+            db_manager = get_db_manager()
+            
+            with db_manager.get_session() as session:
+                # Import Customer and LOITransaction models
+                from database.models import Customer, LOITransaction
+                
+                # Check if customer already exists
+                existing_customer = session.query(Customer).filter_by(
+                    email=request_data.customer_email
+                ).first()
+                
+                if existing_customer:
+                    customer = existing_customer
+                    logger.info(f"👤 Found existing customer: {customer.company_name}")
+                else:
+                    # Create new customer record
+                    customer = Customer(
+                        company_name=request_data.company_name,
+                        email=request_data.customer_email,
+                        phone=request_data.customer_phone,
+                        customer_id=request_data.customer_id,
+                        customer_type="eft_prospect",
+                        is_vip_customer=False
+                    )
+                    session.add(customer)
+                    session.commit()
+                    logger.info(f"👤 Created new customer: {request_data.company_name}")
+                
+                # Create transaction record
+                transaction = LOITransaction(
+                    id=transaction_id,
+                    customer_id=customer.id,
+                    loi_type="eft_authorization",
+                    status="initiated",
+                    workflow_stage="sales_initiation",
+                    initiated_by=request_data.initiated_by or "Sales Team",
+                    notes=request_data.notes,
+                    customer_email=request_data.customer_email,
+                    company_name=request_data.company_name
+                )
+                session.add(transaction)
+                session.commit()
+                
+                logger.info(f"📝 Created transaction record: {transaction_id}")
+                
+        except Exception as db_error:
+            logger.warning(f"Database operation failed (continuing anyway): {db_error}")
+            # Continue with email sending even if database fails
+        
+        # Create customer form URL with pre-filled data
+        base_url = "https://loi-automation-api.onrender.com"
+        customer_form_url = f"{base_url}/eft_form.html?transaction_id={transaction_id}"
+        
+        # Add pre-fill parameters if provided
+        prefill_params = []
+        if request_data.company_name:
+            prefill_params.append(f"company_name={request_data.company_name}")
+        if request_data.customer_id:
+            prefill_params.append(f"customer_id={request_data.customer_id}")
+        if request_data.federal_tax_id:
+            prefill_params.append(f"federal_tax_id={request_data.federal_tax_id}")
+        if request_data.bank_name:
+            prefill_params.append(f"bank_name={request_data.bank_name}")
+        if request_data.account_holder_name:
+            prefill_params.append(f"account_holder_name={request_data.account_holder_name}")
+        if request_data.account_type:
+            prefill_params.append(f"account_type={request_data.account_type}")
+        if request_data.authorized_by_name:
+            prefill_params.append(f"authorized_by_name={request_data.authorized_by_name}")
+        if request_data.authorized_by_title:
+            prefill_params.append(f"authorized_by_title={request_data.authorized_by_title}")
+        
+        if prefill_params:
+            customer_form_url += "&" + "&".join(prefill_params)
+        
+        # Send email to customer
+        email_subject = f"EFT Authorization Required - {request_data.company_name}"
+        email_body = f"""
+        Dear {request_data.company_name} Representative,
+        
+        Better Day Energy requires Electronic Funds Transfer (EFT) authorization to process ACH payments for fuel purchases.
+        
+        Please complete your EFT authorization form by clicking the secure link below:
+        
+        {customer_form_url}
+        
+        Transaction ID: {transaction_id}
+        Company: {request_data.company_name}
+        
+        Important Notes:
+        • This form must be completed by an authorized signer
+        • All information is encrypted and secure
+        • Electronic signature is legally binding
+        • Contact us if you prefer a paper copy
+        
+        Questions? Contact our team:
+        Email: billing@betterdayenergy.com
+        Phone: (618) 555-0123
+        
+        Best regards,
+        Better Day Energy Accounts Team
+        
+        This email was sent in compliance with the Electronic Signatures in Global and National Commerce (ESIGN) Act.
+        """
+        
+        # Send email
+        try:
+            msg = MIMEText(email_body)
+            msg['Subject'] = email_subject
+            msg['From'] = f"{EMAIL_CONFIG['from_name']} <{EMAIL_CONFIG['from_email']}>"
+            msg['To'] = request_data.customer_email
+            
+            server = smtplib.SMTP(EMAIL_CONFIG['smtp_host'], EMAIL_CONFIG['smtp_port'])
+            server.starttls()
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
+            server.send_message(msg)
+            server.quit()
+            
+            logger.info(f"✅ EFT form email sent to {request_data.customer_email}")
+            
+            return {
+                "success": True,
+                "message": "EFT form sent successfully",
+                "transaction_id": transaction_id,
+                "customer_email": request_data.customer_email,
+                "form_url": customer_form_url
+            }
+            
+        except Exception as email_error:
+            logger.error(f"❌ Failed to send EFT form email: {email_error}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to send EFT form email: {str(email_error)}"
+            )
+        
+    except Exception as e:
+        logger.error(f"❌ EFT form initiation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initiate EFT form")
+
 # Paper Copy Request Endpoint (ESIGN Act Compliance)
 @app.post("/api/v1/paper-copy/request")
 async def request_paper_copy(request_data: dict):
