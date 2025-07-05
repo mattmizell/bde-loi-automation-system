@@ -105,11 +105,11 @@ class DatabaseManager:
             # DISABLED: Tables already exist in production
             # self._create_tables()
             
-            # Create database views
-            self._create_views()
+            # DISABLED: Views causing enum type errors on startup
+            # self._create_views()
             
-            # Insert default data
-            self._insert_default_data()
+            # DISABLED: Default data causing recursion errors
+            # self._insert_default_data()
             
             self._initialized = True
             logger.info("✅ Database initialized successfully")
